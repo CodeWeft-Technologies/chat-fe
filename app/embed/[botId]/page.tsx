@@ -252,7 +252,7 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
       const kcfg = includeKey && pubKey ? `,botKey:'${pubKey}'` : '';
       return [
         "<!-- Default CDN widget: paste near end of body -->",
-        `<script>window.chatbotConfig={botId:'${botId}',orgId:'${org}',apiBase:'${base2}'${kcfg}${botName?`,botName:'${botName.replace(/'/g,"\\'")}'`:''}${icon?`,icon:'${icon.replace(/'/g,"\\'")}'`:''}${brandName?`,brandName:'${brandName.replace(/'/g,"\\'")}'`:''}${brandLink?`,brandLink:'${brandLink.replace(/'/g,"\\'")}'`:''}};</script>`,
+        `<script>window.chatbotConfig={botId:'${botId}',orgId:'${org}',apiBase:'${base2}'${kcfg}${botName?`,botName:'${botName.replace(/'/g,"\\'")}'`:''}${icon?`,icon:'${icon.replace(/'/g,"\\'")}'`:''}};</script>`,
         `<script src='${base2}/api/widget.js' async></script>`
       ].join("\n");
     }
