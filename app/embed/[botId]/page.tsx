@@ -36,7 +36,13 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
         const r = await fetch(`${B()}/api/bots/${encodeURIComponent(botId)}/embed?org_id=${encodeURIComponent(org)}&widget=${encodeURIComponent(widget)}`, { headers });
         if (!r.ok) throw new Error(`http${r.status}`);
         const d = await r.json();
-        setSnippet(d.snippet);
+        const base = B().replace(/\/$/, "");
+        const sn: string = String(d.snippet || "");
+        const fixed = sn
+          .replace(/apiBase\s*:\s*'[^']*'/, `apiBase:'${base}'`)
+          .replace(/src=("|')https?:\/\/[^"']+\/api\/widget\.js\1/g, `src='${base}/api/widget.js'`)
+          .replace(/U=\'https?:\\\/\\\/[^']+\\\/api\\\/chat\\\/stream\\\/${botId}\'/, `U='${base}/api/chat/stream/${botId}'`);
+        setSnippet(fixed);
       } catch {
         const base = B().replace(/\/$/, "");
         let fallback = "";
