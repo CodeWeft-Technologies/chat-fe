@@ -350,11 +350,11 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
     const t0 = esc(s || "");
     if (/<[a-z]/i.test(t0)) {
       let h = t0;
-      h = h.replace(/(&lt;\/?)([a-zA-Z0-9:-]+)([^>]*?)(>)/g, function(_, a, tag, rest, b) {
+      h = h.replace(/(&lt;\/?)([a-zA-Z0-9:-]+)([^>]*?)(>)/g, function(_: string, a: string, tag: string, rest: string, b: string) {
         const tagC = `<span style=\"color:#60a5fa\">${tag}</span>`;
-        const restC = rest.replace(/([a-zA-Z_:][-a-zA-Z0-9_:.]*)(=)/g, function(__, n, eq) {
+        const restC = rest.replace(/([a-zA-Z_:][-a-zA-Z0-9_:.]*)(=)/g, function(__: string, n: string, eq: string) {
           return `<span style=\"color:#34d399\">${n}</span>${eq}`;
-        }).replace(/(&quot;[^&]*?&quot;)/g, function(m) { return `<span style=\"color:#fca5a5\">${m}</span>`; });
+        }).replace(/(&quot;[^&]*?&quot;)/g, function(m: string) { return `<span style=\"color:#fca5a5\">${m}</span>`; });
         return `${a}${tagC}${restC}${b}`;
       });
       return h;
@@ -362,8 +362,8 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
     let h = t0;
     h = h.replace(/(\/\*[\s\S]*?\*\/)/g, '<span style="color:#6b7280">$1</span>');
     h = h.replace(/(^|\n)(\s*\/\/.*)/g, '$1<span style="color:#6b7280">$2</span>');
-    h = h.replace(/([\'\"])(?:\\.|(?!\1).)*\1/g, function(m) { return `<span style=\"color:#fca5a5\">${m}</span>`; });
-    h = h.replace(/`(?:\\.|[^`\\])*`/g, function(m) { return `<span style=\"color:#fca5a5\">${m}</span>`; });
+    h = h.replace(/([\'\"])(?:\\.|(?!\1).)*\1/g, function(m: string) { return `<span style=\"color:#fca5a5\">${m}</span>`; });
+    h = h.replace(/`(?:\\.|[^`\\])*`/g, function(m: string) { return `<span style=\"color:#fca5a5\">${m}</span>`; });
     h = h.replace(/\b(?:var|let|const|function|return|if|else|for|while|new|class|try|catch|finally|switch|case|break|continue|import|from|export|default|await|async|typeof|in|instanceof)\b/g, '<span style="color:#93c5fd">$&</span>');
     h = h.replace(/\b(?:true|false|null|undefined)\b/g, '<span style="color:#fcd34d">$&</span>');
     h = h.replace(/\b\d+(?:\.\d+)?\b/g, '<span style="color:#fcd34d">$&</span>');
