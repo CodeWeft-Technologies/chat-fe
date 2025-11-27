@@ -1,7 +1,12 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 
-function B() { return (process.env.NEXT_PUBLIC_BACKEND_URL || "").replace(/\/$/, ""); }
+function B() {
+  const env = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+  if (env) return env.replace(/\/$/, "");
+  if (typeof window !== "undefined") return window.location.origin.replace(/\/$/, "");
+  return "";
+}
 
 export default function IngestPage() {
   const [mounted, setMounted] = useState(false);

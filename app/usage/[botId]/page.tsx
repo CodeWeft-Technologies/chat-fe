@@ -1,7 +1,12 @@
 "use client";
 import { useEffect, useState, use as usePromise } from "react";
 
-function B() { return (process.env.NEXT_PUBLIC_BACKEND_URL || "").replace(/\/$/, ""); }
+function B() {
+  const env = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+  if (env) return env.replace(/\/$/, "");
+  if (typeof window !== "undefined") return window.location.origin.replace(/\/$/, "");
+  return "";
+}
 
 type UsageSummary = { chats: number; successes: number; fallbacks: number; avg_similarity: number };
 type DailyEntry = { day: string; chats: number; successes: number; fallbacks: number; avg_similarity: number };

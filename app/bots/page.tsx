@@ -2,7 +2,12 @@
 import Link from "next/link";
 import { useCallback, useState, useEffect } from "react";
 
-function B() { return (process.env.NEXT_PUBLIC_BACKEND_URL || "").replace(/\/$/, ""); }
+function B() {
+  const env = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+  if (env) return env.replace(/\/$/, "");
+  if (typeof window !== "undefined") return window.location.origin.replace(/\/$/, "");
+  return "";
+}
 
 type BotItem = { bot_id: string; behavior: string; has_key: boolean };
 
