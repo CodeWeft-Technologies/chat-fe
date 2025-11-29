@@ -25,8 +25,15 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
   const [icon, setIcon] = useState<string>("💬");
   const [brandName, setBrandName] = useState<string>("CodeWeft");
   const [brandLink, setBrandLink] = useState<string>("https://github.com/CodeWeft-Technologies");
-  const [primaryColor, setPrimaryColor] = useState<string>("#0ea5e9");
+  const [primaryColor] = useState<string>("#0ea5e9");
   const [radius, setRadius] = useState<number>(16);
+  const [theme, setTheme] = useState<"light"|"dark">("light");
+  const [position, setPosition] = useState<"right"|"left">("right");
+  
+  const [accent, setAccent] = useState<string>("#2563eb");
+  const [textColor, setTextColor] = useState<string>("#0f1724");
+  const [cardColor, setCardColor] = useState<string>("#ffffff");
+  const [bgColor, setBgColor] = useState<string>("#ffffff");
   useEffect(() => {
     if (!org) return;
     (async () => {
@@ -150,95 +157,19 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
     const base = B().replace(/\/$/, "");
     const k = includeKey && pubKey ? pubKey : "";
     if (id === "bubble-blue") {
+      const kcfg = includeKey && pubKey ? `,botKey:'${pubKey}'` : '';
       return [
-        "<!-- Bubble chat: paste before </body> -->",
-        "<script>",
-        "(function(){",
-        `var B='${botId}',O='${org}',K='${k}',U='${base}/api/chat/stream/${botId}';`,
-        "function stream(m,cb){var h={'Content-Type':'application/json'};if(K){h['X-Bot-Key']=K;}var b=JSON.stringify({message:m,org_id:O});fetch(U,{method:'POST',headers:h,body:b}).then(function(r){var rd=r.body.getReader();var d=new TextDecoder();function pump(){rd.read().then(function(x){if(x.done){cb(null,true);return;}var t=d.decode(x.value);t.split('\\n\\n').forEach(function(l){if(l.indexOf('data: ')==0){cb(l.slice(6),false);}});pump();});}pump();});}",
-        "function el(t,c){var e=document.createElement(t);if(c){e.className=c;}return e;}",
-        "var wrap=el('div','cb-wrap'),btn=el('button','cb-btn'),panel=el('div','cb-panel'),head=el('div','cb-header'),title=el('div','cb-title'),avatar=el('div','cb-avatar'),close=el('button','cb-close'),msgs=el('div','cb-messages'),inp=el('div','cb-input'),input=document.createElement('input'),send=document.createElement('button');",
-        "btn.textContent='Chat';avatar.textContent='AI';close.textContent='×';input.placeholder='Ask a question';send.textContent='Send';",
-        "wrap.style.position='fixed';wrap.style.bottom='24px';wrap.style.right='24px';wrap.style.zIndex='99999';",
-        "btn.style.padding='12px 16px';btn.style.borderRadius='999px';btn.style.border='none';btn.style.background='#0ea5e9';btn.style.color='#fff';btn.style.boxShadow='0 10px 20px rgba(14,165,233,0.35)';",
-        "panel.style.position='fixed';panel.style.bottom='96px';panel.style.right='24px';panel.style.width='min(360px, calc(100vw - 48px))';panel.style.maxHeight='70vh';panel.style.display='none';panel.style.boxShadow='0 16px 40px rgba(0,0,0,0.2)';panel.style.borderRadius='16px';panel.style.background='#fff';panel.style.color='#0f172a';panel.style.overflow='hidden';panel.style.border='1px solid #e5e7eb';",
-        "head.style.display='flex';head.style.alignItems='center';head.style.justifyContent='space-between';head.style.padding='10px 12px';head.style.background='linear-gradient(90deg,#0ea5e9,#22d3ee)';head.style.color='#fff';",
-        "title.style.display='flex';title.style.alignItems='center';title.style.gap='8px';",
-        "avatar.style.width='24px';avatar.style.height='24px';avatar.style.borderRadius='999px';avatar.style.background='#fff';avatar.style.color='#0ea5e9';avatar.style.display='flex';avatar.style.alignItems='center';avatar.style.justifyContent='center';avatar.style.fontSize='12px';",
-        "msgs.style.padding='12px';msgs.style.height='48vh';msgs.style.overflow='auto';msgs.style.background='#f8fafc';",
-        "inp.style.display='flex';inp.style.gap='8px';inp.style.padding='12px';inp.style.borderTop='1px solid #e5e7eb';",
-        "input.style.flex='1';input.style.padding='10px';input.style.border='1px solid #e5e7eb';input.style.borderRadius='10px';",
-        "send.style.padding='10px 14px';send.style.border='none';send.style.borderRadius='10px';send.style.background='#0ea5e9';send.style.color='#fff';send.style.fontWeight='600';",
-        "title.appendChild(avatar);title.appendChild(document.createTextNode('Assistant'));head.appendChild(title);head.appendChild(close);",
-        "var welcome=document.createElement('div');welcome.className='cb-msg bot';welcome.style.background='#e2e8f0';welcome.style.color='#0f172a';welcome.style.marginRight='auto';welcome.style.maxWidth='80%';welcome.style.marginBottom='8px';welcome.style.padding='8px 10px';welcome.style.borderRadius='12px';welcome.textContent='Hello! How can I help you today?';msgs.appendChild(welcome);",
-        "function addU(m){var e=document.createElement('div');e.className='cb-msg user';e.style.background='#0ea5e9';e.style.color='#fff';e.style.marginLeft='auto';e.style.maxWidth='80%';e.style.marginBottom='8px';e.style.padding='8px 10px';e.style.borderRadius='12px';e.textContent=m;msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;}",
-        "function addB(){var e=document.createElement('div');e.className='cb-msg bot';e.style.background='#e2e8f0';e.style.color='#0f172a';e.style.marginRight='auto';e.style.maxWidth='80%';e.style.marginBottom='8px';e.style.padding='8px 10px';e.style.borderRadius='12px';msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;return e;}",
-        "wrap.appendChild(btn);panel.appendChild(head);panel.appendChild(msgs);inp.appendChild(input);inp.appendChild(send);panel.appendChild(inp);document.body.appendChild(wrap);document.body.appendChild(panel);",
-        "btn.onclick=function(){panel.style.display=panel.style.display==='none'?'block':'none';};",
-        "close.onclick=function(){panel.style.display='none';};",
-        "function sendMsg(){var q=input.value;if(!q.trim()){return;}input.value='';addU(q);var bot=addB();stream(q,function(tok,end){if(end){return;}bot.textContent+=tok;});}",
-        "send.onclick=sendMsg;input.addEventListener('keydown',function(ev){if(ev.key==='Enter'){sendMsg();}});",
-        "})();",
-        "</script>"
+        "<!-- Bubble widget: paste near end of body -->",
+        `<script>window.chatbotConfig={botId:'${botId}',orgId:'${org}',apiBase:'${base}',mode:'bubble',theme:'${theme}',position:'${position}',accent:'${accent}',text:'${textColor}',card:'${cardColor}',bg:'${bgColor}'${botName?`,botName:'${botName.replace(/'/g,"\\'")}'`:''}${icon?`,icon:'${icon.replace(/'/g,"\\'")}'`:''}${kcfg}${(brandName.trim()||brandLink.trim())?`,branding:{text:'${brandName.trim().replace(/'/g,"\\'")}',link:'${brandLink.trim().replace(/'/g,"\\'")}'}`:`,branding:false`}};</script>`,
+        `<script src='${base}/api/widget.js' async></script>`
       ].join("\n");
     }
     if (id === "bubble-dark") {
+      const kcfg = includeKey && pubKey ? `,botKey:'${pubKey}'` : '';
       return [
-        "<!-- Bubble chat (dark): paste before </body> -->",
-        "<script>",
-        "(function(){",
-        `var B='${botId}',O='${org}',K='${k}',U='${base}/api/chat/stream/${botId}';`,
-        "function stream(m,cb){var h={'Content-Type':'application/json'};if(K){h['X-Bot-Key']=K;}var b=JSON.stringify({message:m,org_id:O});fetch(U,{method:'POST',headers:h,body:b}).then(function(r){var rd=r.body.getReader();var d=new TextDecoder();function pump(){rd.read().then(function(x){if(x.done){cb(null,true);return;}var t=d.decode(x.value);t.split('\\n\\n').forEach(function(l){if(l.indexOf('data: ')==0){cb(l.slice(6),false);}});pump();});}pump();});}",
-        "function el(t,c){var e=document.createElement(t);if(c){e.className=c;}return e;}",
-        "var wrap=el('div','cb-wrap'),btn=el('button','cb-btn'),panel=el('div','cb-panel'),head=el('div','cb-header'),title=el('div','cb-title'),avatar=el('div','cb-avatar'),close=el('button','cb-close'),msgs=el('div','cb-messages'),inp=el('div','cb-input'),input=document.createElement('input'),send=document.createElement('button');",
-        "btn.textContent='Chat';avatar.textContent='AI';close.textContent='×';input.placeholder='Ask a question';send.textContent='Send';",
-        "wrap.style.position='fixed';wrap.style.bottom='24px';wrap.style.left='24px';wrap.style.zIndex='99999';",
-        "btn.style.padding='12px 16px';btn.style.borderRadius='12px';btn.style.border='1px solid #334155';btn.style.background='#111827';btn.style.color='#e5e7eb';btn.style.boxShadow='0 10px 20px rgba(2,6,23,0.5)';",
-        "panel.style.position='fixed';panel.style.bottom='96px';panel.style.left='24px';panel.style.width='min(360px, calc(100vw - 48px))';panel.style.maxHeight='70vh';panel.style.display='none';panel.style.boxShadow='0 16px 40px rgba(2,6,23,0.7)';panel.style.borderRadius='16px';panel.style.background='#111827';panel.style.color='#e5e7eb';panel.style.overflow='hidden';panel.style.border='1px solid #334155';",
-        "head.style.display='flex';head.style.alignItems='center';head.style.justifyContent='space-between';head.style.padding='10px 12px';head.style.background='#0b1220';head.style.color='#e5e7eb';head.style.borderBottom='1px solid #334155';",
-        "title.style.display='flex';title.style.alignItems='center';title.style.gap='8px';",
-        "avatar.style.width='24px';avatar.style.height='24px';avatar.style.borderRadius='999px';avatar.style.background='#334155';avatar.style.color='#e5e7eb';avatar.style.display='flex';avatar.style.alignItems='center';avatar.style.justifyContent='center';avatar.style.fontSize='12px';",
-        "msgs.style.padding='12px';msgs.style.height='48vh';msgs.style.overflow='auto';msgs.style.background='#0b1220';",
-        "inp.style.display='flex';inp.style.gap='8px';inp.style.padding='12px';inp.style.borderTop='1px solid #334155';",
-        "input.style.flex='1';input.style.padding='10px';input.style.border='1px solid #334155';input.style.borderRadius='10px';input.style.background='#0b1220';input.style.color='#e5e7eb';",
-        "send.style.padding='10px 14px';send.style.border='1px solid #334155';send.style.borderRadius='10px';send.style.background='#0b1220';send.style.color='#e5e7eb';send.style.fontWeight='600';",
-        "title.appendChild(avatar);title.appendChild(document.createTextNode('Assistant'));head.appendChild(title);head.appendChild(close);",
-        "var welcome=document.createElement('div');welcome.className='cb-msg bot';welcome.style.background='#1f2937';welcome.style.color='#e5e7eb';welcome.style.marginRight='auto';welcome.style.maxWidth='80%';welcome.style.marginBottom='8px';welcome.style.padding='8px 10px';welcome.style.borderRadius='12px';welcome.textContent='Hello! How can I help you today?';msgs.appendChild(welcome);",
-        "function addU(m){var e=document.createElement('div');e.className='cb-msg user';e.style.background='#334155';e.style.color='#e5e7eb';e.style.marginLeft='auto';e.style.maxWidth='80%';e.style.marginBottom='8px';e.style.padding='8px 10px';e.style.borderRadius='12px';e.textContent=m;msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;}",
-        "function addB(){var e=document.createElement('div');e.className='cb-msg bot';e.style.background='#1f2937';e.style.color='#e5e7eb';e.style.marginRight='auto';e.style.maxWidth='80%';e.style.marginBottom='8px';e.style.padding='8px 10px';e.style.borderRadius='12px';msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;return e;}",
-        "wrap.appendChild(btn);panel.appendChild(head);panel.appendChild(msgs);inp.appendChild(input);inp.appendChild(send);panel.appendChild(inp);document.body.appendChild(wrap);document.body.appendChild(panel);",
-        "btn.onclick=function(){panel.style.display=panel.style.display==='none'?'block':'none';};",
-        "close.onclick=function(){panel.style.display='none';};",
-        "function sendMsg(){var q=input.value;if(!q.trim()){return;}input.value='';addU(q);var bot=addB();stream(q,function(tok,end){if(end){return;}bot.textContent+=tok;});}",
-        "send.onclick=sendMsg;input.addEventListener('keydown',function(ev){if(ev.key==='Enter'){sendMsg();}});",
-        "})();",
-        "</script>"
-      ].join("\n");
-    }
-    if (id === "inline-card") {
-      return [
-        "<!-- Inline chat: add container then paste script -->",
-        "<div id=\"bot-inline\"></div>",
-        "<script>",
-        "(function(){",
-        `var O='${org}',K='${k}',U='${base}/api/chat/stream/${botId}';`,
-        "function stream(m,cb){var h={'Content-Type':'application/json'};if(K){h['X-Bot-Key']=K;}var b=JSON.stringify({message:m,org_id:O});fetch(U,{method:'POST',headers:h,body:b}).then(function(r){var rd=r.body.getReader();var d=new TextDecoder();function pump(){rd.read().then(function(x){if(x.done){cb(null,true);return;}var t=d.decode(x.value);t.split('\\n\\n').forEach(function(l){if(l.indexOf('data: ')==0){cb(l.slice(6),false);}});pump();});}pump();});}",
-        "var c=document.getElementById('bot-inline');var card=document.createElement('div');card.style.width='min(560px, calc(100vw - 32px))';card.style.maxWidth='560px';card.style.margin='24px auto';card.style.border='1px solid #e5e7eb';card.style.borderRadius='16px';card.style.boxShadow='0 12px 28px rgba(0,0,0,0.08)';card.style.background='#fff';card.style.overflow='hidden';",
-        "var head=document.createElement('div');head.style.display='flex';head.style.alignItems='center';head.style.gap='8px';head.style.padding='12px';head.style.background='#111827';head.style.color='#fff';",
-        "var av=document.createElement('div');av.textContent='AI';av.style.width='24px';av.style.height='24px';av.style.borderRadius='999px';av.style.background='#fff';av.style.color='#111827';av.style.display='flex';av.style.alignItems='center';av.style.justifyContent='center';av.style.fontSize='12px';",
-        "head.appendChild(av);head.appendChild(document.createTextNode('Assistant'));card.appendChild(head);",
-        "var msgs=document.createElement('div');msgs.style.padding='12px';msgs.style.height='40vh';msgs.style.overflow='auto';msgs.style.background='#f9fafb';card.appendChild(msgs);",
-        "var welcome=document.createElement('div');welcome.style.background='#e2e8f0';welcome.style.color='#0f172a';welcome.style.marginRight='auto';welcome.style.maxWidth='80%';welcome.style.marginBottom='8px';welcome.style.padding='8px 10px';welcome.style.borderRadius='12px';welcome.textContent='Hello! How can I help you today?';msgs.appendChild(welcome);",
-        "var inp=document.createElement('div');inp.style.display='flex';inp.style.gap='8px';inp.style.padding='12px';inp.style.borderTop='1px solid #e5e7eb';",
-        "var input=document.createElement('input');input.placeholder='Ask a question';input.style.flex='1';input.style.padding='10px';input.style.border='1px solid #e5e7eb';input.style.borderRadius='10px';",
-        "var send=document.createElement('button');send.textContent='Send';send.style.padding='10px 14px';send.style.border='none';send.style.borderRadius='10px';send.style.background='#111827';send.style.color='#fff';",
-        "inp.appendChild(input);inp.appendChild(send);card.appendChild(inp);c.appendChild(card);",
-        "function addU(m){var e=document.createElement('div');e.style.background='#111827';e.style.color='#fff';e.style.marginLeft='auto';e.style.maxWidth='80%';e.style.marginBottom='8px';e.style.padding='8px 10px';e.style.borderRadius='12px';e.textContent=m;msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;}",
-        "function addB(){var e=document.createElement('div');e.style.background='#e2e8f0';e.style.color='#0f172a';e.style.marginRight='auto';e.style.maxWidth='80%';e.style.marginBottom='8px';e.style.padding='8px 10px';e.style.borderRadius='12px';msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;return e;}",
-        "function sendMsg(){var q=input.value;if(!q.trim()){return;}input.value='';addU(q);var bot=addB();stream(q,function(tok,end){if(end){return;}bot.textContent+=tok;});}",
-        "send.onclick=sendMsg;input.addEventListener('keydown',function(ev){if(ev.key==='Enter'){sendMsg();}});",
-        "})();",
-        "</script>"
+        "<!-- Bubble widget (dark): paste near end of body -->",
+        `<script>window.chatbotConfig={botId:'${botId}',orgId:'${org}',apiBase:'${base}',mode:'bubble',theme:'${theme}',position:'${position}',accent:'${accent}',text:'${textColor}',card:'${cardColor}',bg:'${bgColor}'${botName?`,botName:'${botName.replace(/'/g,"\\'")}'`:''}${icon?`,icon:'${icon.replace(/'/g,"\\'")}'`:''}${kcfg}${(brandName.trim()||brandLink.trim())?`,branding:{text:'${brandName.trim().replace(/'/g,"\\'")}',link:'${brandLink.trim().replace(/'/g,"\\'")}'}`:`,branding:false`}};</script>`,
+        `<script src='${base}/api/widget.js' async></script>`
       ].join("\n");
     }
     if (id === "iframe-minimal") {
@@ -262,9 +193,42 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
   function buildTemplateSnippet(id: string): string {
     const base = B().replace(/\/$/, "");
     const k = includeKey && pubKey ? pubKey : "";
+    if ((id === "bubble-blue" || id === "bubble-dark")) {
+      const conf: Record<string, unknown> = {
+        botId: botId,
+        orgId: org,
+        apiBase: base,
+        mode: 'bubble',
+        theme,
+        position,
+        accent,
+        text: textColor,
+        card: cardColor,
+        bg: bgColor,
+        botName,
+        icon,
+      };
+      if (includeKey && pubKey) conf.botKey = pubKey;
+      if ((brandName && brandName.trim()) || (brandLink && brandLink.trim())) {
+        conf.branding = { text: brandName.trim(), link: brandLink.trim() };
+      } else {
+        conf.branding = false;
+      }
+      const json = JSON.stringify(conf).replace(/</g, "\\u003c");
+      const srcdoc = [
+        "<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"></head><body>",
+        '<div id=\"cb-preview-placeholder\" style=\"padding:8px;font-family:system-ui,sans-serif;font-size:12px;color:#6b7280\">Loading preview...</div>',
+        '<script>window.chatbotConfig='+json+';<\\/script>',
+        '<script>setTimeout(function(){var ph=document.getElementById(\"cb-preview-placeholder\");if(ph){ph.textContent=\"Preview not loaded. Check backend URL and org id.\";}},1500);<\\/script>',
+        '<script src="'+base+'/api/widget.js" async><\\/script>',
+        '<script>(function(){setTimeout(function(){var has=document.querySelector(\".cb-btn,.cb-panel\");if(has) return;var C=window.chatbotConfig||{};var ACC=C.accent||\"#2563eb\";var wrap=document.createElement(\"div\");wrap.style.position=\"fixed\";wrap.style.bottom=\"24px\";wrap.style.right=\"24px\";wrap.style.zIndex=\"99999\";var btn=document.createElement(\"button\");btn.textContent=C.icon||\"💬\";btn.style.padding=\"12px 16px\";btn.style.borderRadius=\"999px\";btn.style.border=\"none\";btn.style.background=ACC;btn.style.color=\"#fff\";var panel=document.createElement(\"div\");panel.style.position=\"fixed\";panel.style.bottom=\"96px\";panel.style.right=\"24px\";panel.style.width=\"min(360px, calc(100vw - 48px))\";panel.style.maxHeight=\"70vh\";panel.style.display=\"block\";panel.style.boxShadow=\"0 8px 24px rgba(0,0,0,0.15)\";panel.style.borderRadius=\"12px\";panel.style.background=\"#fff\";panel.style.color=\"#111\";panel.style.padding=\"12px\";var msg=document.createElement(\"div\");msg.textContent=\"Preview fallback (widget not loaded)\";msg.style.fontFamily=\"system-ui,sans-serif\";msg.style.fontSize=\"12px\";msg.style.color=\"#6b7280\";panel.appendChild(msg);wrap.appendChild(btn);document.body.appendChild(wrap);document.body.appendChild(panel);},1200);})();<\\/script>',
+        '</body></html>'
+      ].join('');
+      return "<iframe sandbox=\"allow-scripts allow-same-origin\" srcdoc=\""+srcdoc.replace(/\"/g,'&quot;')+"\" style=\"width:100%;min-height:540px;border:1px solid #e5e7eb;border-radius:8px\"></iframe>";
+    }
     if (id === "bubble-blue") {
       const srcdoc = "<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><style>.cb-wrap{position:fixed;bottom:24px;right:24px;z-index:99999}.cb-btn{padding:12px 16px;border-radius:999px;border:none;background:#0ea5e9;color:#fff;box-shadow:0 10px 20px rgba(14,165,233,0.35);cursor:pointer}.cb-panel{position:fixed;bottom:96px;right:24px;width:min(360px,calc(100vw - 48px));max-height:70vh;display:none;box-shadow:0 16px 40px rgba(0,0,0,0.2);border-radius:16px;background:#fff;color:#0f172a;overflow:hidden;border:1px solid #e5e7eb}.cb-header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:linear-gradient(90deg,#0ea5e9,#22d3ee);color:#fff}.cb-title{display:flex;align-items:center;gap:8px;font-weight:600}.cb-avatar{width:24px;height:24px;border-radius:999px;background:#fff;color:#0ea5e9;display:flex;align-items:center;justify-content:center;font-size:12px}.cb-messages{padding:12px;height:48vh;overflow:auto;background:#f8fafc}.cb-msg{max-width:80%;margin-bottom:8px;padding:8px 10px;border-radius:12px;font-size:14px;line-height:1.5;white-space:pre-wrap}.cb-msg.user{background:#0ea5e9;color:#fff;margin-left:auto;border-bottom-right-radius:4px}.cb-msg.bot{background:#e2e8f0;color:#0f172a;margin-right:auto;border-bottom-left-radius:4px}.cb-input{display:flex;gap:8px;padding:12px;border-top:1px solid #e5e7eb;background:#fff}.cb-input input{flex:1;padding:10px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px}.cb-input button{padding:10px 14px;border:none;border-radius:10px;background:#0ea5e9;color:#fff;font-weight:600;cursor:pointer}.cb-close{border:none;background:transparent;color:#fff;font-size:18px;cursor:pointer}</style></head><body><div class='cb-wrap'></div><script>(function(){var B='"+botId+"',O='"+org+"',K='"+k+"',U='"+base+"/api/chat/stream/"+botId+"';function s(m,cb){var h={'Content-Type':'application/json'};if(K){h['X-Bot-Key']=K;}var b=JSON.stringify({message:m,org_id:O});fetch(U,{method:'POST',headers:h,body:b}).then(function(r){var rd=r.body.getReader();var d=new TextDecoder();function n(){rd.read().then(function(x){if(x.done){cb(null,true);return;}var t=d.decode(x.value);t.split('\\n\\n').forEach(function(l){if(l.indexOf('data: ')==0){cb(l.slice(6),false);}});n();});}n();});}function ui(){var w=document.querySelector('.cb-wrap');var b=document.createElement('button');b.className='cb-btn';b.textContent='Chat';var p=document.createElement('div');p.className='cb-panel';var h=document.createElement('div');h.className='cb-header';var t=document.createElement('div');t.className='cb-title';var av=document.createElement('div');av.className='cb-avatar';av.textContent='AI';var nm=document.createElement('span');nm.textContent='Assistant';t.appendChild(av);t.appendChild(nm);var x=document.createElement('button');x.className='cb-close';x.textContent='×';h.appendChild(t);h.appendChild(x);var msgs=document.createElement('div');msgs.className='cb-messages';var welcome=document.createElement('div');welcome.className='cb-msg bot';welcome.textContent='Hello! How can I help you today?';msgs.appendChild(welcome);var inp=document.createElement('div');inp.className='cb-input';var i=document.createElement('input');i.type='text';i.placeholder='Ask a question';var go=document.createElement('button');go.textContent='Send';inp.appendChild(i);inp.appendChild(go);p.appendChild(h);p.appendChild(msgs);p.appendChild(inp);w.appendChild(b);document.body.appendChild(p);function addUser(m){var e=document.createElement('div');e.className='cb-msg user';e.textContent=m;msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;}function ensureBot(){var e=document.createElement('div');e.className='cb-msg bot';msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;return e;}b.onclick=function(){p.style.display=p.style.display==='none'?'block':'none';};x.onclick=function(){p.style.display='none';};function send(){var q=i.value;if(!q.trim()){return;}i.value='';addUser(q);var bot=ensureBot();s(q,function(tok,end){if(end){return;}bot.textContent+=tok;});}go.onclick=send;i.addEventListener('keydown',function(ev){if(ev.key==='Enter'){send();}});}ui();})();</script></body></html>";
-      return "<iframe srcdoc=\""+srcdoc
+      return "<iframe sandbox=\"allow-scripts allow-same-origin\" srcdoc=\""+srcdoc
         .replace(/position:fixed/g,'position:absolute')
         .replace(/bottom:96px;/g,'top:72px;')
         .replace(/bottom:24px;/g,'top:12px;')
@@ -280,7 +244,7 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
     }
     if (id === "bubble-dark") {
       const srcdoc = "<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><style>body{background:#0f172a;color:#e5e7eb}.cb-wrap{position:fixed;bottom:24px;left:24px;z-index:99999}.cb-btn{padding:12px 16px;border-radius:12px;border:1px solid #334155;background:#111827;color:#e5e7eb;box-shadow:0 10px 20px rgba(2,6,23,0.5);cursor:pointer}.cb-panel{position:fixed;bottom:96px;left:24px;width:min(360px,calc(100vw - 48px));max-height:70vh;display:none;box-shadow:0 16px 40px rgba(2,6,23,0.7);border-radius:16px;background:#111827;color:#e5e7eb;overflow:hidden;border:1px solid #334155}.cb-header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#0b1220;color:#e5e7eb;border-bottom:1px solid #334155}.cb-title{display:flex;align-items:center;gap:8px;font-weight:600}.cb-avatar{width:24px;height:24px;border-radius:999px;background:#334155;color:#e5e7eb;display:flex;align-items:center;justify-content:center;font-size:12px}.cb-messages{padding:12px;height:48vh;overflow:auto;background:#0b1220}.cb-msg{max-width:80%;margin-bottom:8px;padding:8px 10px;border-radius:12px;font-size:14px;line-height:1.5;white-space:pre-wrap}.cb-msg.user{background:#334155;color:#e5e7eb;margin-left:auto;border-bottom-right-radius:4px}.cb-msg.bot{background:#1f2937;color:#e5e7eb;margin-right:auto;border-bottom-left-radius:4px}.cb-input{display:flex;gap:8px;padding:12px;border-top:1px solid #334155;background:#111827}.cb-input input{flex:1;padding:10px;border:1px solid #334155;border-radius:10px;background:#0b1220;color:#e5e7eb;font-size:14px}.cb-input button{padding:10px 14px;border:1px solid #334155;border-radius:10px;background:#0b1220;color:#e5e7eb;font-weight:600;cursor:pointer}.cb-close{border:none;background:transparent;color:#e5e7eb;font-size:18px;cursor:pointer}</style></head><body><div class='cb-wrap'></div><script>(function(){var B='"+botId+"',O='"+org+"',K='"+k+"',U='"+base+"/api/chat/stream/"+botId+"';function s(m,cb){var h={'Content-Type':'application/json'};if(K){h['X-Bot-Key']=K;}var b=JSON.stringify({message:m,org_id:O});fetch(U,{method:'POST',headers:h,body:b}).then(function(r){var rd=r.body.getReader();var d=new TextDecoder();function n(){rd.read().then(function(x){if(x.done){cb(null,true);return;}var t=d.decode(x.value);t.split('\\n\\n').forEach(function(l){if(l.indexOf('data: ')==0){cb(l.slice(6),false);}});n();});}n();});}function ui(){var w=document.querySelector('.cb-wrap');var b=document.createElement('button');b.className='cb-btn';b.textContent='Chat';var p=document.createElement('div');p.className='cb-panel';var h=document.createElement('div');h.className='cb-header';var t=document.createElement('div');t.className='cb-title';var av=document.createElement('div');av.className='cb-avatar';av.textContent='AI';var nm=document.createElement('span');nm.textContent='Assistant';t.appendChild(av);t.appendChild(nm);var x=document.createElement('button');x.className='cb-close';x.textContent='×';h.appendChild(t);h.appendChild(x);var msgs=document.createElement('div');msgs.className='cb-messages';var welcome=document.createElement('div');welcome.className='cb-msg bot';welcome.textContent='Hello! How can I help you today?';msgs.appendChild(welcome);var inp=document.createElement('div');inp.className='cb-input';var i=document.createElement('input');i.type='text';i.placeholder='Ask a question';var go=document.createElement('button');go.textContent='Send';inp.appendChild(i);inp.appendChild(go);p.appendChild(h);p.appendChild(msgs);p.appendChild(inp);w.appendChild(b);document.body.appendChild(p);function addUser(m){var e=document.createElement('div');e.className='cb-msg user';e.textContent=m;msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;}function ensureBot(){var e=document.createElement('div');e.className='cb-msg bot';msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;return e;}b.onclick=function(){p.style.display=p.style.display==='none'?'block':'none';};x.onclick=function(){p.style.display='none';};function send(){var q=i.value;if(!q.trim()){return;}i.value='';addUser(q);var bot=ensureBot();s(q,function(tok,end){if(end){return;}bot.textContent+=tok;});}go.onclick=send;i.addEventListener('keydown',function(ev){if(ev.key==='Enter'){send();}});}ui();})();</script></body></html>";
-      return "<iframe srcdoc=\""+srcdoc
+      return "<iframe sandbox=\"allow-scripts allow-same-origin\" srcdoc=\""+srcdoc
         .replace(/position:fixed/g,'position:absolute')
         .replace(/bottom:96px;/g,'top:72px;')
         .replace(/bottom:24px;/g,'top:12px;')
@@ -301,12 +265,40 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
     }
     if (id === "cdn-default") {
       const base2 = B().replace(/\/$/, "");
-      const kcfg = includeKey && pubKey ? `,botKey:'${pubKey}'` : '';
-      return `<script>window.chatbotConfig={botId:'${botId}',orgId:'${org}',apiBase:'${base2}'${kcfg}};</script><script src='${base2}/api/widget.js' async></script>`;
+      const conf: Record<string, unknown> = {
+        botId: botId,
+        orgId: org,
+        apiBase: base2,
+        mode: 'bubble',
+        theme,
+        position,
+        accent,
+        text: textColor,
+        card: cardColor,
+        bg: bgColor,
+        botName,
+        icon,
+      };
+      if (includeKey && pubKey) conf.botKey = pubKey;
+      if ((brandName && brandName.trim()) || (brandLink && brandLink.trim())) {
+        conf.branding = { text: brandName.trim(), link: brandLink.trim() };
+      } else {
+        conf.branding = false;
+      }
+      const json = JSON.stringify(conf).replace(/</g, "\\u003c");
+      const srcdoc = [
+        "<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"></head><body>",
+        '<div id=\"cb-preview-placeholder\" style=\"padding:8px;font-family:system-ui,sans-serif;font-size:12px;color:#6b7280\">Loading preview...</div>',
+        '<script>window.chatbotConfig='+json+';<\\/script>',
+        '<script>setTimeout(function(){var ph=document.getElementById(\"cb-preview-placeholder\");if(ph){ph.textContent=\"Preview unavailable. Set NEXT_PUBLIC_BACKEND_URL to backend URL.\";}},1500);<\\/script>',
+        '<script src=\"'+base2+'/api/widget.js\" async><\\/script>',
+        '</body></html>'
+      ].join('');
+      return "<iframe srcdoc=\""+srcdoc.replace(/\"/g,'&quot;')+"\" style=\"width:100%;min-height:540px;border:1px solid #e5e7eb;border-radius:8px\"></iframe>";
     }
     return "";
   }
-  const displaySnippet = tpl ? buildTemplateSnippet(tpl) : "";
+  
   function formatJSBlock(tt: string): string {
     const js = tt
       .replace(/;\s*/g, ";\n")
@@ -396,7 +388,6 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
               <label className="text-sm">Embed Type</label>
               <select value={widget} onChange={e=>{setWidget(e.target.value); setTpl('');}} className="px-3 py-2 rounded-md border border-black/10 text-sm">
                 <option value="bubble">Bubble</option>
-                <option value="inline">Inline</option>
                 <option value="iframe">Iframe</option>
                 <option value="cdn">CDN</option>
               </select>
@@ -405,13 +396,36 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
                 <option value="">None</option>
                 <option value="bubble-blue">Bubble • Blue</option>
                 <option value="bubble-dark">Bubble • Dark</option>
-                <option value="inline-card">Inline • Card</option>
                 <option value="iframe-minimal">Iframe • Minimal</option>
                 <option value="cdn-default">CDN • Default</option>
               </select>
               <input value={botName} onChange={e=>setBotName(e.target.value)} placeholder="Bot name" className="px-3 py-2 rounded-md border border-black/10 text-sm w-36" />
               <input value={icon} onChange={e=>setIcon(e.target.value)} placeholder="Icon" className="px-3 py-2 rounded-md border border-black/10 text-sm w-20" />
-              <input type="color" value={primaryColor} onChange={e=>setPrimaryColor(e.target.value)} className="w-10 h-8 border border-black/10 rounded" />
+              <select value={theme} onChange={e=>setTheme(e.target.value as ("light"|"dark"))} className="px-3 py-2 rounded-md border border-black/10 text-sm">
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+              </select>
+              <select value={position} onChange={e=>setPosition(e.target.value as ("right"|"left"))} className="px-3 py-2 rounded-md border border-black/10 text-sm">
+                <option value="right">Right</option>
+                <option value="left">Left</option>
+              </select>
+              
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-black/60">Accent</span>
+                <input type="color" value={accent} onChange={e=>setAccent(e.target.value)} className="w-10 h-8 border border-black/10 rounded" />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-black/60">Text</span>
+                <input type="color" value={textColor} onChange={e=>setTextColor(e.target.value)} className="w-10 h-8 border border-black/10 rounded" />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-black/60">Card</span>
+                <input type="color" value={cardColor} onChange={e=>setCardColor(e.target.value)} className="w-10 h-8 border border-black/10 rounded" />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-black/60">Background</span>
+                <input type="color" value={bgColor} onChange={e=>setBgColor(e.target.value)} className="w-10 h-8 border border-black/10 rounded" />
+              </div>
               <input type="number" min={8} max={24} value={radius} onChange={e=>setRadius(parseInt(e.target.value||'16'))} className="px-2 py-2 rounded-md border border-black/10 text-sm w-20" />
               <input value={brandName} onChange={e=>setBrandName(e.target.value)} placeholder="Brand" className="px-3 py-2 rounded-md border border-black/10 text-sm w-28" />
               <input value={brandLink} onChange={e=>setBrandLink(e.target.value)} placeholder="Brand link" className="px-3 py-2 rounded-md border border-black/10 text-sm w-56" />
@@ -439,6 +453,13 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
                   </div>
                 </div>
               ); })()}
+            </div>
+            <div className="rounded-md border border-black/10 p-3 text-xs space-y-1">
+              <div className="font-medium">How to preview</div>
+              <div>1) Ensure the backend is running at {B() || ''}.</div>
+              <div>2) Select a template (Bubble, Inline, CDN).</div>
+              <div>3) Adjust colors and position; the preview updates live.</div>
+              <div>4) Copy the code and paste near the end of your site’s <code>&lt;body&gt;</code>.</div>
             </div>
             <div className="rounded-md border border-yellow-300 bg-yellow-50 text-yellow-900 p-3 text-xs">
               If you rotate the public API key, include the new value as <span className="font-medium">botKey</span>.
