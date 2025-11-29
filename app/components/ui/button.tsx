@@ -32,24 +32,15 @@ export function Button({ variant = "primary", size = "md", loading, disabled, ic
     const existing = (children.props as any).className || "";
     const composed = `${existing} ${baseClasses}`.trim();
     // We cannot truly disable non-button elements; simulate via aria-disabled + pointer-events
-    const extraProps: Record<string, any> = {};
+    const finalClass = (disabled || loading) ? `${composed} pointer-events-none opacity-60` : composed;
+    const extraProps: Record<string, any> = {
+      ...rest,
+      className: finalClass
+    };
     if (disabled || loading) {
       extraProps['aria-disabled'] = true;
-      extraProps['className'] = `${composed} pointer-events-none opacity-60`; // override composed
     }
-    return React.cloneElement(children, {
-      ...rest,
-      ...extraProps,
-      className: extraProps.className || composed,
-      children: (
-        <span className="flex items-center gap-1">
-          {loading && <span className="inline-block w-3 h-3 rounded-full border-2 border-white border-t-transparent animate-spin" aria-hidden />}
-          {iconLeft && <span className="flex items-center" aria-hidden>{iconLeft}</span>}
-          <span className="truncate">{children.props.children}</span>
-          {iconRight && <span className="flex items-center" aria-hidden>{iconRight}</span>}
-        </span>
-      )
-    });
+    return React.cloneElement(children, extraProps);
   }
 
   return (
