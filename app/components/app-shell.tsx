@@ -11,9 +11,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAuth = pathname === "/login" || pathname === "/register";
   const [open, setOpen] = useState(true);
-  if (isAuth) {
-    return <main className="px-6 py-6">{children}</main>;
-  }
+  
+  // All hooks must be called before any conditional returns
   const logout = useCallback(() => {
     try {
       if (typeof window !== 'undefined') {
@@ -22,6 +21,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     } catch {}
     window.location.href = '/login';
   }, []);
+  
+  if (isAuth) {
+    return <main className="px-6 py-6">{children}</main>;
+  }
 
   return (
     <>
