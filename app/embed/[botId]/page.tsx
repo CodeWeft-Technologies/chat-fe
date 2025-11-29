@@ -23,8 +23,8 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
   const [includeKey, setIncludeKey] = useState<boolean>(true);
   const [botName, setBotName] = useState<string>("Assistant");
   const [icon, setIcon] = useState<string>("💬");
-  const [brandName, setBrandName] = useState<string>("CodeWeft");
-  const [brandLink, setBrandLink] = useState<string>("https://github.com/CodeWeft-Technologies");
+  const BRAND_TEXT = "CodeWeft";
+  const BRAND_LINK = "https://github.com/CodeWeft-Technologies";
   const [primaryColor] = useState<string>("#0ea5e9");
   const [radius, setRadius] = useState<number>(16);
   const [theme, setTheme] = useState<"light"|"dark">("light");
@@ -160,7 +160,7 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
       const kcfg = includeKey && pubKey ? `,botKey:'${pubKey}'` : '';
       return [
         "<!-- Bubble widget: paste near end of body -->",
-        `<script>window.chatbotConfig={botId:'${botId}',orgId:'${org}',apiBase:'${base}',mode:'bubble',theme:'${theme}',position:'${position}',accent:'${accent}',text:'${textColor}',card:'${cardColor}',bg:'${bgColor}'${botName?`,botName:'${botName.replace(/'/g,"\\'")}'`:''}${icon?`,icon:'${icon.replace(/'/g,"\\'")}'`:''}${kcfg}${(brandName.trim()||brandLink.trim())?`,branding:{text:'${brandName.trim().replace(/'/g,"\\'")}',link:'${brandLink.trim().replace(/'/g,"\\'")}'}`:`,branding:false`}};</script>`,
+        `<script>window.chatbotConfig={botId:'${botId}',orgId:'${org}',apiBase:'${base}',mode:'bubble',theme:'${theme}',position:'${position}',accent:'${accent}',text:'${textColor}',card:'${cardColor}',bg:'${bgColor}'${botName?`,botName:'${botName.replace(/'/g,"\\'")}'`:''}${icon?`,icon:'${icon.replace(/'/g,"\\'")}'`:''}${kcfg},branding:{text:'${BRAND_TEXT}',link:'${BRAND_LINK}'}};</script>`,
         `<script src='${base}/api/widget.js' async></script>`
       ].join("\n");
     }
@@ -168,7 +168,7 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
       const kcfg = includeKey && pubKey ? `,botKey:'${pubKey}'` : '';
       return [
         "<!-- Bubble widget (dark): paste near end of body -->",
-        `<script>window.chatbotConfig={botId:'${botId}',orgId:'${org}',apiBase:'${base}',mode:'bubble',theme:'${theme}',position:'${position}',accent:'${accent}',text:'${textColor}',card:'${cardColor}',bg:'${bgColor}'${botName?`,botName:'${botName.replace(/'/g,"\\'")}'`:''}${icon?`,icon:'${icon.replace(/'/g,"\\'")}'`:''}${kcfg}${(brandName.trim()||brandLink.trim())?`,branding:{text:'${brandName.trim().replace(/'/g,"\\'")}',link:'${brandLink.trim().replace(/'/g,"\\'")}'}`:`,branding:false`}};</script>`,
+        `<script>window.chatbotConfig={botId:'${botId}',orgId:'${org}',apiBase:'${base}',mode:'bubble',theme:'${theme}',position:'${position}',accent:'${accent}',text:'${textColor}',card:'${cardColor}',bg:'${bgColor}'${botName?`,botName:'${botName.replace(/'/g,"\\'")}'`:''}${icon?`,icon:'${icon.replace(/'/g,"\\'")}'`:''}${kcfg},branding:{text:'${BRAND_TEXT}',link:'${BRAND_LINK}'}};</script>`,
         `<script src='${base}/api/widget.js' async></script>`
       ].join("\n");
     }
@@ -209,11 +209,7 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
         icon,
       };
       if (includeKey && pubKey) conf.botKey = pubKey;
-      if ((brandName && brandName.trim()) || (brandLink && brandLink.trim())) {
-        conf.branding = { text: brandName.trim(), link: brandLink.trim() };
-      } else {
-        conf.branding = false;
-      }
+      conf.branding = { text: BRAND_TEXT, link: BRAND_LINK };
       const json = JSON.stringify(conf).replace(/</g, "\\u003c");
       const srcdoc = [
         "<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"></head><body>",
@@ -239,7 +235,7 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
         .replace(/#0ea5e9/g, primaryColor)
         .replace(/border-radius:16px/g, 'border-radius:'+String(radius)+'px')
         .replace(/border-radius:12px/g, 'border-radius:'+String(Math.max(8, Math.min(24, radius-4)))+'px')
-        .replace(/p\.appendChild\(msgs\);/g, `p.appendChild(msgs);var ft=document.createElement('div');ft.style.padding='8px 12px';ft.style.fontSize='11px';ft.style.color='#6b7280';ft.style.borderTop='1px solid #e5e7eb';ft.innerHTML='Powered by <a href=\\'${brandLink.replace(/'/g,"\\'" )}\\' target=\\'_blank\\' rel=\\'noopener noreferrer\\' style=\\'color:${primaryColor}\\'>'+${JSON.stringify(brandName)}+'</a>';p.appendChild(ft);`)
+        .replace(/p\.appendChild\(msgs\);/g, `p.appendChild(msgs);var ft=document.createElement('div');ft.style.padding='8px 12px';ft.style.fontSize='11px';ft.style.color='#6b7280';ft.style.borderTop='1px solid #e5e7eb';ft.innerHTML='Powered by <a href=\\'${BRAND_LINK}\\' target=\\'_blank\\' rel=\\'noopener noreferrer\\' style=\\'color:${primaryColor}\\'>${BRAND_TEXT}</a>';p.appendChild(ft);`)
         .replace(/\"/g,'&quot;')+"\" style=\"width:100%;min-height:540px;border:1px solid #e5e7eb;border-radius:12px\"></iframe>";
     }
     if (id === "bubble-dark") {
@@ -257,7 +253,7 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
     }
     if (id === "inline-card") {
       const srcdoc = "<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><style>body{background:#f8fafc}.card{max-width:560px;margin:24px auto;border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 12px 28px rgba(0,0,0,0.08);overflow:hidden;background:#fff}.head{display:flex;align-items:center;gap:8px;padding:12px;background:#111827;color:#fff}.av{width:24px;height:24px;border-radius:999px;background:#fff;color:#111827;display:flex;align-items:center;justify-content:center;font-size:12px}.msgs{padding:12px;height:40vh;overflow:auto;background:#f9fafb}.m{max-width:80%;margin-bottom:8px;padding:8px 10px;border-radius:12px;font-size:14px;line-height:1.5;white-space:pre-wrap}.m.u{background:#111827;color:#fff;margin-left:auto;border-bottom-right-radius:4px}.m.b{background:#e2e8f0;color:#0f172a;margin-right:auto;border-bottom-left-radius:4px}.inp{display:flex;gap:8px;padding:12px;border-top:1px solid #e5e7eb;background:#fff}.inp input{flex:1;padding:10px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px}.inp button{padding:10px 14px;border:none;border-radius:10px;background:#111827;color:#fff;font-weight:600;cursor:pointer}</style></head><body><div class='card'><div class='head'><div class='av'>AI</div><div>Assistant</div></div><div class='msgs'></div><div class='inp'><input type='text' placeholder='Ask a question'><button>Send</button></div></div><script>(function(){var O='"+org+"',K='"+k+"',U='"+base+"/api/chat/stream/"+botId+"';function s(m,cb){var h={'Content-Type':'application/json'};if(K){h['X-Bot-Key']=K;}var b=JSON.stringify({message:m,org_id:O});fetch(U,{method:'POST',headers:h,body:b}).then(function(r){var rd=r.body.getReader();var d=new TextDecoder();function n(){rd.read().then(function(x){if(x.done){cb(null,true);return;}var t=d.decode(x.value);t.split('\\n\\n').forEach(function(l){if(l.indexOf('data: ')==0){cb(l.slice(6),false);}});n();});}n();});}var c=document.querySelector('.card');var msgs=document.querySelector('.msgs');var i=c.querySelector('input');var go=c.querySelector('button');function addU(m){var e=document.createElement('div');e.className='m u';e.textContent=m;msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;}function addB(){var e=document.createElement('div');e.className='m b';msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;return e;}function send(){var q=i.value;if(!q.trim()){return;}i.value='';addU(q);var bot=addB();s(q,function(tok,end){if(end){return;}bot.textContent+=tok;});}go.onclick=send;i.addEventListener('keydown',function(ev){if(ev.key==='Enter'){send();}});})();</script></body></html>";
-      return "<iframe srcdoc=\""+srcdoc.replace(/max-width:560px;/g,'width:min(560px,calc(100vw - 32px));max-width:560px;').replace(/c\.appendChild\(card\);/g, `c.appendChild(card);var ft=document.createElement('div');ft.style.margin='0 24px';ft.style.padding='8px 0';ft.style.fontSize='11px';ft.style.color='#6b7280';ft.style.textAlign='right';ft.innerHTML='Powered by <a href=\\'${brandLink.replace(/'/g,"\\'")}\\' target=\\'_blank\\' rel=\\'noopener noreferrer\\' style=\\'color:${primaryColor}\\'>${brandName.replace(/'/g,"\\'")}</a>';c.appendChild(ft);`).replace(/\"/g,'&quot;')+"\" style=\"width:100%;min-height:340px;border:1px solid #e5e7eb;border-radius:16px\"></iframe>";
+      return "<iframe srcdoc=\""+srcdoc.replace(/max-width:560px;/g,'width:min(560px,calc(100vw - 32px));max-width:560px;').replace(/c\\.appendChild\(card\);/g, `c.appendChild(card);var ft=document.createElement('div');ft.style.margin='0 24px';ft.style.padding='8px 0';ft.style.fontSize='11px';ft.style.color='#6b7280';ft.style.textAlign='right';ft.innerHTML='Powered by <a href=\\'${BRAND_LINK}\\' target=\\'_blank\\' rel=\\'noopener noreferrer\\' style=\\'color:${primaryColor}\\'>${BRAND_TEXT}</a>';c.appendChild(ft);`).replace(/\"/g,'&quot;')+"\" style=\"width:100%;min-height:340px;border:1px solid #e5e7eb;border-radius:16px\"></iframe>";
     }
     if (id === "iframe-minimal") {
       const srcdoc = "<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><style>body{font-family:sans-serif;font-size:14px;margin:0}.wrap{padding:10px}.msgs{padding:10px;height:36vh;overflow:auto;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;margin-bottom:8px}.m{max-width:80%;margin-bottom:8px;padding:8px 10px;border-radius:12px;white-space:pre-wrap}.m.u{background:#0ea5e9;color:#fff;margin-left:auto;border-bottom-right-radius:4px}.m.b{background:#e2e8f0;color:#0f172a;margin-right:auto;border-bottom-left-radius:4px}.inp{display:flex;gap:8px}.inp input{flex:1;padding:10px;border:1px solid #e5e7eb;border-radius:10px}.inp button{padding:10px 14px;border:none;border-radius:10px;background:#111827;color:#fff;font-weight:600;cursor:pointer}</style></head><body><div class='wrap'><div class='msgs'></div><div class='inp'><input type='text' placeholder='Ask'><button>Send</button></div></div><script>(function(){var O='"+org+"',K='"+k+"',U='"+base+"/api/chat/stream/"+botId+"';function s(m,cb){var h={'Content-Type':'application/json'};if(K){h['X-Bot-Key']=K;}var b=JSON.stringify({message:m,org_id:O});fetch(U,{method:'POST',headers:h,body:b}).then(function(r){var rd=r.body.getReader();var d=new TextDecoder();function n(){rd.read().then(function(x){if(x.done){cb(null,true);return;}var t=d.decode(x.value);t.split('\\n\\n').forEach(function(l){if(l.indexOf('data: ')==0){cb(l.slice(6),false);}});n();});}n();});}var msgs=document.querySelector('.msgs');var i=document.querySelector('.inp input');var go=document.querySelector('.inp button');function addU(m){var e=document.createElement('div');e.className='m u';e.textContent=m;msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;}function addB(){var e=document.createElement('div');e.className='m b';msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;return e;}function send(){var q=i.value;if(!q.trim()){return;}i.value='';addU(q);var bot=addB();s(q,function(tok,end){if(end){return;}bot.textContent+=tok;});}go.onclick=send;i.addEventListener('keydown',function(ev){if(ev.key==='Enter'){send();}});})();</script></body></html>";
@@ -280,10 +276,10 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
         icon,
       };
       if (includeKey && pubKey) conf.botKey = pubKey;
-      if ((brandName && brandName.trim()) || (brandLink && brandLink.trim())) {
-        conf.branding = { text: brandName.trim(), link: brandLink.trim() };
-      } else {
-        conf.branding = false;
+      {
+        const bn = (brandName || '').trim() || 'CodeWeft';
+        const bl = (brandLink || '').trim() || 'https://github.com/CodeWeft-Technologies';
+        conf.branding = { text: bn, link: bl };
       }
       const json = JSON.stringify(conf).replace(/</g, "\\u003c");
       const srcdoc = [
@@ -427,8 +423,7 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
                 <input type="color" value={bgColor} onChange={e=>setBgColor(e.target.value)} className="w-10 h-8 border border-black/10 rounded" />
               </div>
               <input type="number" min={8} max={24} value={radius} onChange={e=>setRadius(parseInt(e.target.value||'16'))} className="px-2 py-2 rounded-md border border-black/10 text-sm w-20" />
-              <input value={brandName} onChange={e=>setBrandName(e.target.value)} placeholder="Brand" className="px-3 py-2 rounded-md border border-black/10 text-sm w-28" />
-              <input value={brandLink} onChange={e=>setBrandLink(e.target.value)} placeholder="Brand link" className="px-3 py-2 rounded-md border border-black/10 text-sm w-56" />
+              
               <label className="text-sm flex items-center gap-2">
                 <input type="checkbox" checked={includeKey} onChange={e=>setIncludeKey(e.target.checked)} /> Include public key
               </label>
