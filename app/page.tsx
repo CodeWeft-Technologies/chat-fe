@@ -1,5 +1,7 @@
 "use client";
 import Link from "next/link";
+import { Button } from "./components/ui/button";
+import { Card } from "./components/ui/card";
 import { useEffect, useState, useCallback } from "react";
 
 function B() {
@@ -37,80 +39,75 @@ export default function Home() {
     return () => clearTimeout(t);
   }, [loadBots]);
   return (
-    <div className="space-y-6">
-      <div className="rounded-xl border border-black/10 p-6 bg-gradient-to-r from-blue-50 to-indigo-50">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold">Overview</h1>
-            <p className="text-sm text-black/60">Create bots and ingest content to power your chatbot.</p>
+    <div className="space-y-8">
+      <div className="card gradient-border p-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between relative overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none opacity-40 [mask-image:radial-gradient(circle_at_center,white,transparent)] bg-[linear-gradient(130deg,var(--accent),#6366f1_50%,#8b5cf6)]" />
+        <div className="space-y-2">
+          <h1 className="text-3xl font-semibold tracking-tight">Dashboard Overview</h1>
+          <p className="text-sm text-black/60 dark:text-white/60 max-w-xl leading-relaxed">Create chatbots, ingest helpful knowledge, and embed them anywhere. Everything is designed so non‑technical users can succeed quickly.</p>
+          <div className="flex gap-2 mt-2 text-[10px] text-black/50 dark:text-white/40">
+            <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[var(--accent)] animate-pulse" />Real‑time</span>
+            <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500" />Secure</span>
+            <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-indigo-500" />Accessible</span>
           </div>
-          <div className="hidden md:flex gap-3">
-            <Link href="/bots" className="px-3 py-2 rounded-md bg-blue-600 text-white text-sm shadow hover:bg-blue-700 transition">Create Bot</Link>
-            <Link href="/ingest" className="px-3 py-2 rounded-md bg-black/80 text-white text-sm shadow hover:bg-black transition">Ingest Content</Link>
-          </div>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <Button asChild size="md" variant="primary"><Link href="/bots">Create Bot</Link></Button>
+          <Button asChild size="md" variant="outline"><Link href="/ingest">Add Knowledge</Link></Button>
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="rounded-xl border border-black/10 p-5 bg-white shadow-sm">
-          <h2 className="text-lg font-semibold mb-2">Create a Bot</h2>
-          <p className="text-sm mb-3">Create a chatbot for your organization. Choose its behavior (support, sales, appointment), set a name, and author a system prompt that guides how it answers.</p>
-          <Link href="/bots" className="inline-block px-3 py-2 rounded-md bg-blue-600 text-white text-sm shadow hover:bg-blue-700 transition">Go to Bots</Link>
-        </div>
-        <div className="rounded-xl border border-black/10 p-5 bg-white shadow-sm">
-          <h2 className="text-lg font-semibold mb-2">Add Knowledge</h2>
-          <p className="text-sm mb-3">Add information your bot can use to answer questions. Paste text, add a website, or upload PDFs. Behind the scenes, we prepare the content for fast lookup.</p>
-          <Link href="/ingest" className="inline-block px-3 py-2 rounded-md bg-blue-600 text-white text-sm shadow hover:bg-blue-700 transition">Open Add Knowledge</Link>
-        </div>
+        <Card hover title="Create a Bot" subtitle="Define behavior, set a name, craft a helpful system prompt.">
+          <div className="text-xs text-black/60 dark:text-white/60 leading-relaxed mb-4">Support, sales, booking – tune it with a few guided fields. We handle the complex parts behind the scenes.</div>
+          <Button asChild size="sm"><Link href="/bots">Go to Bots</Link></Button>
+        </Card>
+        <Card hover title="Add Knowledge" subtitle="Upload documents or paste text for retrieval.">
+          <div className="text-xs text-black/60 dark:text-white/60 leading-relaxed mb-4">Enrich answers by adding PDFs, website URLs, or internal notes. Content is indexed securely for fast semantic lookup.</div>
+          <Button asChild size="sm" variant="outline"><Link href="/ingest">Open Knowledge</Link></Button>
+        </Card>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="rounded-xl border border-black/10 p-5 bg-white shadow-sm">
-          <h2 className="text-lg font-semibold mb-2">Usage</h2>
-          <p className="text-sm mb-3">View daily chats, success vs fallback counts, and similarity scores to understand performance. Use this to tune prompts and content.</p>
-          <p className="text-sm">Open any bot and click <span className="font-medium">Usage</span> to see detailed charts.</p>
-        </div>
-        <div className="rounded-xl border border-black/10 p-5 bg-white shadow-sm">
-          <h2 className="text-lg font-semibold mb-2">Embed & Widget</h2>
-          <p className="text-sm mb-3">Get copy-paste snippets to embed your bot on a website. Options include bubble chat, inline, iframe, and a CDN widget.</p>
-          <p className="text-sm">Open any bot and click <span className="font-medium">Embed</span> to fetch the snippet.</p>
-        </div>
-        <div className="rounded-xl border border-black/10 p-5 bg-white shadow-sm">
-          <h2 className="text-lg font-semibold mb-2">Config</h2>
-          <p className="text-sm mb-3">Update behavior, system prompt, and optional public API key. The public key is required if you plan to use unauthenticated embeds on public sites.</p>
-          <p className="text-sm">Open any bot and click <span className="font-medium">Config</span> to edit settings.</p>
-        </div>
-        <div className="rounded-xl border border-black/10 p-5 bg-white shadow-sm">
-          <h2 className="text-lg font-semibold mb-2">Security</h2>
-          <p className="text-sm mb-3">Authenticated dashboard actions use your bearer token. Public embeds can use a per-bot public API key; rotate it from the Bots page when needed.</p>
-          <p className="text-sm">Keys should never be hard-coded server-side; use the provided rotation.</p>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        <Card hover title="Usage" subtitle="Track performance & tune prompts.">
+          <p className="text-xs text-black/60 dark:text-white/60 leading-relaxed">Daily chats, fallback rate and similarity stats help refine quality. Open a bot &gt; Usage for charts.</p>
+        </Card>
+        <Card hover title="Embed & Widget" subtitle="Copy‑paste install snippets.">
+          <p className="text-xs text-black/60 dark:text-white/60 leading-relaxed">Bubble, inline, iframe, CDN widget – all unified styling. Open a bot &gt; Embed.</p>
+        </Card>
+        <Card hover title="Config" subtitle="Adjust core behavior & keys.">
+          <p className="text-xs text-black/60 dark:text-white/60 leading-relaxed">Set system prompt, rotate public key, tune persona. Open a bot &gt; Config.</p>
+        </Card>
+        <Card hover title="Security" subtitle="Public vs authenticated usage.">
+          <p className="text-xs text-black/60 dark:text-white/60 leading-relaxed">Dashboard uses bearer token; embeds can use rotating public keys – never hard‑code secrets.</p>
+        </Card>
       </div>
-      <div className="space-y-3">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Your Bots</h2>
-          <Link href="/bots" className="px-3 py-2 rounded-md bg-black/80 text-white text-sm shadow hover:bg-black transition">Manage</Link>
+          <h2 className="text-xl font-semibold tracking-tight">Your Bots</h2>
+          <Button asChild size="sm" variant="outline"><Link href="/bots">Manage</Link></Button>
         </div>
         {!bots.length ? (
-          <div className="rounded-xl border border-black/10 bg-white p-4 text-sm shadow-sm">No bots found</div>
+          <Card className="text-sm" hover title="No bots found" subtitle="Create one to get started.">
+            <Button asChild size="sm"><Link href="/bots">Create Bot</Link></Button>
+          </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {bots.map(b => (
-              <div key={b.bot_id} className="rounded-xl border border-black/10 bg-white p-4 shadow-sm">
-                <div className="text-sm text-black/60 mb-1">{b.behavior}</div>
-                <div className="font-mono text-sm break-all mb-2">{b.bot_id}</div>
-                <div className="text-xs mb-3">{b.has_key ? "Key active" : "No key"}</div>
+              <Card key={b.bot_id} hover padding="md" className="relative overflow-hidden" title={b.behavior} subtitle={b.has_key ? 'Key active' : 'No key'}>
+                <div className="font-mono text-xs break-all mb-3 opacity-80">{b.bot_id}</div>
                 <div className="flex flex-wrap gap-2">
-                  <Link href={`/usage/${b.bot_id}`} className="px-2 py-1 rounded-md bg-blue-600 text-white text-xs shadow hover:bg-blue-700 transition">Usage</Link>
-                  <Link href={`/embed/${b.bot_id}`} className="px-2 py-1 rounded-md bg-blue-600 text-white text-xs shadow hover:bg-blue-700 transition">Embed</Link>
-                  <Link href={`/bots/${b.bot_id}/config`} className="px-2 py-1 rounded-md bg-blue-600 text-white text-xs shadow hover:bg-blue-700 transition">Config</Link>
+                  <Button asChild size="sm" variant="outline"><Link href={`/usage/${b.bot_id}`}>Usage</Link></Button>
+                  <Button asChild size="sm" variant="outline"><Link href={`/embed/${b.bot_id}`}>Embed</Link></Button>
+                  <Button asChild size="sm" variant="outline"><Link href={`/bots/${b.bot_id}/config`}>Config</Link></Button>
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         )}
       </div>
       {!org && (
-        <div className="rounded-xl border border-yellow-300 bg-yellow-50 text-yellow-900 p-4 text-sm">
-          You are not logged in. Please <Link href="/login" className="underline">login</Link> or <Link href="/register" className="underline">register</Link>.
+        <div className="card p-4 border border-warning/40 bg-warning/10 text-sm flex flex-col gap-2">
+          <div className="font-medium">You are not logged in</div>
+          <div className="text-black/70 dark:text-white/70">Please <Link href="/login" className="text-accent underline">login</Link> or <Link href="/register" className="text-accent underline">register</Link> to save bots.</div>
         </div>
       )}
     </div>

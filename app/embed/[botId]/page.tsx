@@ -9,37 +9,143 @@ function B() {
 }
 
 export default function EmbedPage({ params }: { params: Promise<{ botId: string }> }) {
-  const [org] = useState(() => {
-    const d = (typeof window !== "undefined" ? localStorage.getItem("orgId") : null) || process.env.NEXT_PUBLIC_DEFAULT_ORG_ID || "";
-    return d || "";
-  });
+  const [org, setOrg] = useState<string>("");
   const { botId } = usePromise(params as Promise<{ botId: string }>);
   const [snippet, setSnippet] = useState<string | null>(null);
   const [widget, setWidget] = useState<string>("bubble");
-  const [tpl, setTpl] = useState<string>("");
+  const [tpl, setTpl] = useState<string>("bubble-blue");
   const [copied, setCopied] = useState(false);
   const [pubKey, setPubKey] = useState<string | null>(null);
   const [rotatedAt, setRotatedAt] = useState<string | null>(null);
   const [includeKey, setIncludeKey] = useState<boolean>(true);
   const [botName, setBotName] = useState<string>("Assistant");
   const [icon, setIcon] = useState<string>("💬");
+  // Greeting managed on backend config page; fetched for preview
+  const [greeting, setGreeting] = useState<string>("");
   const BRAND_TEXT = "CodeWeft";
-  const BRAND_LINK = "https://github.com/CodeWeft-Technologies";
-  const [primaryColor] = useState<string>("#0ea5e9");
-  const [radius, setRadius] = useState<number>(16);
-  const [theme, setTheme] = useState<"light"|"dark">("light");
-  const [position, setPosition] = useState<"right"|"left">("right");
+  const BRAND_LINK = "https://codeweft.in/";
   
+  // Color and theme controls
   const [accent, setAccent] = useState<string>("#2563eb");
+  const [buttonColor, setButtonColor] = useState<string>("#2563eb");
   const [textColor, setTextColor] = useState<string>("#0f1724");
   const [cardColor, setCardColor] = useState<string>("#ffffff");
   const [bgColor, setBgColor] = useState<string>("#ffffff");
+  const [radius, setRadius] = useState<number>(16);
+  const [theme, setTheme] = useState<"light"|"dark">("light");
+  const [position, setPosition] = useState<"right"|"left">("right");
+  const [linkAccentButton, setLinkAccentButton] = useState<boolean>(true);
+
+  // --- Color utilities & contrast scoring ---
+  function hexToRgb(h: string){
+    const m = h.replace(/^#/,'');
+    if(m.length===3){return {
+      r: parseInt(m[0]+m[0],16),
+      g: parseInt(m[1]+m[1],16),
+      b: parseInt(m[2]+m[2],16)
+    };}
+    if(m.length!==6) return {r:0,g:0,b:0};
+    return {r:parseInt(m.slice(0,2),16),g:parseInt(m.slice(2,4),16),b:parseInt(m.slice(4,6),16)};
+  }
+  function luminance(h: string){
+    const {r,g,b}=hexToRgb(h);
+    const a=[r,g,b].map(v=>{
+      const c=v/255;return c<=0.03928?c/12.92:Math.pow((c+0.055)/1.055,2.4);
+    });
+    return 0.2126*a[0]+0.7152*a[1]+0.0722*a[2];
+  }
+  function contrastRatio(fg: string, bg: string){
+    const L1=luminance(fg)+0.05;const L2=luminance(bg)+0.05;return (Math.max(L1,L2)/Math.min(L1,L2));
+  }
+  function badge(r: number, compact: boolean){
+    if(compact){
+      if(r>=7) return {label:r.toFixed(1), cls:'bg-green-600'};
+      if(r>=4.5) return {label:r.toFixed(1), cls:'bg-green-500'};
+      if(r>=3) return {label:r.toFixed(1), cls:'bg-amber-500'};
+      return {label:r.toFixed(1), cls:'bg-red-500'};
+    }
+    if(r>=7) return {label:`AAA ${r.toFixed(1)}`, cls:'bg-green-600'};
+    if(r>=4.5) return {label:`AA ${r.toFixed(1)}`, cls:'bg-green-500'};
+    if(r>=3) return {label:`Low ${r.toFixed(1)}`, cls:'bg-amber-500'};
+    return {label:`Poor ${r.toFixed(1)}`, cls:'bg-red-500'};
+  }
+
+  // Preset accessible palettes
+  const presets: Array<{name:string, values:{accent:string, button?:string, text:string, card:string, bg:string}}>= [
+    {name:'Ocean Light', values:{accent:'#2563eb', text:'#0f172a', card:'#ffffff', bg:'#f1f5f9'}},
+    {name:'Emerald', values:{accent:'#059669', text:'#062c22', card:'#ffffff', bg:'#f0fdf4'}},
+    {name:'Rose', values:{accent:'#e11d48', text:'#3b0a14', card:'#ffffff', bg:'#fff1f2'}},
+    {name:'Slate Dark', values:{accent:'#3b82f6', text:'#f1f5f9', card:'#162131', bg:'#0b111a'}},
+    {name:'Violet Dark', values:{accent:'#8b5cf6', text:'#f1f5f9', card:'#1e1b2e', bg:'#12111c'}},
+  ];
+
+  function applyPreset(p:{accent:string, button?:string, text:string, card:string, bg:string}){
+    setAccent(p.accent);
+    if(!linkAccentButton && p.button){ setButtonColor(p.button); } else if(linkAccentButton) { setButtonColor(p.accent); }
+    setTextColor(p.text); setCardColor(p.card); setBgColor(p.bg);
+    // infer theme
+    const darkLum = luminance(p.bg); if(darkLum < 0.25) setTheme('dark'); else setTheme('light');
+  }
+
+  // Auto-fix for contrast issues
+  function tweakColor(hex:string, targetBg:string, minRatio:number):string{
+    let h = hex;
+    let tries = 0;
+    function clamp(v:number){ return Math.min(255, Math.max(0,v)); }
+    while(contrastRatio(h, targetBg) < minRatio && tries < 24){
+      const {r,g,b}=hexToRgb(h); const bgLum = luminance(targetBg); const fgLum = luminance(h);
+      const factor = bgLum > fgLum ? 0.9 : 1.1; // move away from bg
+      const nr = clamp(Math.round(r*factor)); const ng = clamp(Math.round(g*factor)); const nb = clamp(Math.round(b*factor));
+      h = '#'+[nr,ng,nb].map(x=>x.toString(16).padStart(2,'0')).join('');
+      tries++;
+    }
+    return h;
+  }
+
+  function autoFix(){
+    const newText = contrastRatio(textColor, bgColor) < 4.5 ? tweakColor(textColor, bgColor, 4.5) : textColor;
+    const newAccent = contrastRatio(accent, bgColor) < 4.5 ? tweakColor(accent, bgColor, 4.5) : accent;
+    const newButton = contrastRatio(buttonColor, bgColor) < 4.5 ? tweakColor(buttonColor, bgColor, 4.5) : buttonColor;
+    setTextColor(newText); setAccent(newAccent); if(linkAccentButton){ setButtonColor(newAccent);} else { setButtonColor(newButton);} }
+
+  const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
+  const [compactContrast, setCompactContrast] = useState<boolean>(true);
+
+  const contrastTextOnBg = contrastRatio(textColor, bgColor);
+  const contrastTextOnCard = contrastRatio(textColor, cardColor);
+  const contrastAccentOnBg = contrastRatio(accent, bgColor);
+  const contrastAccentOnCard = contrastRatio(accent, cardColor);
+  const contrastButtonOnBg = contrastRatio(buttonColor, bgColor);
+
+  // Auto link accent -> button color if enabled
+  useEffect(()=>{ if(linkAccentButton) setButtonColor(accent); }, [accent, linkAccentButton]);
+
+  // Suggest safer colors in dark mode if poor contrast
+  function suggestForDark(hex: string){
+    if(theme!=='dark') return null;
+    const lum=luminance(hex);
+    if(lum>0.6) return '#1e40af'; // too light -> deeper blue
+    if(lum<0.08) return '#3b82f6'; // too dark -> mid blue
+    return null;
+  }
+  const accentSuggestion = suggestForDark(accent);
+  const textSuggestion = theme==='dark' && (contrastTextOnBg<4.5? '#f1f5f9': null);
+
+  // Load org from localStorage on client side only
+  useEffect(() => {
+    const orgId = localStorage.getItem("orgId") || process.env.NEXT_PUBLIC_DEFAULT_ORG_ID || "";
+    setOrg(orgId);
+  }, []);
+
   useEffect(() => {
     if (!org) return;
     (async () => {
       try {
         const headers: Record<string, string> = {};
-        if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
+        if (typeof window !== "undefined") { 
+          const t = localStorage.getItem("token"); 
+          if (t) headers["Authorization"] = `Bearer ${t}`; 
+        }
         const r = await fetch(`${B()}/api/bots/${encodeURIComponent(botId)}/embed?org_id=${encodeURIComponent(org)}&widget=${encodeURIComponent(widget)}`, { headers });
         if (!r.ok) throw new Error(`http${r.status}`);
         const d = await r.json();
@@ -51,51 +157,17 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
           .replace(/U=\'https?:\\\/\\\/[^']+\\\/api\\\/chat\\\/stream\\\/${botId}\'/, `U='${base}/api/chat/stream/${botId}'`);
         setSnippet(fixed);
       } catch {
-        const base = B().replace(/\/$/, "");
-        let fallback = "";
-        if (widget === "cdn") {
-          fallback = `<script>window.chatbotConfig={botId:'${botId}',orgId:'${org}',apiBase:'${base}',botKey:''};</script><script src='${base}/api/widget.js' async></script>`;
-        } else if (widget === "bubble") {
-          fallback = (
-            "<script>"+
-            "(function(){"+
-            `var B='${botId}',O='${org}',K='',U='${base}/api/chat/stream/${botId}';`+
-            "function s(m,cb){var h={'Content-Type':'application/json','X-Bot-Key':K};var b=JSON.stringify({message:m,org_id:O});fetch(U,{method:'POST',headers:h,body:b}).then(function(r){var rd=r.body.getReader();var d=new TextDecoder();function n(){rd.read().then(function(x){if(x.done){cb(null,true);return;}var t=d.decode(x.value);t.split('\\n\\n').forEach(function(l){if(l.indexOf('data: ')==0){cb(l.slice(6),false);}});n();});}n();});}"+
-            "function ui(){var w=document.createElement('div');w.style.position='fixed';w.style.bottom='24px';w.style.right='24px';w.style.zIndex='99999';var b=document.createElement('button');b.textContent='Chat';b.style.padding='12px 16px';b.style.borderRadius='999px';b.style.border='none';b.style.background='#0ea5e9';b.style.color='#fff';var p=document.createElement('div');p.style.position='fixed';p.style.bottom='96px';p.style.right='24px';p.style.width='min(360px, calc(100vw - 48px))';p.style.maxHeight='70vh';p.style.display='none';p.style.boxShadow='0 8px 24px rgba(0,0,0,0.15)';p.style.borderRadius='12px';p.style.background='#fff';p.style.color='#111';p.style.padding='12px';var a=document.createElement('div');a.style.whiteSpace='pre-wrap';a.style.fontFamily='system-ui, sans-serif';a.style.fontSize='14px';a.style.lineHeight='1.4';var i=document.createElement('input');i.type='text';i.placeholder='Ask a question';i.style.width='100%';i.style.marginTop='8px';i.style.padding='10px';i.style.border='1px solid #e5e7eb';i.style.borderRadius='8px';var go=document.createElement('button');go.textContent='Send';go.style.marginTop='8px';go.style.padding='8px 12px';go.style.borderRadius='8px';go.style.border='none';go.style.background='#0ea5e9';go.style.color='#fff';p.appendChild(a);p.appendChild(i);p.appendChild(go);w.appendChild(b);document.body.appendChild(w);document.body.appendChild(p);b.onclick=function(){p.style.display=p.style.display==='none'?'block':'none';};go.onclick=function(){a.textContent='';var q=i.value;i.value='';s(q,function(tok,end){if(end){return;}a.textContent+=tok;});};}ui();"+
-            "})();"+
-            "</script>"
-          );
-        } else if (widget === "inline") {
-          fallback = (
-            "<div id=\"bot-inline\"></div>"+
-            "<script>"+
-            "(function(){"+
-            `var O='${org}',K='',U='${base}/api/chat/stream/${botId}';`+
-            "function s(m,cb){var h={'Content-Type':'application/json','X-Bot-Key':K};var b=JSON.stringify({message:m,org_id:O});fetch(U,{method:'POST',headers:h,body:b}).then(function(r){var rd=r.body.getReader();var d=new TextDecoder();function n(){rd.read().then(function(x){if(x.done){cb(null,true);return;}var t=d.decode(x.value);t.split('\\n\\n').forEach(function(l){if(l.indexOf('data: ')==0){cb(l.slice(6),false);}});n();});}n();});}"+
-            "var c=document.getElementById('bot-inline');var a=document.createElement('div');a.style.whiteSpace='pre-wrap';a.style.fontFamily='system-ui, sans-serif';a.style.fontSize='14px';var i=document.createElement('input');i.type='text';i.placeholder='Ask a question';i.style.width='100%';var go=document.createElement('button');go.textContent='Send';c.appendChild(a);c.appendChild(i);c.appendChild(go);go.onclick=function(){a.textContent='';var q=i.value;i.value='';s(q,function(tok,end){if(end){return;}a.textContent+=tok;});};"+
-            "})();"+
-            "</script>"
-          );
-        } else if (widget === "iframe") {
-          const srcdoc = (
-            "<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"></head><body>"+
-            "<div id=\"app\" style=\"font-family:sans-serif;font-size:14px\"></div>"+
-            "<script>"+
-            `var O='${org}',K='',U='${base}/api/chat/stream/${botId}';`+
-            "function s(m,cb){var h={'Content-Type':'application/json','X-Bot-Key':K};var b=JSON.stringify({message:m,org_id:O});fetch(U,{method:'POST',headers:h,body:b}).then(function(r){var rd=r.body.getReader();var d=new TextDecoder();function n(){rd.read().then(function(x){if(x.done){cb(null,true);return;}var t=d.decode(x.value);t.split('\\n\\n').forEach(function(l){if(l.indexOf('data: ')==0){cb(l.slice(6),false);}});n();});}n();});}"+
-            "var a=document.getElementById('app');var i=document.createElement('input');i.type='text';i.placeholder='Ask';var go=document.createElement('button');go.textContent='Send';a.appendChild(i);a.appendChild(go);var o=document.createElement('pre');o.style.whiteSpace='pre-wrap';a.appendChild(o);go.onclick=function(){o.textContent='';var q=i.value;i.value='';s(q,function(tok,end){if(end){return;}o.textContent+=tok;});};"+
-            "</script>"+
-            "</body></html>"
-          );
-          fallback = `<iframe srcdoc="${srcdoc.replace(/"/g, '&quot;')}" style="width:100%;min-height:300px;border:1px solid #e5e7eb;border-radius:8px"></iframe>`;
-        } else {
-          fallback = `<script>window.chatbotConfig={botId:'${botId}',orgId:'${org}',apiBase:'${base}',botKey:''};</script><script src='${base}/api/widget.js' async></script>`;
-        }
-        setSnippet(fallback);
+        // Fallback for when API is not available
+        setSnippet(`<script>window.chatbotConfig={botId:'${botId}',orgId:'${org}',apiBase:'${B().replace(/\/$/, "")}',botKey:''};</script><script src='${B().replace(/\/$/, "")}/api/widget.js' async></script>`);
       }
+
+      // Fetch public key
       try {
         const headers2: Record<string, string> = {};
-        if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers2["Authorization"] = `Bearer ${t}`; }
+        if (typeof window !== "undefined") { 
+          const t = localStorage.getItem("token"); 
+          if (t) headers2["Authorization"] = `Bearer ${t}`; 
+        }
         const rk = await fetch(`${B()}/api/bots/${encodeURIComponent(botId)}/key?org_id=${encodeURIComponent(org)}`, { headers: headers2 });
         if (rk.ok) {
           const kj = await rk.json();
@@ -105,6 +177,27 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
       } catch {}
     })();
   }, [org, botId, widget]);
+
+  // Fetch backend-configured greeting (welcome_message) for preview
+  useEffect(() => {
+    if (!org) return;
+    (async () => {
+      try {
+        const headers: Record<string, string> = {};
+        if (typeof window !== "undefined") {
+          const t = localStorage.getItem("token");
+          if (t) headers["Authorization"] = `Bearer ${t}`;
+        }
+        const r = await fetch(`${B()}/api/bots/${encodeURIComponent(botId)}/config?org_id=${encodeURIComponent(org)}`, { headers });
+        if (r.ok) {
+          const d = await r.json();
+          setGreeting(d.welcome_message || "");
+        }
+      } catch {}
+    })();
+  }, [org, botId]);
+
+  // Copy to clipboard function
   async function copy(text: string) {
     try {
       if (typeof navigator !== "undefined" && navigator.clipboard && navigator.clipboard.writeText) {
@@ -124,371 +217,1162 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
       setTimeout(() => setCopied(false), 1500);
     } catch {}
   }
-  function injectKey(s: string, k: string): string {
-    let t = s;
-    try {
-      t = t.replace(/botKey\s*:\s*['"][^'"]*['"]/g, `botKey:'${k}'`);
-      t = t.replace(/var\s+K\s*=\s*['"][^'"]*['"]/g, `var K='${k}'`);
-      if (!/botKey\s*:\s*['"]/i.test(t) && /window\.chatbotConfig\s*=\s*\{/.test(t)) {
-        t = t.replace(/window\.chatbotConfig\s*=\s*\{/, `window.chatbotConfig={botKey:'${k}',`);
-      }
-    } catch {}
-    return t;
-  }
-  const finalSnippet = (() => {
-    const s = snippet || "";
-    if (includeKey && pubKey) return injectKey(s, pubKey);
-    return s;
-  })();
-  function withComments(s: string): string {
-    const tt = (s || "").trim();
-    if (!tt) return "";
-    const isHtmlLike = /<\/?[a-z]/i.test(tt);
-    const lines = [
-      "Paste into your site and adjust placement.",
-      "Include your public bot key as botKey if required.",
-    ];
-    if (isHtmlLike) {
-      return [`<!-- ${lines[0]} -->`, `<!-- ${lines[1]} -->`, tt].join("\n");
-    }
-    return [`// ${lines[0]}`, `// ${lines[1]}`, tt].join("\n");
-  }
-  function buildTemplateCode(id: string): string {
+
+  // Generate code for different templates
+  function generateCode(templateId: string): string {
     const base = B().replace(/\/$/, "");
     const k = includeKey && pubKey ? pubKey : "";
-    if (id === "bubble-blue") {
-      const kcfg = includeKey && pubKey ? `,botKey:'${pubKey}'` : '';
+    
+    if (templateId === "bubble-blue" || templateId === "bubble-dark") {
+      const isDark = templateId === "bubble-dark";
       return [
-        "<!-- Bubble widget: paste near end of body -->",
-        `<script>window.chatbotConfig={botId:'${botId}',orgId:'${org}',apiBase:'${base}',mode:'bubble',theme:'${theme}',position:'${position}',accent:'${accent}',text:'${textColor}',card:'${cardColor}',bg:'${bgColor}'${botName?`,botName:'${botName.replace(/'/g,"\\'")}'`:''}${icon?`,icon:'${icon.replace(/'/g,"\\'")}'`:''}${kcfg},branding:{text:'${BRAND_TEXT}',link:'${BRAND_LINK}'}};</script>`,
-        `<script src='${base}/api/widget.js' async></script>`
+        `<!-- ${isDark ? "Dark bubble" : "Bubble"} chat widget (self-contained) -->`,
+        `<div id="chatbot-bubble"></div>`,
+        `<style>`,
+        `#chatbot-bubble{position:fixed;bottom:24px;${position}:24px;z-index:9999;font-family:system-ui,sans-serif}`,
+        `#chatbot-btn{width:56px;height:56px;border-radius:${radius}px;background:${buttonColor};color:#fff;border:none;font-size:24px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.15);transition:transform 0.2s}`,
+        `#chatbot-btn:hover{transform:scale(1.05)}`,
+        `#chatbot-panel{display:none;position:absolute;bottom:70px;${position}:0;width:350px;height:500px;background:${cardColor};border:1px solid ${isDark ? '#374151' : '#e5e7eb'};border-radius:${radius}px;box-shadow:0 8px 24px rgba(0,0,0,0.2);flex-direction:column;overflow:hidden}`,
+        `#chatbot-panel.open{display:flex}`,
+        `#chatbot-header{display:flex;align-items:center;justify-content:space-between;padding:12px;background:${buttonColor};color:#fff;border-bottom:1px solid ${isDark ? '#374151' : '#e5e7eb'}}`,
+        `#chatbot-close{background:transparent;border:none;color:#fff;font-size:24px;cursor:pointer;padding:0;width:32px;height:32px;border-radius:50%;transition:background 0.2s}`,
+        `#chatbot-close:hover{background:rgba(255,255,255,0.2)}`,
+        `#chatbot-messages{flex:1;padding:12px;overflow-y:auto;background:${bgColor}}`,
+        `#chatbot-messages::-webkit-scrollbar{width:6px}`,
+        `#chatbot-messages::-webkit-scrollbar-thumb{background:${isDark ? '#4b5563' : '#d1d5db'};border-radius:3px}`,
+        `.chat-msg{margin-bottom:8px;padding:10px 12px;border-radius:${Math.max(8, radius-4)}px;max-width:80%;word-wrap:break-word;font-size:14px;line-height:1.4}`,
+        `.chat-msg.user{background:${accent};color:#fff;margin-left:auto;border-bottom-right-radius:4px}`,
+        `.chat-msg.bot{background:${isDark ? '#374151' : '#f3f4f6'};color:${textColor};margin-right:auto;border-bottom-left-radius:4px}`,
+        `.typing{display:flex;gap:4px;padding:10px}.typing div{width:8px;height:8px;background:${textColor};border-radius:50%;animation:bounce 1.4s infinite ease-in-out}`,
+        `.typing div:nth-child(1){animation-delay:-0.32s}.typing div:nth-child(2){animation-delay:-0.16s}`,
+        `@keyframes bounce{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}`,
+        `#chatbot-input-area{display:flex;gap:8px;padding:12px;border-top:1px solid ${isDark ? '#374151' : '#e5e7eb'};background:${cardColor}}`,
+        `#chatbot-input{flex:1;padding:10px;border:1px solid ${isDark ? '#374151' : '#e5e7eb'};border-radius:${Math.max(6, radius-6)}px;background:${bgColor};color:${textColor};font-size:14px;outline:none}`,
+        `#chatbot-send{padding:10px 16px;background:${buttonColor};color:#fff;border:none;border-radius:${Math.max(6, radius-6)}px;font-weight:600;cursor:pointer;font-size:14px}`,
+        `#chatbot-send:disabled{opacity:0.5;cursor:not-allowed}`,
+        `#chatbot-send:not(:disabled):hover{opacity:0.9}`,
+        `</style>`,
+        `<script>`,
+        `(function(){`,
+        `var cfg={botId:'${botId}',orgId:'${org}',apiBase:'${base}',botKey:'${k}',botName:'${botName.replace(/'/g, "\\'")}',icon:'${icon.replace(/'/g, "\\'")}',greeting:'${greeting.replace(/'/g, "\\'")}'};`,
+        `var root=document.getElementById('chatbot-bubble');`,
+        `var btn=document.createElement('button');btn.id='chatbot-btn';btn.innerHTML=cfg.icon;`,
+        `var panel=document.createElement('div');panel.id='chatbot-panel';`,
+        `var header=document.createElement('div');header.id='chatbot-header';`,
+        `header.innerHTML='<div style="display:flex;align-items:center;gap:8px"><div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center">'+cfg.icon+'</div><span style="font-weight:600">'+cfg.botName+'</span></div><button id="chatbot-close">×</button>';`,
+        `var msgs=document.createElement('div');msgs.id='chatbot-messages';`,
+        `msgs.innerHTML='<div class="chat-msg bot">'+(cfg.greeting||'')+'</div>';`,
+        `var inputArea=document.createElement('div');inputArea.id='chatbot-input-area';`,
+        `inputArea.innerHTML='<input id="chatbot-input" type="text" placeholder="Ask a question..."><button id="chatbot-send">Send</button>';`,
+        `panel.appendChild(header);panel.appendChild(msgs);panel.appendChild(inputArea);`,
+        `root.appendChild(btn);root.appendChild(panel);`,
+        `var input=document.getElementById('chatbot-input');`,
+        `var sendBtn=document.getElementById('chatbot-send');`,
+        `var isTyping=false;`,
+        `btn.onclick=function(){panel.classList.toggle('open')};`,
+        `document.getElementById('chatbot-close').onclick=function(){panel.classList.remove('open')};`,
+        `function addMsg(txt,isUser){var m=document.createElement('div');m.className='chat-msg '+(isUser?'user':'bot');m.textContent=txt;msgs.appendChild(m);msgs.scrollTop=msgs.scrollHeight;return m}`,
+        `function showTyping(){var t=document.createElement('div');t.className='chat-msg bot typing';t.innerHTML='<div></div><div></div><div></div>';msgs.appendChild(t);msgs.scrollTop=msgs.scrollHeight;return t}`,
+        `function send(){var q=input.value.trim();if(!q||isTyping)return;input.value='';addMsg(q,true);isTyping=true;sendBtn.disabled=true;var typing=showTyping();`,
+        `var h={'Content-Type':'application/json'};if(cfg.botKey)h['X-Bot-Key']=cfg.botKey;`,
+        `fetch(cfg.apiBase+'/api/chat/stream/'+cfg.botId,{method:'POST',headers:h,body:JSON.stringify({message:q,org_id:cfg.orgId})})`,
+        `.then(function(r){if(!r.ok)throw new Error('Failed');var reader=r.body.getReader();var decoder=new TextDecoder();var botMsg='';`,
+        `typing.remove();var msgEl=addMsg('',false);`,
+        `function read(){reader.read().then(function(x){if(x.done){isTyping=false;sendBtn.disabled=false;return}`,
+        `var chunk=decoder.decode(x.value);chunk.split('\\n\\n').forEach(function(line){if(line.startsWith('data: ')){botMsg+=line.slice(6);msgEl.textContent=botMsg}});read()})}read()})`,
+        `.catch(function(){typing.remove();addMsg('Sorry, something went wrong. Please try again.',false);isTyping=false;sendBtn.disabled=false})}`,
+        `sendBtn.onclick=send;input.onkeydown=function(e){if(e.key==='Enter')send()}`,
+        `})();`,
+        `</script>`
       ].join("\n");
     }
-    if (id === "bubble-dark") {
-      const kcfg = includeKey && pubKey ? `,botKey:'${pubKey}'` : '';
-      return [
-        "<!-- Bubble widget (dark): paste near end of body -->",
-        `<script>window.chatbotConfig={botId:'${botId}',orgId:'${org}',apiBase:'${base}',mode:'bubble',theme:'${theme}',position:'${position}',accent:'${accent}',text:'${textColor}',card:'${cardColor}',bg:'${bgColor}'${botName?`,botName:'${botName.replace(/'/g,"\\'")}'`:''}${icon?`,icon:'${icon.replace(/'/g,"\\'")}'`:''}${kcfg},branding:{text:'${BRAND_TEXT}',link:'${BRAND_LINK}'}};</script>`,
-        `<script src='${base}/api/widget.js' async></script>`
-      ].join("\n");
-    }
-    if (id === "iframe-minimal") {
+
+    if (templateId === "iframe-minimal") {
       return [
         "<!-- Minimal iframe embed -->",
-        `<iframe srcdoc="<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><style>body{font-family:sans-serif;font-size:14px;margin:0}.wrap{padding:10px}.msgs{padding:10px;height:36vh;overflow:auto;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;margin-bottom:8px}.m{max-width:80%;margin-bottom:8px;padding:8px 10px;border-radius:12px;white-space:pre-wrap}.m.u{background:#0ea5e9;color:#fff;margin-left:auto;border-bottom-right-radius:4px}.m.b{background:#e2e8f0;color:#0f172a;margin-right:auto;border-bottom-left-radius:4px}.inp{display:flex;gap:8px}.inp input{flex:1;padding:10px;border:1px solid #e5e7eb;border-radius:10px}.inp button{padding:10px 14px;border:none;border-radius:10px;background:#111827;color:#fff;font-weight:600;cursor:pointer}</style></head><body><div class='wrap'><div class='msgs'></div><div class='inp'><input type='text' placeholder='Ask'><button>Send</button></div></div><script>(function(){var O='${org}',K='${k}',U='${base}/api/chat/stream/${botId}';function s(m,cb){var h={'Content-Type':'application/json'};if(K){h['X-Bot-Key']=K;}var b=JSON.stringify({message:m,org_id:O});fetch(U,{method:'POST',headers:h,body:b}).then(function(r){var rd=r.body.getReader();var d=new TextDecoder();function n(){rd.read().then(function(x){if(x.done){cb(null,true);return;}var t=d.decode(x.value);t.split(\\"\\n\\n\\").forEach(function(l){if(l.indexOf('data: ')==0){cb(l.slice(6),false);}});n();});}n();});}var msgs=document.querySelector('.msgs');var i=document.querySelector('.inp input');var go=document.querySelector('.inp button');function addU(m){var e=document.createElement('div');e.className='m u';e.textContent=m;msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;}function addB(){var e=document.createElement('div');e.className='m b';msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;return e;}function send(){var q=i.value;if(!q.trim()){return;}i.value='';addU(q);var bot=addB();s(q,function(tok,end){if(end){return;}bot.textContent+=tok;});}go.onclick=send;i.addEventListener('keydown',function(ev){if(ev.key==='Enter'){send();}})})();</script></body></html>" style="width:100%;min-height:280px;border:1px solid #e5e7eb;border-radius:8px"></iframe>`
+        `<iframe srcdoc="<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><style>body{font-family:sans-serif;font-size:14px;margin:0;background:${bgColor}}.wrap{padding:10px}.msgs{padding:10px;height:36vh;overflow:auto;border:1px solid #e5e7eb;border-radius:${radius}px;background:#f9fafb;margin-bottom:8px}.m{max-width:80%;margin-bottom:8px;padding:8px 10px;border-radius:${Math.max(6, radius-4)}px;white-space:pre-wrap}.m.u{background:${accent};color:#fff;margin-left:auto;border-bottom-right-radius:4px}.m.b{background:#e2e8f0;color:${textColor};margin-right:auto;border-bottom-left-radius:4px}.inp{display:flex;gap:8px}.inp input{flex:1;padding:10px;border:1px solid #e5e7eb;border-radius:${Math.max(6, radius-4)}px}.inp button{padding:10px 14px;border:none;border-radius:${Math.max(6, radius-4)}px;background:${buttonColor};color:#fff;font-weight:600;cursor:pointer}</style></head><body><div class='wrap'><div class='msgs'><div class='m b'>${greeting.replace(/'/g,"&#39;")}</div></div><div class='inp'><input type='text' placeholder='Ask'><button>Send</button></div></div><script>(function(){var O='${org}',K='${k}',U='${base}/api/chat/stream/${botId}';function s(m,cb){var h={'Content-Type':'application/json'};if(K){h['X-Bot-Key']=K;}var b=JSON.stringify({message:m,org_id:O});fetch(U,{method:'POST',headers:h,body:b}).then(function(r){var rd=r.body.getReader();var d=new TextDecoder();function n(){rd.read().then(function(x){if(x.done){cb(null,true);return;}var t=d.decode(x.value);t.split(\"\\n\\n\").forEach(function(l){if(l.indexOf('data: ')==0){cb(l.slice(6),false);}});n();});}n();});}var msgs=document.querySelector('.msgs');var i=document.querySelector('.inp input');var go=document.querySelector('.inp button');function addU(m){var e=document.createElement('div');e.className='m u';e.textContent=m;msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;}function addB(){var e=document.createElement('div');e.className='m b';msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;return e;}function send(){var q=i.value;if(!q.trim()){return;}i.value='';addU(q);var bot=addB();s(q,function(tok,end){if(end){return;}bot.textContent+=tok;});}go.onclick=send;i.addEventListener('keydown',function(ev){if(ev.key==='Enter'){send();}})})();</script></body></html>" style="width:100%;min-height:280px;border:1px solid #e5e7eb;border-radius:${radius}px"></iframe>`
       ].join("\n");
     }
-    if (id === "cdn-default") {
-      const base2 = B().replace(/\/$/, "");
+
+    if (templateId === "cdn-default") {
       const kcfg = includeKey && pubKey ? `,botKey:'${pubKey}'` : '';
       return [
         "<!-- Default CDN widget: paste near end of body -->",
-        `<script>window.chatbotConfig={botId:'${botId}',orgId:'${org}',apiBase:'${base2}'${kcfg}${botName?`,botName:'${botName.replace(/'/g,"\\'")}'`:''}${icon?`,icon:'${icon.replace(/'/g,"\\'")}'`:''}};</script>`,
-        `<script src='${base2}/api/widget.js' async></script>`
+        `<script>window.chatbotConfig={botId:'${botId}',orgId:'${org}',apiBase:'${base}',buttonColor:'${buttonColor}',accent:'${accent}',text:'${textColor}',card:'${cardColor}',bg:'${bgColor}',radius:${radius}${kcfg}${botName?`,botName:'${botName.replace(/'/g,"\\'")}'`:''}${icon?`,icon:'${icon.replace(/'/g,"\\'")}'`:''}};</script>`,
+        `<script src='${base}/api/widget.js' async></script>`
       ].join("\n");
     }
+
+    if (templateId === "inline-card") {
+      return [
+        "<!-- Inline card widget -->",
+        `<div id="bot-inline-card"></div>`,
+        `<script>`,
+        `(function(){`,
+        `var O='${org}',K='${k}',U='${base}/api/chat/stream/${botId}',G='${greeting.replace(/'/g,"\\'")}';`,
+        `function s(m,cb){var h={'Content-Type':'application/json'};if(K){h['X-Bot-Key']=K;}var b=JSON.stringify({message:m,org_id:O});fetch(U,{method:'POST',headers:h,body:b}).then(function(r){var rd=r.body.getReader();var d=new TextDecoder();function n(){rd.read().then(function(x){if(x.done){cb(null,true);return;}var t=d.decode(x.value);t.split('\\\\n\\\\n').forEach(function(l){if(l.indexOf('data: ')==0){cb(l.slice(6),false);}});n();});}n();});}`,
+        `var c=document.getElementById('bot-inline-card');c.style.cssText='max-width:560px;margin:24px auto;border:1px solid #e5e7eb;border-radius:${radius}px;box-shadow:0 12px 28px rgba(0,0,0,0.08);overflow:hidden;background:#fff';`,
+        `var h=document.createElement('div');h.style.cssText='display:flex;align-items:center;gap:8px;padding:12px;background:${buttonColor};color:#fff';h.innerHTML='<div style="width:24px;height:24px;border-radius:999px;background:#fff;color:${buttonColor};display:flex;align-items:center;justify-content:center;font-size:12px">${icon}</div><div>${botName.replace(/'/g,"\\'")}</div>';`,
+        `var msgs=document.createElement('div');msgs.style.cssText='padding:12px;height:40vh;overflow:auto;background:${bgColor}';`,
+        `if(G){var gm=document.createElement('div');gm.style.cssText='max-width:80%;margin-bottom:8px;padding:8px 10px;border-radius:${Math.max(6, radius-4)}px;font-size:14px;line-height:1.5;white-space:pre-wrap;background:#e2e8f0;color:${textColor};margin-right:auto;border-bottom-left-radius:4px';gm.textContent=G;msgs.appendChild(gm);}`,
+        `var inp=document.createElement('div');inp.style.cssText='display:flex;gap:8px;padding:12px;border-top:1px solid #e5e7eb;background:#fff';`,
+        `var i=document.createElement('input');i.style.cssText='flex:1;padding:10px;border:1px solid #e5e7eb;border-radius:${Math.max(6, radius-4)}px;font-size:14px';i.placeholder='Ask a question';`,
+        `var go=document.createElement('button');go.style.cssText='padding:10px 14px;border:none;border-radius:${Math.max(6, radius-4)}px;background:${buttonColor};color:#fff;font-weight:600;cursor:pointer';go.textContent='Send';`,
+        `inp.appendChild(i);inp.appendChild(go);c.appendChild(h);c.appendChild(msgs);c.appendChild(inp);`,
+        `function addU(m){var e=document.createElement('div');e.style.cssText='max-width:80%;margin-bottom:8px;padding:8px 10px;border-radius:${Math.max(6, radius-4)}px;font-size:14px;line-height:1.5;white-space:pre-wrap;background:${accent};color:#fff;margin-left:auto;border-bottom-right-radius:4px';e.textContent=m;msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;}`,
+        `function addB(){var e=document.createElement('div');e.style.cssText='max-width:80%;margin-bottom:8px;padding:8px 10px;border-radius:${Math.max(6, radius-4)}px;font-size:14px;line-height:1.5;white-space:pre-wrap;background:#e2e8f0;color:${textColor};margin-right:auto;border-bottom-left-radius:4px';msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;return e;}`,
+        `function send(){var q=i.value;if(!q.trim()){return;}i.value='';addU(q);var bot=addB();s(q,function(tok,end){if(end){return;}bot.textContent+=tok;});}`,
+        `go.onclick=send;i.addEventListener('keydown',function(ev){if(ev.key==='Enter'){send();}});`,
+        `})();`,
+        `</script>`
+      ].join("\n");
+    }
+
+    if (templateId === "fullscreen") {
+      return [
+        "<!-- Fullscreen chat widget -->",
+        `<div id="bot-fullscreen"></div>`,
+        `<script>`,
+        `(function(){`,
+        `var O='${org}',K='${k}',U='${base}/api/chat/stream/${botId}',G='${greeting.replace(/'/g,"\\'")}';`,
+        `function s(m,cb){var h={'Content-Type':'application/json'};if(K){h['X-Bot-Key']=K;}var b=JSON.stringify({message:m,org_id:O});fetch(U,{method:'POST',headers:h,body:b}).then(function(r){var rd=r.body.getReader();var d=new TextDecoder();function n(){rd.read().then(function(x){if(x.done){cb(null,true);return;}var t=d.decode(x.value);t.split('\\\\n\\\\n').forEach(function(l){if(l.indexOf('data: ')==0){cb(l.slice(6),false);}});n();});}n();});}`,
+        `var c=document.getElementById('bot-fullscreen');c.style.cssText='width:100%;height:100vh;display:flex;flex-direction:column;background:${bgColor}';`,
+        `var h=document.createElement('div');h.style.cssText='display:flex;align-items:center;gap:8px;padding:16px;background:${buttonColor};color:#fff;box-shadow:0 2px 4px rgba(0,0,0,0.1)';h.innerHTML='<div style="width:32px;height:32px;border-radius:999px;background:#fff;color:${buttonColor};display:flex;align-items:center;justify-content:center;font-size:16px">${icon}</div><div style="font-size:18px;font-weight:600">${botName}</div>';`,
+        `var msgs=document.createElement('div');msgs.style.cssText='flex:1;padding:16px;overflow:auto;background:${bgColor}';`,
+        `if(G){var gm=document.createElement('div');gm.style.cssText='max-width:70%;margin-bottom:12px;padding:12px 16px;border-radius:${radius}px;font-size:16px;line-height:1.5;white-space:pre-wrap;background:#f1f5f9;color:${textColor};margin-right:auto;border-bottom-left-radius:4px';gm.textContent=G;msgs.appendChild(gm);}`,
+        `var inp=document.createElement('div');inp.style.cssText='display:flex;gap:12px;padding:16px;border-top:1px solid #e5e7eb;background:#fff';`,
+        `var i=document.createElement('input');i.style.cssText='flex:1;padding:12px;border:1px solid #e5e7eb;border-radius:${Math.max(8, radius-4)}px;font-size:16px';i.placeholder='Ask a question...';`,
+        `var go=document.createElement('button');go.style.cssText='padding:12px 24px;border:none;border-radius:${Math.max(8, radius-4)}px;background:${buttonColor};color:#fff;font-weight:600;cursor:pointer;font-size:16px';go.textContent='Send';`,
+        `inp.appendChild(i);inp.appendChild(go);c.appendChild(h);c.appendChild(msgs);c.appendChild(inp);`,
+        `function addU(m){var e=document.createElement('div');e.style.cssText='max-width:70%;margin-bottom:12px;padding:12px 16px;border-radius:${radius}px;font-size:16px;line-height:1.5;white-space:pre-wrap;background:${accent};color:#fff;margin-left:auto;border-bottom-right-radius:4px';e.textContent=m;msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;}`,
+        `function addB(){var e=document.createElement('div');e.style.cssText='max-width:70%;margin-bottom:12px;padding:12px 16px;border-radius:${radius}px;font-size:16px;line-height:1.5;white-space:pre-wrap;background:#f1f5f9;color:${textColor};margin-right:auto;border-bottom-left-radius:4px';msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;return e;}`,
+        `function send(){var q=i.value;if(!q.trim()){return;}i.value='';addU(q);var bot=addB();s(q,function(tok,end){if(end){return;}bot.textContent+=tok;});}`,
+        `go.onclick=send;i.addEventListener('keydown',function(ev){if(ev.key==='Enter'){send();}});`,
+        `})();`,
+        `</script>`
+      ].join("\n");
+    }
+
     return "";
   }
-  const displayCode = tpl ? buildTemplateCode(tpl) : withComments(finalSnippet);
-  function buildTemplateSnippet(id: string): string {
-    const base = B().replace(/\/$/, "");
-    const k = includeKey && pubKey ? pubKey : "";
-    if ((id === "bubble-blue" || id === "bubble-dark")) {
-      const conf: Record<string, unknown> = {
-        botId: botId,
-        orgId: org,
-        apiBase: base,
-        mode: 'bubble',
-        theme,
-        position,
-        accent,
-        text: textColor,
-        card: cardColor,
-        bg: bgColor,
-        botName,
-        icon,
-      };
-      if (includeKey && pubKey) conf.botKey = pubKey;
-      conf.branding = { text: BRAND_TEXT, link: BRAND_LINK };
-      const json = JSON.stringify(conf).replace(/</g, "\\u003c");
-      const srcdoc = [
-        "<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"></head><body>",
-        '<div id=\"cb-preview-placeholder\" style=\"padding:8px;font-family:system-ui,sans-serif;font-size:12px;color:#6b7280\">Loading preview...</div>',
-        '<script>window.chatbotConfig='+json+';<\\/script>',
-        '<script>setTimeout(function(){var ph=document.getElementById(\"cb-preview-placeholder\");if(ph){ph.textContent=\"Preview not loaded. Check backend URL and org id.\";}},1500);<\\/script>',
-        '<script src="'+base+'/api/widget.js" async><\\/script>',
-        '<script>(function(){setTimeout(function(){var has=document.querySelector(\".cb-btn,.cb-panel\");if(has) return;var C=window.chatbotConfig||{};var ACC=C.accent||\"#2563eb\";var wrap=document.createElement(\"div\");wrap.style.position=\"fixed\";wrap.style.bottom=\"24px\";wrap.style.right=\"24px\";wrap.style.zIndex=\"99999\";var btn=document.createElement(\"button\");btn.textContent=C.icon||\"💬\";btn.style.padding=\"12px 16px\";btn.style.borderRadius=\"999px\";btn.style.border=\"none\";btn.style.background=ACC;btn.style.color=\"#fff\";var panel=document.createElement(\"div\");panel.style.position=\"fixed\";panel.style.bottom=\"96px\";panel.style.right=\"24px\";panel.style.width=\"min(360px, calc(100vw - 48px))\";panel.style.maxHeight=\"70vh\";panel.style.display=\"block\";panel.style.boxShadow=\"0 8px 24px rgba(0,0,0,0.15)\";panel.style.borderRadius=\"12px\";panel.style.background=\"#fff\";panel.style.color=\"#111\";panel.style.padding=\"12px\";var msg=document.createElement(\"div\");msg.textContent=\"Preview fallback (widget not loaded)\";msg.style.fontFamily=\"system-ui,sans-serif\";msg.style.fontSize=\"12px\";msg.style.color=\"#6b7280\";panel.appendChild(msg);wrap.appendChild(btn);document.body.appendChild(wrap);document.body.appendChild(panel);},1200);})();<\\/script>',
-        '</body></html>'
-      ].join('');
-      return "<iframe sandbox=\"allow-scripts allow-same-origin\" srcdoc=\""+srcdoc.replace(/\"/g,'&quot;')+"\" style=\"width:100%;min-height:540px;border:1px solid #e5e7eb;border-radius:8px\"></iframe>";
-    }
-    if (id === "bubble-blue") {
-      const srcdoc = "<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><style>.cb-wrap{position:fixed;bottom:24px;right:24px;z-index:99999}.cb-btn{padding:12px 16px;border-radius:999px;border:none;background:#0ea5e9;color:#fff;box-shadow:0 10px 20px rgba(14,165,233,0.35);cursor:pointer}.cb-panel{position:fixed;bottom:96px;right:24px;width:min(360px,calc(100vw - 48px));max-height:70vh;display:none;box-shadow:0 16px 40px rgba(0,0,0,0.2);border-radius:16px;background:#fff;color:#0f172a;overflow:hidden;border:1px solid #e5e7eb}.cb-header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:linear-gradient(90deg,#0ea5e9,#22d3ee);color:#fff}.cb-title{display:flex;align-items:center;gap:8px;font-weight:600}.cb-avatar{width:24px;height:24px;border-radius:999px;background:#fff;color:#0ea5e9;display:flex;align-items:center;justify-content:center;font-size:12px}.cb-messages{padding:12px;height:48vh;overflow:auto;background:#f8fafc}.cb-msg{max-width:80%;margin-bottom:8px;padding:8px 10px;border-radius:12px;font-size:14px;line-height:1.5;white-space:pre-wrap}.cb-msg.user{background:#0ea5e9;color:#fff;margin-left:auto;border-bottom-right-radius:4px}.cb-msg.bot{background:#e2e8f0;color:#0f172a;margin-right:auto;border-bottom-left-radius:4px}.cb-input{display:flex;gap:8px;padding:12px;border-top:1px solid #e5e7eb;background:#fff}.cb-input input{flex:1;padding:10px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px}.cb-input button{padding:10px 14px;border:none;border-radius:10px;background:#0ea5e9;color:#fff;font-weight:600;cursor:pointer}.cb-close{border:none;background:transparent;color:#fff;font-size:18px;cursor:pointer}</style></head><body><div class='cb-wrap'></div><script>(function(){var B='"+botId+"',O='"+org+"',K='"+k+"',U='"+base+"/api/chat/stream/"+botId+"';function s(m,cb){var h={'Content-Type':'application/json'};if(K){h['X-Bot-Key']=K;}var b=JSON.stringify({message:m,org_id:O});fetch(U,{method:'POST',headers:h,body:b}).then(function(r){var rd=r.body.getReader();var d=new TextDecoder();function n(){rd.read().then(function(x){if(x.done){cb(null,true);return;}var t=d.decode(x.value);t.split('\\n\\n').forEach(function(l){if(l.indexOf('data: ')==0){cb(l.slice(6),false);}});n();});}n();});}function ui(){var w=document.querySelector('.cb-wrap');var b=document.createElement('button');b.className='cb-btn';b.textContent='Chat';var p=document.createElement('div');p.className='cb-panel';var h=document.createElement('div');h.className='cb-header';var t=document.createElement('div');t.className='cb-title';var av=document.createElement('div');av.className='cb-avatar';av.textContent='AI';var nm=document.createElement('span');nm.textContent='Assistant';t.appendChild(av);t.appendChild(nm);var x=document.createElement('button');x.className='cb-close';x.textContent='×';h.appendChild(t);h.appendChild(x);var msgs=document.createElement('div');msgs.className='cb-messages';var welcome=document.createElement('div');welcome.className='cb-msg bot';welcome.textContent='Hello! How can I help you today?';msgs.appendChild(welcome);var inp=document.createElement('div');inp.className='cb-input';var i=document.createElement('input');i.type='text';i.placeholder='Ask a question';var go=document.createElement('button');go.textContent='Send';inp.appendChild(i);inp.appendChild(go);p.appendChild(h);p.appendChild(msgs);p.appendChild(inp);w.appendChild(b);document.body.appendChild(p);function addUser(m){var e=document.createElement('div');e.className='cb-msg user';e.textContent=m;msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;}function ensureBot(){var e=document.createElement('div');e.className='cb-msg bot';msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;return e;}b.onclick=function(){p.style.display=p.style.display==='none'?'block':'none';};x.onclick=function(){p.style.display='none';};function send(){var q=i.value;if(!q.trim()){return;}i.value='';addUser(q);var bot=ensureBot();s(q,function(tok,end){if(end){return;}bot.textContent+=tok;});}go.onclick=send;i.addEventListener('keydown',function(ev){if(ev.key==='Enter'){send();}});}ui();})();</script></body></html>";
-      return "<iframe sandbox=\"allow-scripts allow-same-origin\" srcdoc=\""+srcdoc
-        .replace(/position:fixed/g,'position:absolute')
-        .replace(/bottom:96px;/g,'top:72px;')
-        .replace(/bottom:24px;/g,'top:12px;')
-        .replace(/display:none;/g,'display:block;')
-        .replace(/btn\.textContent='Chat';/g, `btn.textContent='${icon.replace(/'/g,"\\'")}';`)
-        .replace(/av\.textContent='AI';/g, `av.textContent='${icon.replace(/'/g,"\\'")}';`)
-        .replace(/document\.createTextNode\('Assistant'\)/g, `document.createTextNode('${botName.replace(/'/g,"\\'")}')`)
-        .replace(/#0ea5e9/g, primaryColor)
-        .replace(/border-radius:16px/g, 'border-radius:'+String(radius)+'px')
-        .replace(/border-radius:12px/g, 'border-radius:'+String(Math.max(8, Math.min(24, radius-4)))+'px')
-        .replace(/p\.appendChild\(msgs\);/g, `p.appendChild(msgs);var ft=document.createElement('div');ft.style.padding='8px 12px';ft.style.fontSize='11px';ft.style.color='#6b7280';ft.style.borderTop='1px solid #e5e7eb';ft.innerHTML='Powered by <a href=\\'${BRAND_LINK}\\' target=\\'_blank\\' rel=\\'noopener noreferrer\\' style=\\'color:${primaryColor}\\'>${BRAND_TEXT}</a>';p.appendChild(ft);`)
-        .replace(/\"/g,'&quot;')+"\" style=\"width:100%;min-height:540px;border:1px solid #e5e7eb;border-radius:12px\"></iframe>";
-    }
-    if (id === "bubble-dark") {
-      const srcdoc = "<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><style>body{background:#0f172a;color:#e5e7eb}.cb-wrap{position:fixed;bottom:24px;left:24px;z-index:99999}.cb-btn{padding:12px 16px;border-radius:12px;border:1px solid #334155;background:#111827;color:#e5e7eb;box-shadow:0 10px 20px rgba(2,6,23,0.5);cursor:pointer}.cb-panel{position:fixed;bottom:96px;left:24px;width:min(360px,calc(100vw - 48px));max-height:70vh;display:none;box-shadow:0 16px 40px rgba(2,6,23,0.7);border-radius:16px;background:#111827;color:#e5e7eb;overflow:hidden;border:1px solid #334155}.cb-header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#0b1220;color:#e5e7eb;border-bottom:1px solid #334155}.cb-title{display:flex;align-items:center;gap:8px;font-weight:600}.cb-avatar{width:24px;height:24px;border-radius:999px;background:#334155;color:#e5e7eb;display:flex;align-items:center;justify-content:center;font-size:12px}.cb-messages{padding:12px;height:48vh;overflow:auto;background:#0b1220}.cb-msg{max-width:80%;margin-bottom:8px;padding:8px 10px;border-radius:12px;font-size:14px;line-height:1.5;white-space:pre-wrap}.cb-msg.user{background:#334155;color:#e5e7eb;margin-left:auto;border-bottom-right-radius:4px}.cb-msg.bot{background:#1f2937;color:#e5e7eb;margin-right:auto;border-bottom-left-radius:4px}.cb-input{display:flex;gap:8px;padding:12px;border-top:1px solid #334155;background:#111827}.cb-input input{flex:1;padding:10px;border:1px solid #334155;border-radius:10px;background:#0b1220;color:#e5e7eb;font-size:14px}.cb-input button{padding:10px 14px;border:1px solid #334155;border-radius:10px;background:#0b1220;color:#e5e7eb;font-weight:600;cursor:pointer}.cb-close{border:none;background:transparent;color:#e5e7eb;font-size:18px;cursor:pointer}</style></head><body><div class='cb-wrap'></div><script>(function(){var B='"+botId+"',O='"+org+"',K='"+k+"',U='"+base+"/api/chat/stream/"+botId+"';function s(m,cb){var h={'Content-Type':'application/json'};if(K){h['X-Bot-Key']=K;}var b=JSON.stringify({message:m,org_id:O});fetch(U,{method:'POST',headers:h,body:b}).then(function(r){var rd=r.body.getReader();var d=new TextDecoder();function n(){rd.read().then(function(x){if(x.done){cb(null,true);return;}var t=d.decode(x.value);t.split('\\n\\n').forEach(function(l){if(l.indexOf('data: ')==0){cb(l.slice(6),false);}});n();});}n();});}function ui(){var w=document.querySelector('.cb-wrap');var b=document.createElement('button');b.className='cb-btn';b.textContent='Chat';var p=document.createElement('div');p.className='cb-panel';var h=document.createElement('div');h.className='cb-header';var t=document.createElement('div');t.className='cb-title';var av=document.createElement('div');av.className='cb-avatar';av.textContent='AI';var nm=document.createElement('span');nm.textContent='Assistant';t.appendChild(av);t.appendChild(nm);var x=document.createElement('button');x.className='cb-close';x.textContent='×';h.appendChild(t);h.appendChild(x);var msgs=document.createElement('div');msgs.className='cb-messages';var welcome=document.createElement('div');welcome.className='cb-msg bot';welcome.textContent='Hello! How can I help you today?';msgs.appendChild(welcome);var inp=document.createElement('div');inp.className='cb-input';var i=document.createElement('input');i.type='text';i.placeholder='Ask a question';var go=document.createElement('button');go.textContent='Send';inp.appendChild(i);inp.appendChild(go);p.appendChild(h);p.appendChild(msgs);p.appendChild(inp);w.appendChild(b);document.body.appendChild(p);function addUser(m){var e=document.createElement('div');e.className='cb-msg user';e.textContent=m;msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;}function ensureBot(){var e=document.createElement('div');e.className='cb-msg bot';msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;return e;}b.onclick=function(){p.style.display=p.style.display==='none'?'block':'none';};x.onclick=function(){p.style.display='none';};function send(){var q=i.value;if(!q.trim()){return;}i.value='';addUser(q);var bot=ensureBot();s(q,function(tok,end){if(end){return;}bot.textContent+=tok;});}go.onclick=send;i.addEventListener('keydown',function(ev){if(ev.key==='Enter'){send();}});}ui();})();</script></body></html>";
-      return "<iframe sandbox=\"allow-scripts allow-same-origin\" srcdoc=\""+srcdoc
-        .replace(/position:fixed/g,'position:absolute')
-        .replace(/bottom:96px;/g,'top:72px;')
-        .replace(/bottom:24px;/g,'top:12px;')
-        .replace(/display:none;/g,'display:block;')
-        .replace(/btn\.textContent='Chat';/g, `btn.textContent='${icon.replace(/'/g,"\\'")}';`)
-        .replace(/av\.textContent='AI';/g, `av.textContent='${icon.replace(/'/g,"\\'")}';`)
-        .replace(/document\.createTextNode\('Assistant'\)/g, `document.createTextNode('${botName.replace(/'/g,"\\'")}')`)
-        .replace(/p\.appendChild\(msgs\);/g, `p.appendChild(msgs);var ft=document.createElement('div');ft.style.padding='8px 12px';ft.style.fontSize='11px';ft.style.color='#94a3b8';ft.style.borderTop='1px solid #334155';ft.innerHTML='Powered by <a href=\\'${brandLink.replace(/'/g,"\\'" )}\\' target=\\'_blank\\' rel=\\'noopener noreferrer\\' style=\\'color:${primaryColor}\\'>'+${JSON.stringify(brandName)}+'</a>';p.appendChild(ft);`)
-        .replace(/\"/g,'&quot;')+"\" style=\"width:100%;min-height:540px;border:1px solid #334155;border-radius:12px\"></iframe>";
-    }
-    if (id === "inline-card") {
-      const srcdoc = "<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><style>body{background:#f8fafc}.card{max-width:560px;margin:24px auto;border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 12px 28px rgba(0,0,0,0.08);overflow:hidden;background:#fff}.head{display:flex;align-items:center;gap:8px;padding:12px;background:#111827;color:#fff}.av{width:24px;height:24px;border-radius:999px;background:#fff;color:#111827;display:flex;align-items:center;justify-content:center;font-size:12px}.msgs{padding:12px;height:40vh;overflow:auto;background:#f9fafb}.m{max-width:80%;margin-bottom:8px;padding:8px 10px;border-radius:12px;font-size:14px;line-height:1.5;white-space:pre-wrap}.m.u{background:#111827;color:#fff;margin-left:auto;border-bottom-right-radius:4px}.m.b{background:#e2e8f0;color:#0f172a;margin-right:auto;border-bottom-left-radius:4px}.inp{display:flex;gap:8px;padding:12px;border-top:1px solid #e5e7eb;background:#fff}.inp input{flex:1;padding:10px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px}.inp button{padding:10px 14px;border:none;border-radius:10px;background:#111827;color:#fff;font-weight:600;cursor:pointer}</style></head><body><div class='card'><div class='head'><div class='av'>AI</div><div>Assistant</div></div><div class='msgs'></div><div class='inp'><input type='text' placeholder='Ask a question'><button>Send</button></div></div><script>(function(){var O='"+org+"',K='"+k+"',U='"+base+"/api/chat/stream/"+botId+"';function s(m,cb){var h={'Content-Type':'application/json'};if(K){h['X-Bot-Key']=K;}var b=JSON.stringify({message:m,org_id:O});fetch(U,{method:'POST',headers:h,body:b}).then(function(r){var rd=r.body.getReader();var d=new TextDecoder();function n(){rd.read().then(function(x){if(x.done){cb(null,true);return;}var t=d.decode(x.value);t.split('\\n\\n').forEach(function(l){if(l.indexOf('data: ')==0){cb(l.slice(6),false);}});n();});}n();});}var c=document.querySelector('.card');var msgs=document.querySelector('.msgs');var i=c.querySelector('input');var go=c.querySelector('button');function addU(m){var e=document.createElement('div');e.className='m u';e.textContent=m;msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;}function addB(){var e=document.createElement('div');e.className='m b';msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;return e;}function send(){var q=i.value;if(!q.trim()){return;}i.value='';addU(q);var bot=addB();s(q,function(tok,end){if(end){return;}bot.textContent+=tok;});}go.onclick=send;i.addEventListener('keydown',function(ev){if(ev.key==='Enter'){send();}});})();</script></body></html>";
-      return "<iframe srcdoc=\""+srcdoc.replace(/max-width:560px;/g,'width:min(560px,calc(100vw - 32px));max-width:560px;').replace(/c\\.appendChild\(card\);/g, `c.appendChild(card);var ft=document.createElement('div');ft.style.margin='0 24px';ft.style.padding='8px 0';ft.style.fontSize='11px';ft.style.color='#6b7280';ft.style.textAlign='right';ft.innerHTML='Powered by <a href=\\'${BRAND_LINK}\\' target=\\'_blank\\' rel=\\'noopener noreferrer\\' style=\\'color:${primaryColor}\\'>${BRAND_TEXT}</a>';c.appendChild(ft);`).replace(/\"/g,'&quot;')+"\" style=\"width:100%;min-height:340px;border:1px solid #e5e7eb;border-radius:16px\"></iframe>";
-    }
-    if (id === "iframe-minimal") {
-      const srcdoc = "<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><style>body{font-family:sans-serif;font-size:14px;margin:0}.wrap{padding:10px}.msgs{padding:10px;height:36vh;overflow:auto;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;margin-bottom:8px}.m{max-width:80%;margin-bottom:8px;padding:8px 10px;border-radius:12px;white-space:pre-wrap}.m.u{background:#0ea5e9;color:#fff;margin-left:auto;border-bottom-right-radius:4px}.m.b{background:#e2e8f0;color:#0f172a;margin-right:auto;border-bottom-left-radius:4px}.inp{display:flex;gap:8px}.inp input{flex:1;padding:10px;border:1px solid #e5e7eb;border-radius:10px}.inp button{padding:10px 14px;border:none;border-radius:10px;background:#111827;color:#fff;font-weight:600;cursor:pointer}</style></head><body><div class='wrap'><div class='msgs'></div><div class='inp'><input type='text' placeholder='Ask'><button>Send</button></div></div><script>(function(){var O='"+org+"',K='"+k+"',U='"+base+"/api/chat/stream/"+botId+"';function s(m,cb){var h={'Content-Type':'application/json'};if(K){h['X-Bot-Key']=K;}var b=JSON.stringify({message:m,org_id:O});fetch(U,{method:'POST',headers:h,body:b}).then(function(r){var rd=r.body.getReader();var d=new TextDecoder();function n(){rd.read().then(function(x){if(x.done){cb(null,true);return;}var t=d.decode(x.value);t.split('\\n\\n').forEach(function(l){if(l.indexOf('data: ')==0){cb(l.slice(6),false);}});n();});}n();});}var msgs=document.querySelector('.msgs');var i=document.querySelector('.inp input');var go=document.querySelector('.inp button');function addU(m){var e=document.createElement('div');e.className='m u';e.textContent=m;msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;}function addB(){var e=document.createElement('div');e.className='m b';msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;return e;}function send(){var q=i.value;if(!q.trim()){return;}i.value='';addU(q);var bot=addB();s(q,function(tok,end){if(end){return;}bot.textContent+=tok;});}go.onclick=send;i.addEventListener('keydown',function(ev){if(ev.key==='Enter'){send();}});})();</script></body></html>";
-      return "<iframe srcdoc=\""+srcdoc.replace(/\"/g,'&quot;')+"\" style=\"width:100%;min-height:280px;border:1px solid #e5e7eb;border-radius:8px\"></iframe>";
-    }
-    if (id === "cdn-default") {
-      const base2 = B().replace(/\/$/, "");
-      const conf: Record<string, unknown> = {
-        botId: botId,
-        orgId: org,
-        apiBase: base2,
-        mode: 'bubble',
-        theme,
-        position,
-        accent,
-        text: textColor,
-        card: cardColor,
-        bg: bgColor,
-        botName,
-        icon,
-      };
-      if (includeKey && pubKey) conf.botKey = pubKey;
-      {
-        const bn = (brandName || '').trim() || 'CodeWeft';
-        const bl = (brandLink || '').trim() || 'https://github.com/CodeWeft-Technologies';
-        conf.branding = { text: bn, link: bl };
+
+  // Native React preview component
+  function ChatPreview({ template }: { template: string }) {
+    const [messages, setMessages] = useState<Array<{type: 'user' | 'bot', text: string}>>([]);
+    const [input, setInput] = useState('');
+    const [isTyping, setIsTyping] = useState(false);
+    const [isOpen, setIsOpen] = useState(true);
+    
+    const sendMessage = async (msg: string) => {
+      if (!msg.trim() || isTyping) return;
+      
+      setMessages(prev => [...prev, { type: 'user', text: msg }]);
+      setInput('');
+      setIsTyping(true);
+      
+      try {
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (pubKey) headers['X-Bot-Key'] = pubKey;
+        
+        const response = await fetch(`${B()}/api/chat/stream/${botId}`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ message: msg, org_id: org })
+        });
+        
+        if (!response.ok) throw new Error('Failed to send message');
+        
+        setMessages(prev => [...prev, { type: 'bot', text: '' }]);
+        
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+        let botResponse = '';
+        
+        while (true) {
+          const { done, value } = await reader!.read();
+          if (done) break;
+          
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n\n');
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const token = line.slice(6);
+              botResponse += token;
+              setMessages(prev => {
+                const newMessages = [...prev];
+                if (newMessages[newMessages.length - 1]?.type === 'bot') {
+                  newMessages[newMessages.length - 1].text = botResponse;
+                }
+                return newMessages;
+              });
+            }
+          }
+        }
+      } catch (error) {
+        setMessages(prev => [...prev, { type: 'bot', text: 'Sorry, I encountered an error. Please try again.' }]);
+      } finally {
+        setIsTyping(false);
       }
-      const json = JSON.stringify(conf).replace(/</g, "\\u003c");
-      const srcdoc = [
-        "<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"></head><body>",
-        '<div id=\"cb-preview-placeholder\" style=\"padding:8px;font-family:system-ui,sans-serif;font-size:12px;color:#6b7280\">Loading preview...</div>',
-        '<script>window.chatbotConfig='+json+';<\\/script>',
-        '<script>setTimeout(function(){var ph=document.getElementById(\"cb-preview-placeholder\");if(ph){ph.textContent=\"Preview unavailable. Set NEXT_PUBLIC_BACKEND_URL to backend URL.\";}},1500);<\\/script>',
-        '<script src=\"'+base2+'/api/widget.js\" async><\\/script>',
-        '</body></html>'
-      ].join('');
-      return "<iframe srcdoc=\""+srcdoc.replace(/\"/g,'&quot;')+"\" style=\"width:100%;min-height:540px;border:1px solid #e5e7eb;border-radius:8px\"></iframe>";
+    };
+    
+    if (!template) {
+      return (
+        <div className="w-full h-64 border border-gray-200 rounded-lg flex items-center justify-center text-gray-500">
+          Select a template to see preview
+        </div>
+      );
     }
-    return "";
+    
+    if (template === 'bubble-blue' || template === 'bubble-dark') {
+      return (
+        <div className="relative w-full h-[540px] bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
+          {/* Chat Button */}
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="fixed bottom-6 right-6 w-14 h-14 shadow-lg flex items-center justify-center text-2xl transition-transform hover:scale-105"
+            style={{ 
+              backgroundColor: buttonColor,
+              color: '#fff',
+              borderRadius: `${radius}px`
+            }}
+          >
+            {icon || '💬'}
+          </button>
+          
+          {/* Chat Panel */}
+          {isOpen && (
+            <div 
+              className="fixed bottom-20 right-6 w-80 h-96 shadow-2xl overflow-hidden transition-all"
+              style={{
+                backgroundColor: cardColor,
+                border: `1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'}`,
+                borderRadius: `${Math.max(8, radius)}px`
+              }}
+            >
+              {/* Header */}
+              <div 
+                className="flex items-center justify-between p-3 border-b"
+                style={{
+                  backgroundColor: buttonColor,
+                  borderBottomColor: theme === 'dark' ? '#374151' : '#e5e7eb',
+                  color: '#fff'
+                }}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center text-sm" style={{ color: buttonColor }}>
+                    {icon || '🤖'}
+                  </div>
+                  <span className="font-semibold">{botName}</span>
+                </div>
+                <button 
+                  onClick={() => setIsOpen(false)}
+                  className="text-lg leading-none hover:opacity-70"
+                  style={{ color: '#fff' }}
+                >
+                  ×
+                </button>
+              </div>
+              
+              {/* Messages */}
+              <div 
+                className="flex-1 p-3 h-64 overflow-y-auto space-y-2"
+                style={{ backgroundColor: bgColor }}
+              >
+                {messages.length === 0 && (
+                  <div 
+                    className="text-sm p-3 rounded-lg max-w-[80%]"
+                    style={{
+                      backgroundColor: theme === 'dark' ? '#374151' : '#f3f4f6',
+                      color: textColor,
+                      borderRadius: `${Math.max(8, radius-4)}px`
+                    }}
+                  >
+                    {greeting}
+                  </div>
+                )}
+                {messages.map((msg, i) => (
+                  <div
+                    key={i}
+                    className={`text-sm p-3 max-w-[80%] ${
+                      msg.type === 'user' ? 'ml-auto' : 'mr-auto'
+                    }`}
+                    style={{
+                      backgroundColor: msg.type === 'user' ? accent : (theme === 'dark' ? '#374151' : '#f3f4f6'),
+                      color: msg.type === 'user' ? '#fff' : textColor,
+                      borderRadius: `${Math.max(8, radius-4)}px`
+                    }}
+                  >
+                    {msg.text}
+                  </div>
+                ))}
+                {isTyping && (
+                  <div 
+                    className="text-sm p-3 max-w-[80%] mr-auto flex items-center gap-1"
+                    style={{
+                      backgroundColor: theme === 'dark' ? '#374151' : '#f3f4f6',
+                      color: textColor,
+                      borderRadius: `${Math.max(8, radius-4)}px`
+                    }}
+                  >
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                      <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                      <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Input */}
+              <div 
+                className="p-3 border-t flex gap-2"
+                style={{
+                  backgroundColor: cardColor,
+                  borderTopColor: theme === 'dark' ? '#374151' : '#e5e7eb'
+                }}
+              >
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && sendMessage(input)}
+                  placeholder="Ask a question..."
+                  className="flex-1 px-3 py-2 border text-sm"
+                  style={{
+                    backgroundColor: bgColor,
+                    borderColor: theme === 'dark' ? '#374151' : '#e5e7eb',
+                    color: textColor,
+                    borderRadius: `${Math.max(6, radius-6)}px`
+                  }}
+                />
+                <button
+                  onClick={() => sendMessage(input)}
+                  disabled={!input.trim() || isTyping}
+                  className="px-4 py-2 text-sm font-semibold disabled:opacity-50"
+                  style={{ 
+                    backgroundColor: buttonColor,
+                    color: '#fff',
+                    borderRadius: `${Math.max(6, radius-6)}px`
+                  }}
+                >
+                  Send
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+    
+    if (template === 'iframe-minimal') {
+      return (
+        <div 
+          className="w-full h-72 border p-3 space-y-3"
+          style={{
+            backgroundColor: bgColor,
+            borderColor: theme === 'dark' ? '#374151' : '#e5e7eb',
+            borderRadius: `${radius}px`
+          }}
+        >
+          {/* Messages Area */}
+          <div 
+            className="h-48 overflow-y-auto p-2 border space-y-2"
+            style={{
+              backgroundColor: theme === 'dark' ? '#1f2937' : '#f9fafb',
+              borderColor: theme === 'dark' ? '#374151' : '#e5e7eb',
+              borderRadius: `${Math.max(6, radius-4)}px`
+            }}
+          >
+            {messages.length === 0 && (
+              <div
+                className="text-sm p-2"
+                style={{
+                  backgroundColor: theme === 'dark' ? '#374151' : '#e2e8f0',
+                  color: textColor,
+                  borderRadius: `${Math.max(6, radius-6)}px`
+                }}
+              >
+                {greeting}
+              </div>
+            )}
+            {messages.map((msg, i) => (
+              <div
+                key={i}
+                className={`text-sm p-2 max-w-[80%] ${
+                  msg.type === 'user' ? 'ml-auto' : 'mr-auto'
+                }`}
+                style={{
+                  backgroundColor: msg.type === 'user' ? accent : (theme === 'dark' ? '#374151' : '#e2e8f0'),
+                  color: msg.type === 'user' ? '#fff' : textColor,
+                  borderRadius: `${Math.max(6, radius-6)}px`
+                }}
+              >
+                {msg.text}
+              </div>
+            ))}
+            {isTyping && (
+              <div 
+                className="text-sm p-2 max-w-[80%] mr-auto flex items-center gap-1"
+                style={{
+                  backgroundColor: theme === 'dark' ? '#374151' : '#e2e8f0',
+                  color: textColor,
+                  borderRadius: `${Math.max(6, radius-6)}px`
+                }}
+              >
+                <div className="flex gap-1">
+                  <div className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                  <div className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                  <div className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* Input Area */}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && sendMessage(input)}
+              placeholder="Ask a question..."
+              className="flex-1 px-3 py-2 border text-sm"
+              style={{
+                backgroundColor: cardColor,
+                borderColor: theme === 'dark' ? '#374151' : '#e5e7eb',
+                color: textColor,
+                borderRadius: `${Math.max(6, radius-6)}px`
+              }}
+            />
+            <button
+              onClick={() => sendMessage(input)}
+              disabled={!input.trim() || isTyping}
+              className="px-4 py-2 text-sm font-semibold disabled:opacity-50"
+              style={{ 
+                backgroundColor: buttonColor,
+                color: '#fff',
+                borderRadius: `${Math.max(6, radius-6)}px`
+              }}
+            >
+              Send
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    if (template === 'inline-card') {
+      return (
+        <div 
+          className="max-w-md mx-auto border shadow-lg overflow-hidden bg-white"
+          style={{
+            borderRadius: `${radius}px`,
+            borderColor: '#e5e7eb'
+          }}
+        >
+          {/* Header */}
+          <div 
+            className="flex items-center gap-2 p-3"
+            style={{
+              backgroundColor: buttonColor,
+              color: '#fff'
+            }}
+          >
+            <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center text-sm" style={{ color: buttonColor }}>
+              {icon || '🤖'}
+            </div>
+            <span className="font-semibold">{botName}</span>
+          </div>
+          
+          {/* Messages */}
+          <div 
+            className="h-48 overflow-y-auto p-3 space-y-2"
+            style={{ backgroundColor: bgColor }}
+          >
+            {messages.length === 0 && (
+              <div 
+                className="text-sm p-2"
+                style={{ color: textColor }}
+              >
+                {greeting}
+              </div>
+            )}
+            {messages.map((msg, i) => (
+              <div
+                key={i}
+                className={`text-sm p-2 max-w-[80%] ${
+                  msg.type === 'user' ? 'ml-auto' : 'mr-auto'
+                }`}
+                style={{
+                  backgroundColor: msg.type === 'user' ? accent : '#f1f5f9',
+                  color: msg.type === 'user' ? '#fff' : textColor,
+                  borderRadius: `${Math.max(6, radius-4)}px`
+                }}
+              >
+                {msg.text}
+              </div>
+            ))}
+          </div>
+          
+          {/* Input */}
+          <div className="p-3 border-t flex gap-2" style={{ borderTopColor: '#e5e7eb' }}>
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && sendMessage(input)}
+              placeholder="Ask a question..."
+              className="flex-1 px-3 py-2 border text-sm"
+              style={{
+                backgroundColor: cardColor,
+                borderColor: '#e5e7eb',
+                color: textColor,
+                borderRadius: `${Math.max(6, radius-6)}px`
+              }}
+            />
+            <button
+              onClick={() => sendMessage(input)}
+              disabled={!input.trim() || isTyping}
+              className="px-4 py-2 text-sm font-semibold disabled:opacity-50"
+              style={{ 
+                backgroundColor: buttonColor,
+                color: '#fff',
+                borderRadius: `${Math.max(6, radius-6)}px`
+              }}
+            >
+              Send
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    if (template === 'fullscreen') {
+      return (
+        <div 
+          className="w-full h-96 flex flex-col border overflow-hidden"
+          style={{
+            backgroundColor: bgColor,
+            borderColor: '#e5e7eb',
+            borderRadius: `${radius}px`
+          }}
+        >
+          {/* Header */}
+          <div 
+            className="flex items-center gap-3 p-4 border-b shadow-sm"
+            style={{
+              backgroundColor: buttonColor,
+              color: '#fff',
+              borderBottomColor: '#e5e7eb'
+            }}
+          >
+            <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-lg" style={{ color: buttonColor }}>
+              {icon || '🤖'}
+            </div>
+            <div className="text-lg font-semibold">{botName}</div>
+          </div>
+          
+          {/* Messages */}
+          <div className="flex-1 p-4 overflow-y-auto space-y-3">
+            {messages.length === 0 && (
+              <div 
+                className="p-3"
+                style={{ color: textColor }}
+              >
+                {greeting}
+              </div>
+            )}
+            {messages.map((msg, i) => (
+              <div
+                key={i}
+                className={`p-3 max-w-[70%] ${
+                  msg.type === 'user' ? 'ml-auto' : 'mr-auto'
+                }`}
+                style={{
+                  backgroundColor: msg.type === 'user' ? accent : '#f1f5f9',
+                  color: msg.type === 'user' ? '#fff' : textColor,
+                  borderRadius: `${radius}px`
+                }}
+              >
+                {msg.text}
+              </div>
+            ))}
+          </div>
+          
+          {/* Input */}
+          <div className="p-4 border-t flex gap-3" style={{ borderTopColor: '#e5e7eb' }}>
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && sendMessage(input)}
+              placeholder="Ask a question..."
+              className="flex-1 px-4 py-3 border"
+              style={{
+                backgroundColor: cardColor,
+                borderColor: '#e5e7eb',
+                color: textColor,
+                borderRadius: `${Math.max(8, radius-4)}px`
+              }}
+            />
+            <button
+              onClick={() => sendMessage(input)}
+              disabled={!input.trim() || isTyping}
+              className="px-6 py-3 font-semibold disabled:opacity-50"
+              style={{ 
+                backgroundColor: buttonColor,
+                color: '#fff',
+                borderRadius: `${Math.max(8, radius-4)}px`
+              }}
+            >
+              Send
+            </button>
+          </div>
+        </div>
+      );
+    }
+    
+    // CDN widget preview - similar to bubble
+    if (template === 'cdn-default') {
+      return (
+        <div className="relative w-full h-[540px] bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
+          {/* Chat Button */}
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="fixed bottom-6 right-6 w-14 h-14 shadow-lg flex items-center justify-center text-2xl transition-transform hover:scale-105"
+            style={{ 
+              backgroundColor: buttonColor,
+              color: '#fff',
+              borderRadius: `${radius}px`
+            }}
+          >
+            {icon || '💬'}
+          </button>
+          
+          {/* Chat Panel */}
+          {isOpen && (
+            <div 
+              className="fixed bottom-20 right-6 w-80 h-96 shadow-2xl overflow-hidden transition-all"
+              style={{
+                backgroundColor: cardColor,
+                border: `1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'}`,
+                borderRadius: `${Math.max(8, radius)}px`
+              }}
+            >
+              {/* Header */}
+              <div 
+                className="flex items-center justify-between p-3 border-b"
+                style={{
+                  backgroundColor: cardColor,
+                  borderBottomColor: theme === 'dark' ? '#374151' : '#e5e7eb',
+                  color: textColor
+                }}
+              >
+                <div className="flex items-center gap-2">
+                  <div 
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-sm"
+                    style={{ backgroundColor: buttonColor, color: '#fff' }}
+                  >
+                    {icon || '🤖'}
+                  </div>
+                  <span className="font-semibold">{botName}</span>
+                </div>
+                <button 
+                  onClick={() => setIsOpen(false)}
+                  className="text-lg leading-none hover:opacity-70"
+                  style={{ color: textColor }}
+                >
+                  ×
+                </button>
+              </div>
+              
+              {/* Messages */}
+              <div 
+                className="flex-1 p-3 h-64 overflow-y-auto space-y-2"
+                style={{ backgroundColor: bgColor }}
+              >
+                {messages.length === 0 && greeting && (
+                  <div 
+                    className="text-sm p-3 rounded-lg max-w-[80%]"
+                    style={{
+                      backgroundColor: theme === 'dark' ? '#374151' : '#f3f4f6',
+                      color: textColor,
+                      borderRadius: `${Math.max(8, radius-4)}px`
+                    }}
+                  >
+                    {greeting}
+                  </div>
+                )}
+                {messages.map((msg, i) => (
+                  <div
+                    key={i}
+                    className={`text-sm p-3 max-w-[80%] ${
+                      msg.type === 'user' ? 'ml-auto' : 'mr-auto'
+                    }`}
+                    style={{
+                      backgroundColor: msg.type === 'user' ? accent : (theme === 'dark' ? '#374151' : '#f3f4f6'),
+                      color: msg.type === 'user' ? '#fff' : textColor,
+                      borderRadius: `${Math.max(8, radius-4)}px`
+                    }}
+                  >
+                    {msg.text}
+                  </div>
+                ))}
+                {isTyping && (
+                  <div 
+                    className="text-sm p-3 max-w-[80%] mr-auto flex items-center gap-1"
+                    style={{
+                      backgroundColor: theme === 'dark' ? '#374151' : '#f3f4f6',
+                      color: textColor,
+                      borderRadius: `${Math.max(8, radius-4)}px`
+                    }}
+                  >
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                      <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                      <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Input */}
+              <div 
+                className="p-3 border-t flex gap-2"
+                style={{
+                  backgroundColor: cardColor,
+                  borderTopColor: theme === 'dark' ? '#374151' : '#e5e7eb'
+                }}
+              >
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && sendMessage(input)}
+                  placeholder="Ask a question..."
+                  className="flex-1 px-3 py-2 border text-sm"
+                  style={{
+                    backgroundColor: bgColor,
+                    borderColor: theme === 'dark' ? '#374151' : '#e5e7eb',
+                    color: textColor,
+                    borderRadius: `${Math.max(6, radius-6)}px`
+                  }}
+                />
+                <button
+                  onClick={() => sendMessage(input)}
+                  disabled={!input.trim() || isTyping}
+                  className="px-4 py-2 text-sm font-semibold disabled:opacity-50"
+                  style={{ 
+                    backgroundColor: buttonColor,
+                    color: '#fff',
+                    borderRadius: `${Math.max(6, radius-6)}px`
+                  }}
+                >
+                  Send
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+    
+    // Default fallback
+    return (
+      <div className="w-full h-64 border border-gray-200 rounded-lg flex items-center justify-center text-gray-500">
+        <div className="text-center">
+          <div className="text-lg mb-2">📝</div>
+          <div>Template Preview</div>
+          <div className="text-xs">Select a template above</div>
+        </div>
+      </div>
+    );
   }
-  
-  function formatJSBlock(tt: string): string {
-    const js = tt
-      .replace(/;\s*/g, ";\n")
-      .replace(/\}\s*/g, "}\n")
-      .replace(/\{\s*/g, "{\n");
-    const lines = js.split("\n");
-    let indent = 0;
-    const out: string[] = [];
-    for (const line of lines) {
-      const l = line.trim();
-      if (!l) { out.push(""); continue; }
-      if (l.startsWith("}")) indent = Math.max(0, indent - 1);
-      out.push(`${"  ".repeat(indent)}${l}`);
-      if (l.endsWith("{")) indent++;
-    }
-    return out.join("\n");
-  }
-  function formatSnippet(s: string): string {
-    let t = (s ?? "").toString();
-    t = t.replace(/\r\n?/g, "\n");
-    if (!/\n/.test(t) && /\\n/.test(t)) {
-      t = t.replace(/\\n/g, "\n").replace(/\\t/g, "  ");
-    }
-    const tt = t.trim();
-    if (!tt) return "";
-    if (tt.startsWith("{") || tt.startsWith("[")) {
-      try { return JSON.stringify(JSON.parse(tt), null, 2); } catch { /* fall through */ }
-    }
-    if (/<[a-zA-Z!\/?]/.test(tt)) {
-      const withScript = tt.replace(/<script>([\s\S]*?)<\/script>/g, (_m, js) => {
-        return `<script>\n${formatJSBlock(js)}\n<\/script>`;
-      });
-      const parts = withScript.replace(/>\s*</g, ">\n<").split("\n");
-      let indent = 0;
-      const out: string[] = [];
-      for (const raw of parts) {
-        const l = raw.trim();
-        const isClose = /^<\//.test(l);
-        const isSelf = /\/>$/.test(l) || /^<!/.test(l) || /^<\?/.test(l);
-        if (isClose) indent = Math.max(0, indent - 1);
-        out.push(`${"  ".repeat(indent)}${l}`);
-        if (!isClose && !isSelf && /^<[^>]+>$/.test(l)) indent++;
-      }
-      return out.join("\n");
-    }
-    return formatJSBlock(tt);
-  }
-  function highlightCode(s: string): string {
-    function esc(x: string): string {
-      return x.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    }
-    const t0 = esc(s || "");
-    if (/<[a-z]/i.test(t0)) {
-      let h = t0;
-      h = h.replace(/(&lt;\/?)([a-zA-Z0-9:-]+)([^>]*?)(>)/g, function(_: string, a: string, tag: string, rest: string, b: string) {
-        const tagC = `<span style=\"color:#60a5fa\">${tag}</span>`;
-        const restC = rest.replace(/([a-zA-Z_:][-a-zA-Z0-9_:.]*)(=)/g, function(__: string, n: string, eq: string) {
-          return `<span style=\"color:#34d399\">${n}</span>${eq}`;
-        }).replace(/(&quot;[^&]*?&quot;)/g, function(m: string) { return `<span style=\"color:#fca5a5\">${m}</span>`; });
-        return `${a}${tagC}${restC}${b}`;
-      });
-      return h;
-    }
-    let h = t0;
-    h = h.replace(/(\/\*[\s\S]*?\*\/)/g, '<span style="color:#6b7280">$1</span>');
-    h = h.replace(/(^|\n)(\s*\/\/.*)/g, '$1<span style="color:#6b7280">$2</span>');
-    h = h.replace(/([\'\"])(?:\\.|(?!\1).)*\1/g, function(m: string) { return `<span style=\"color:#fca5a5\">${m}</span>`; });
-    h = h.replace(/`(?:\\.|[^`\\])*`/g, function(m: string) { return `<span style=\"color:#fca5a5\">${m}</span>`; });
-    h = h.replace(/\b(?:var|let|const|function|return|if|else|for|while|new|class|try|catch|finally|switch|case|break|continue|import|from|export|default|await|async|typeof|in|instanceof)\b/g, '<span style="color:#93c5fd">$&</span>');
-    h = h.replace(/\b(?:true|false|null|undefined)\b/g, '<span style="color:#fcd34d">$&</span>');
-    h = h.replace(/\b\d+(?:\.\d+)?\b/g, '<span style="color:#fcd34d">$&</span>');
-    return h;
-  }
+
+  const displayCode = generateCode(tpl);
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Embed Chatbot</h1>
-          <p className="text-sm text-black/60">Choose a type and template. Copy the commented code on the left and preview on the right.</p>
+      <div className="text-center max-w-3xl mx-auto">
+        <h1 className="text-3xl font-bold text-gray-900 mb-3">🚀 Add Chat to Your Website</h1>
+        <p className="text-lg text-gray-600 mb-6">Create a customized chatbot widget for your website in 3 simple steps. No coding experience needed!</p>
+        <div className="flex items-center justify-center gap-8 text-sm text-gray-500">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">1</div>
+            <span>Choose Style</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">2</div>
+            <span>Customize Look</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">3</div>
+            <span>Copy & Paste</span>
+          </div>
         </div>
-        <div className="text-xs text-black/60">Last rotated: {rotatedAt ? new Date(rotatedAt).toLocaleString() : "Not set"}</div>
       </div>
+      
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="rounded-xl border border-black/10 bg-white">
-          <div className="p-4 space-y-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <label className="text-sm">Embed Type</label>
-              <select value={widget} onChange={e=>{setWidget(e.target.value); setTpl('');}} className="px-3 py-2 rounded-md border border-black/10 text-sm">
-                <option value="bubble">Bubble</option>
-                <option value="iframe">Iframe</option>
-                <option value="cdn">CDN</option>
-              </select>
-              <label className="text-sm">Template</label>
-              <select value={tpl} onChange={e=>setTpl(e.target.value)} className="px-3 py-2 rounded-md border border-black/10 text-sm">
-                <option value="">None</option>
-                <option value="bubble-blue">Bubble • Blue</option>
-                <option value="bubble-dark">Bubble • Dark</option>
-                <option value="iframe-minimal">Iframe • Minimal</option>
-                <option value="cdn-default">CDN • Default</option>
-              </select>
-              <input value={botName} onChange={e=>setBotName(e.target.value)} placeholder="Bot name" className="px-3 py-2 rounded-md border border-black/10 text-sm w-36" />
-              <input value={icon} onChange={e=>setIcon(e.target.value)} placeholder="Icon" className="px-3 py-2 rounded-md border border-black/10 text-sm w-20" />
-              <select value={theme} onChange={e=>setTheme(e.target.value as ("light"|"dark"))} className="px-3 py-2 rounded-md border border-black/10 text-sm">
-                <option value="light">Light</option>
-                <option value="dark">Dark</option>
-              </select>
-              <select value={position} onChange={e=>setPosition(e.target.value as ("right"|"left"))} className="px-3 py-2 rounded-md border border-black/10 text-sm">
-                <option value="right">Right</option>
-                <option value="left">Left</option>
-              </select>
+        {/* Configuration Panel */}
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+          <div className="p-6 space-y-6">
+            
+            {/* Step 1: Choose Chat Style */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">1</div>
+                <h3 className="text-lg font-semibold text-gray-900">Choose Your Chat Style</h3>
+              </div>
               
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-black/60">Accent</span>
-                <input type="color" value={accent} onChange={e=>setAccent(e.target.value)} className="w-10 h-8 border border-black/10 rounded" />
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => {setWidget('bubble'); setTpl('bubble-blue');}}
+                  className={`p-4 border-2 rounded-lg text-left transition-all ${
+                    tpl === 'bubble-blue' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="text-2xl mb-2">💬</div>
+                  <div className="font-medium text-sm text-gray-900">Bubble Chat</div>
+                  <div className="text-xs text-gray-500">Floating button</div>
+                </button>
+                
+                <button
+                  onClick={() => {setWidget('bubble'); setTpl('bubble-dark');}}
+                  className={`p-4 border-2 rounded-lg text-left transition-all ${
+                    tpl === 'bubble-dark' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="text-2xl mb-2">🌙</div>
+                  <div className="font-medium text-sm text-gray-900">Dark Bubble</div>
+                  <div className="text-xs text-gray-500">Dark theme</div>
+                </button>
+                
+                <button
+                  onClick={() => {setWidget('iframe'); setTpl('iframe-minimal');}}
+                  className={`p-4 border-2 rounded-lg text-left transition-all ${
+                    tpl === 'iframe-minimal' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="text-2xl mb-2">📝</div>
+                  <div className="font-medium text-sm text-gray-900">Embedded</div>
+                  <div className="text-xs text-gray-500">Inline chat</div>
+                </button>
+                
+                <button
+                  onClick={() => {setWidget('cdn'); setTpl('cdn-default');}}
+                  className={`p-4 border-2 rounded-lg text-left transition-all ${
+                    tpl === 'cdn-default' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="text-2xl mb-2">🔧</div>
+                  <div className="font-medium text-sm text-gray-900">CDN Widget</div>
+                  <div className="text-xs text-gray-500">Advanced</div>
+                </button>
+                
+                <button
+                  onClick={() => {setWidget('inline'); setTpl('inline-card');}}
+                  className={`p-4 border-2 rounded-lg text-left transition-all ${
+                    tpl === 'inline-card' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="text-2xl mb-2">🃏</div>
+                  <div className="font-medium text-sm text-gray-900">Card Style</div>
+                  <div className="text-xs text-gray-500">Clean design</div>
+                </button>
+                
+                <button
+                  onClick={() => {setWidget('fullscreen'); setTpl('fullscreen');}}
+                  className={`p-4 border-2 rounded-lg text-left transition-all ${
+                    tpl === 'fullscreen' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="text-2xl mb-2">🖥️</div>
+                  <div className="font-medium text-sm text-gray-900">Full Screen</div>
+                  <div className="text-xs text-gray-500">Large chat</div>
+                </button>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-black/60">Text</span>
-                <input type="color" value={textColor} onChange={e=>setTextColor(e.target.value)} className="w-10 h-8 border border-black/10 rounded" />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-black/60">Card</span>
-                <input type="color" value={cardColor} onChange={e=>setCardColor(e.target.value)} className="w-10 h-8 border border-black/10 rounded" />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-black/60">Background</span>
-                <input type="color" value={bgColor} onChange={e=>setBgColor(e.target.value)} className="w-10 h-8 border border-black/10 rounded" />
-              </div>
-              <input type="number" min={8} max={24} value={radius} onChange={e=>setRadius(parseInt(e.target.value||'16'))} className="px-2 py-2 rounded-md border border-black/10 text-sm w-20" />
-              
-              <label className="text-sm flex items-center gap-2">
-                <input type="checkbox" checked={includeKey} onChange={e=>setIncludeKey(e.target.checked)} /> Include public key
-              </label>
-          <button onClick={() => { if (displayCode) copy(formatSnippet(displayCode)); }} className="px-3 py-2 rounded-md bg-blue-600 text-white" disabled={!snippet}>{copied?"Copied":"Copy"}</button>
             </div>
-            <div className="rounded-md border border-black/10">
-              <div className="flex items-center justify-between px-3 py-2 border-b border-black/10">
-                <span className="text-xs text-black/60">Embed Code</span>
-                <button onClick={() => copy(formatSnippet(displayCode))} className="px-2 py-1 rounded bg-black/80 text-white text-xs" disabled={!snippet}>{copied?"Copied":"Copy"}</button>
+
+            {/* Step 2: Customize Your Bot */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">2</div>
+                <h3 className="text-lg font-semibold text-gray-900">Customize Your Bot</h3>
               </div>
-              {(() => { const codeText = formatSnippet(displayCode); const lines = codeText.split("\n"); const highlighted = highlightCode(codeText); return (
-                <div className="bg-[#0b1220] text-[#e5e7eb]">
-                  <div className="flex items-center justify-between px-3 py-2 border-b border-[#142036]">
-                    <div className="text-xs text-[#93a4b8]">snippet.js</div>
-                    <div className="text-xs text-[#93a4b8]">UTF-8</div>
-                  </div>
-                  <div className="grid grid-cols-[48px_1fr] text-xs font-mono max-h-[540px] overflow-auto">
-                    <div className="select-none text-[#5b6b7f] border-r border-[#142036] p-3 pr-0">
-                      {lines.map((_, i) => (<div key={i} className="leading-5">{i+1}</div>))}
-                    </div>
-                    <pre className="whitespace-pre-wrap break-words p-3" dangerouslySetInnerHTML={{ __html: highlighted }} />
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Bot Name</label>
+                  <input 
+                    value={botName} 
+                    onChange={e=>setBotName(e.target.value)} 
+                    placeholder="e.g., Support Assistant" 
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Bot Icon</label>
+                  <input 
+                    value={icon} 
+                    onChange={e=>setIcon(e.target.value)} 
+                    placeholder="💬 🤖 👋" 
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                  />
+                </div>
+              </div>
+              {/* Greeting input removed; configure welcome message on the backend config page */}
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Theme</label>
+                  <select value={theme} onChange={e=>setTheme(e.target.value as ("light"|"dark"))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="light">☀️ Light</option>
+                    <option value="dark">🌙 Dark</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Position</label>
+                  <select value={position} onChange={e=>setPosition(e.target.value as ("right"|"left"))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="right">➡️ Right</option>
+                    <option value="left">⬅️ Left</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Corner Radius: {radius}px</label>
+                  <input 
+                    type="range" 
+                    min={8} 
+                    max={24} 
+                    value={radius} 
+                    onChange={e=>setRadius(Number(e.target.value))} 
+                    className="w-full h-10 accent-blue-500 cursor-pointer" 
+                  />
+                  <div className="flex justify-between text-xs text-gray-500 px-1">
+                    <span>8</span>
+                    <span>24</span>
                   </div>
                 </div>
-              ); })()}
-            </div>
-            <div className="rounded-md border border-black/10 p-3 text-xs space-y-1">
-              <div className="font-medium">How to preview</div>
-              <div>1) Ensure the backend is running at {B() || ''}.</div>
-              <div>2) Select a template (Bubble, Inline, CDN).</div>
-              <div>3) Adjust colors and position; the preview updates live.</div>
-              <div>4) Copy the code and paste near the end of your site’s <code>&lt;body&gt;</code>.</div>
-            </div>
-            <div className="rounded-md border border-yellow-300 bg-yellow-50 text-yellow-900 p-3 text-xs">
-              If you rotate the public API key, include the new value as <span className="font-medium">botKey</span>.
-            </div>
-            <div className="rounded-md border border-black/10">
-              <div className="p-3 space-y-2">
+              </div>
+
+              <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-black/60">Current bot key</span>
-                  <span className="text-xs text-black/60">Last rotated: {rotatedAt ? new Date(rotatedAt).toLocaleString() : "Not set"}</span>
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm font-semibold text-gray-900">🎨 Palette & Accessibility</div>
+                    <div className="text-xs text-gray-500">Live contrast feedback</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={()=>autoFix()} className="text-xs px-2 py-1 rounded-md bg-blue-600 text-white hover:bg-blue-700">Auto Fix</button>
+                    <button onClick={()=>setCompactContrast(c=>!c)} className="text-xs px-2 py-1 rounded-md bg-gray-200 hover:bg-gray-300" title={compactContrast? 'Show verbose labels (AA/AAA)' : 'Show numeric only'}>{compactContrast? 'Numbers' : 'Labels'}</button>
+                    <button onClick={()=>setShowAdvanced(s=>!s)} className="text-xs px-2 py-1 rounded-md bg-gray-200 hover:bg-gray-300">{showAdvanced? 'Hide':'Show'} Legend</button>
+                  </div>
+                </div>
+                {showAdvanced && (
+                  <div className="flex items-center gap-3 text-[10px]">
+                    <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-600"></span>AAA ≥7</div>
+                    <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span>AA ≥4.5</div>
+                    <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500"></span>Low &lt;4.5</div>
+                    <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500"></span>Poor &lt;3</div>
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {presets.map(p=> (
+                    <button key={p.name} onClick={()=>applyPreset(p.values)} className="text-[10px] px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-100 flex items-center gap-1">
+                      <span className="inline-block w-3 h-3 rounded" style={{backgroundColor:p.values.accent}}></span>{p.name}
+                    </button>
+                  ))}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                  {/* Button / Accent link toggle */}
+                  <div className="col-span-full flex items-center gap-2 mb-2">
+                    <input id="linkAB" type="checkbox" checked={linkAccentButton} onChange={e=>setLinkAccentButton(e.target.checked)} className="w-4 h-4" />
+                    <label htmlFor="linkAB" className="text-xs text-gray-600">Link Chat Button color to Accent (user messages)</label>
+                  </div>
+                  {/* Accent */}
+                  <div className="space-y-1">
+                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <span className="w-4 h-4 rounded-md border border-gray-300" style={{backgroundColor: accent}}></span>
+                      Accent / User Bubble
+                    </label>
+                    <div className="flex items-center gap-3 bg-white rounded-lg p-2 border border-gray-300">
+                      <input aria-label="Accent color" type="color" value={accent} onChange={e=>setAccent(e.target.value)} className="h-10 w-10 cursor-pointer rounded shadow-sm p-0 border-none" />
+                      <div className="font-mono text-xs text-gray-700">{accent}</div>
+                      <span title="Accent vs Page Background" className={`text-[10px] text-white px-1.5 py-0.5 rounded ${badge(contrastAccentOnBg, compactContrast).cls}`}>{badge(contrastAccentOnBg, compactContrast).label}</span>
+                    </div>
+                    {accentSuggestion && <div className="text-[10px] text-amber-600">Suggestion (dark): try {accentSuggestion}</div>}
+                  </div>
+                  {/* Button */}
+                  <div className="space-y-1">
+                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <span className="w-4 h-4 rounded-md border border-gray-300" style={{backgroundColor: buttonColor}}></span>
+                      Chat Button
+                    </label>
+                    <div className="flex items-center gap-3 bg-white rounded-lg p-2 border border-gray-300">
+                      <input aria-label="Button color" type="color" value={buttonColor} onChange={e=>setButtonColor(e.target.value)} disabled={linkAccentButton} className={`h-10 w-10 cursor-pointer rounded shadow-sm p-0 border-none ${linkAccentButton?'opacity-40 cursor-not-allowed':''}`} />
+                      <div className={`font-mono text-xs text-gray-700 ${linkAccentButton?'opacity-40':''}`}>{buttonColor}</div>
+                      <span title="Button vs Page Background" className={`text-[10px] text-white px-1.5 py-0.5 rounded ${badge(contrastButtonOnBg, compactContrast).cls}`}>{badge(contrastButtonOnBg, compactContrast).label}</span>
+                    </div>
+                  </div>
+                  {/* Text */}
+                  <div className="space-y-1">
+                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <span className="w-4 h-4 rounded-md border border-gray-300" style={{backgroundColor: textColor}}></span>
+                      Text
+                    </label>
+                    <div className="flex items-center gap-3 bg-white rounded-lg p-2 border border-gray-300">
+                      <input aria-label="Text color" type="color" value={textColor} onChange={e=>setTextColor(e.target.value)} className="h-10 w-10 cursor-pointer rounded shadow-sm p-0 border-none" />
+                      <div className="font-mono text-xs text-gray-700">{textColor}</div>
+                      <span title="Text vs Page Background" className={`text-[10px] text-white px-1.5 py-0.5 rounded ${badge(contrastTextOnBg, compactContrast).cls}`}>{badge(contrastTextOnBg, compactContrast).label}</span>
+                    </div>
+                    {textSuggestion && <div className="text-[10px] text-amber-600">Suggestion: use {textSuggestion} for better legibility</div>}
+                  </div>
+                  {/* Card */}
+                  <div className="space-y-1">
+                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <span className="w-4 h-4 rounded-md border border-gray-300" style={{backgroundColor: cardColor}}></span>
+                      Card Background
+                    </label>
+                    <div className="flex items-center gap-3 bg-white rounded-lg p-2 border border-gray-300">
+                      <input aria-label="Card background color" type="color" value={cardColor} onChange={e=>setCardColor(e.target.value)} className="h-10 w-10 cursor-pointer rounded shadow-sm p-0 border-none" />
+                      <div className="font-mono text-xs text-gray-700">{cardColor}</div>
+                      <span title="Text vs Card Background" className={`text-[10px] text-white px-1.5 py-0.5 rounded ${badge(contrastTextOnCard, compactContrast).cls}`}>{badge(contrastTextOnCard, compactContrast).label}</span>
+                    </div>
+                  </div>
+                  {/* Page BG */}
+                  <div className="space-y-1">
+                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <span className="w-4 h-4 rounded-md border border-gray-300" style={{backgroundColor: bgColor}}></span>
+                      Page Background
+                    </label>
+                    <div className="flex items-center gap-3 bg-white rounded-lg p-2 border border-gray-300">
+                      <input aria-label="Page background color" type="color" value={bgColor} onChange={e=>setBgColor(e.target.value)} className="h-10 w-10 cursor-pointer rounded shadow-sm p-0 border-none" />
+                      <div className="font-mono text-xs text-gray-700">{bgColor}</div>
+                      <span title="Text vs Page Background" className={`text-[10px] text-white px-1.5 py-0.5 rounded ${badge(contrastTextOnBg, compactContrast).cls}`}>{badge(contrastTextOnBg, compactContrast).label}</span>
+                    </div>
+                  </div>
+                  {/* Swatch preview */}
+                  <div className="col-span-full mt-2 grid grid-cols-2 gap-2 text-[10px]">
+                    <div className="rounded-md border p-2 space-y-1" style={{backgroundColor: bgColor}}>
+                      <div className="font-semibold">Bg Preview</div>
+                      <div className="p-1 rounded" style={{backgroundColor: cardColor, color:textColor}}>Card / Text</div>
+                      <div className="p-1 rounded" style={{backgroundColor: accent, color:'#fff'}}>User Msg</div>
+                      <div className="p-1 rounded" style={{backgroundColor: buttonColor, color:'#fff'}}>Button</div>
+                    </div>
+                    <div className="rounded-md border p-2 space-y-1" style={{backgroundColor: theme==='dark'? '#0b111a':'#ffffff'}}>
+                      <div className="font-semibold">Theme Contrast</div>
+                      <div className="p-1 rounded" style={{backgroundColor: theme==='dark'? '#162131':'#f1f5f9', color:textColor}}>Neutral Surface</div>
+                      <div className="p-1 rounded" style={{backgroundColor: accent, color:'#fff'}}>Accent</div>
+                      <div className="p-1 rounded" style={{backgroundColor: cardColor, color:textColor}}>Card</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Step 3: Copy and Install */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">3</div>
+                <h3 className="text-lg font-semibold text-gray-900">Add to Your Website</h3>
+              </div>
+              
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="text-lg">📋</div>
+                    <span className="font-medium text-gray-900">Website Code</span>
+                  </div>
+                  <button 
+                    onClick={() => copy(displayCode)} 
+                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                      copied 
+                        ? 'bg-green-500 text-white' 
+                        : 'bg-blue-500 hover:bg-blue-600 text-white'
+                    }`} 
+                    disabled={!displayCode}
+                  >
+                    {copied ? '✅ Copied!' : '📋 Copy Code'}
+                  </button>
+                </div>
+                
+                <div className="bg-white rounded-lg border border-gray-200 p-4 font-mono text-sm overflow-x-auto max-h-40">
+                  <pre className="whitespace-pre-wrap text-gray-700">{displayCode}</pre>
+                </div>
+                
+                <div className="mt-3 text-sm text-gray-600">
+                  <div className="font-medium mb-2">📖 How to install:</div>
+                  <ol className="list-decimal list-inside space-y-1 text-xs">
+                    <li>Copy the code above</li>
+                    <li>Paste it into your website's HTML before the closing <code className="bg-gray-200 px-1 rounded">&lt;/body&gt;</code> tag</li>
+                    <li>Save and publish your website</li>
+                    <li>Your chatbot will appear automatically! 🎉</li>
+                  </ol>
+                </div>
+              </div>
+
+              {/* API Key Management */}
+              <div className="rounded-lg border border-gray-200 p-4 bg-gray-50">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-gray-700">Bot API Key</span>
+                  <span className="text-xs text-gray-500">Last rotated: {rotatedAt ? new Date(rotatedAt).toLocaleString() : "Not set"}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <input readOnly value={pubKey || ""} placeholder="No key" className="px-3 py-2 rounded-md border border-black/10 w-full text-sm" />
-                  <button onClick={async()=>{ const k = pubKey || ""; if(!k) return; await copy(k); }} className="px-3 py-2 rounded-md bg-black/80 text-white text-sm">Copy</button>
+                  <input 
+                    readOnly 
+                    value={pubKey || ""} 
+                    placeholder="No key generated" 
+                    className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded text-sm font-mono" 
+                  />
+                  <button 
+                    onClick={async()=>{
+                      const k = pubKey || ""; 
+                      if(!k) return; 
+                      await copy(k);
+                    }} 
+                    className="px-3 py-2 bg-gray-600 text-white text-sm rounded hover:bg-gray-700"
+                  >
+                    Copy
+                  </button>
                 </div>
-                <div className="text-xs text-black/60">Paste as <span className="font-medium">botKey</span> in your embed config.</div>
+                <div className="flex items-center gap-2 mt-2">
+                  <input
+                    type="checkbox"
+                    id="include-key"
+                    checked={includeKey}
+                    onChange={(e) => setIncludeKey(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <label htmlFor="include-key" className="text-xs text-gray-600">
+                    Include API key in generated code (recommended for security)
+                  </label>
+                </div>
               </div>
             </div>
           </div>
         </div>
-        <div className="rounded-xl border border-black/10 bg-white">
-          <div className="p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-black/60">Template Preview</span>
+
+        {/* Preview Panel */}
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+          <div className="p-6 space-y-4">
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <div className="text-2xl">👀</div>
+                <h3 className="text-lg font-semibold text-gray-900">Live Preview</h3>
+              </div>
+              <p className="text-sm text-gray-600">This is exactly how your chatbot will look on your website</p>
             </div>
-            {tpl ? (
-              /^<iframe /.test(buildTemplateSnippet(tpl)) ? (
-                <div className="rounded-md border border-black/10 overflow-hidden flex items-start">
-                  <div className="w-full min-h-[540px]" dangerouslySetInnerHTML={{ __html: buildTemplateSnippet(tpl) }} />
+            
+            <div className="bg-gray-50 rounded-lg p-4">
+              <ChatPreview template={tpl} />
+            </div>
+            
+            {tpl && (
+              <div className="text-center">
+                <div className="inline-flex items-center gap-2 px-3 py-2 bg-green-100 text-green-800 rounded-lg text-sm">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span>Try typing a message above! ⬆️</span>
                 </div>
-              ) : (
-                <div className="text-xs text-black/60">No live preview for this type.</div>
-              )
-            ) : (
-              <div className="text-xs text-black/60">Select a template to preview.</div>
+              </div>
             )}
           </div>
         </div>

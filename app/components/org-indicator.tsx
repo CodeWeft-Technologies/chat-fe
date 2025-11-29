@@ -15,6 +15,7 @@ export default function OrgIndicator() {
       }
     } catch {}
   }, []);
+  // Logout now handled by AppShell header; keep for backward compatibility but hide button
   function logout() {
     if (typeof window !== "undefined") {
       localStorage.removeItem("orgId");
@@ -28,9 +29,8 @@ export default function OrgIndicator() {
     return <Link href="/login" className="text-sm text-blue-600 hover:underline">Login</Link>;
   }
   return (
-    <div className="flex items-center gap-2 text-sm">
+    <div className="flex items-center gap-2 text-xs md:text-sm">
       <span className="text-black/60 dark:text-white/60">{email ? email+" • " : ""}Org: {org}</span>
-      <button onClick={logout} className="px-2 py-1 rounded-md border border-black/10">Logout</button>
     </div>
   );
 }

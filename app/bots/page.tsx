@@ -1,6 +1,29 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState, useEffect, useMemo } from "react";
+import { Card } from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Select } from "../components/ui/select";
+
+const TEMPLATE_PROMPTS: Record<string, { behavior: string; system: string }> = {
+  support: {
+    behavior: 'support',
+    system: 'Answer customer support questions using provided context. Be concise and helpful.'
+  },
+  sales: {
+    behavior: 'sales',
+    system: 'Assist with product questions and sales. Use provided context and be persuasive but honest.'
+  },
+  appointment: {
+    behavior: 'appointment',
+    system: 'Help users schedule appointments. Collect required details and respect constraints from provided context.'
+  },
+  qna: {
+    behavior: 'qna',
+    system: 'Answer strictly from the provided Q&A knowledge. If not found, say: "I don\'t have that information."'
+  }
+};
 
 function B() {
   const env = process.env.NEXT_PUBLIC_BACKEND_URL || "";
@@ -22,8 +45,8 @@ export default function BotsPage() {
   const [system, setSystem] = useState("");
   const [website, setWebsite] = useState("");
   const [tone, setTone] = useState("");
-  const [welcome, setWelcome] = useState("");
   const [template, setTemplate] = useState("");
+  const [search, setSearch] = useState("");
   
 
   async function api<T = unknown>(path: string, opts?: RequestInit): Promise<T> {
@@ -58,8 +81,8 @@ export default function BotsPage() {
     if (!org) { alert("Set Org ID"); return; }
     if (!behavior) { alert("Select a behavior"); return; }
     try {
-      await api(`/api/bots`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ org_id: org, behavior, system_prompt: system || null, name: name || null, website_url: website || null, tone: tone || null, welcome_message: welcome || null }) });
-      setName(""); setBehavior(""); setSystem(""); setWebsite(""); setTone(""); setWelcome("");
+      await api(`/api/bots`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ org_id: org, behavior, system_prompt: system || null, name: name || null, website_url: website || null, tone: tone || null }) });
+      setName(""); setBehavior(""); setSystem(""); setWebsite(""); setTone("");
       await load();
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -101,107 +124,124 @@ export default function BotsPage() {
     }
   }
 
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return bots;
+    return bots.filter(b => b.bot_id.toLowerCase().includes(q) || b.behavior.toLowerCase().includes(q));
+  }, [bots, search]);
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Bots</h1>
-      </div>
-      {mounted && (
-        <div className="rounded-xl border border-black/10 bg-white shadow-sm">
-          <div className="p-4 flex flex-wrap items-center gap-3">
-            <label className="text-sm">Org</label>
-            <input value={org} readOnly className="px-3 py-2 rounded-md border border-black/10 w-full sm:w-64" />
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">Bots</h1>
+        <div className="flex gap-2">
+          <Input
+            placeholder="Search bots..."
+            value={search}
+            onChange={e=>setSearch(e.target.value)}
+            className="sm:w-64"
+          />
+          <Button variant="outline" onClick={load}>Refresh</Button>
         </div>
+      </div>
+
+      {mounted && (
+        <Card title="Organization" subtitle="Context for all bot operations" className="p-4">
+          <Input label="Org ID" value={org} readOnly description="Stored locally for convenience." />
+        </Card>
       )}
 
-      <div className="rounded-xl border border-black/10 bg-white shadow-sm">
-        <div className="p-4 space-y-2 text-sm text-black/70">
-          <div className="font-semibold text-black/80">About Bots</div>
-          <p>Create bots for your organization and manage their behavior and prompts. Keys can be rotated to secure public embeds. Your organization is fixed here to prevent cross-tenant access.</p>
-        </div>
-      </div>
+      <Card title="About Bots" className="p-4" subtitle="Isolated assistants with configurable instructions and usage keys">
+        <p className="text-xs leading-relaxed text-[var(--text-soft)]">Create assistants tailored to support, sales, appointment booking or constrained Q&amp;A. Rotate keys when embedding publicly. Organization scoping prevents cross-tenant leakage.</p>
+      </Card>
 
-      <div className="rounded-xl border border-black/10 bg-white shadow-sm">
-        <div className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold">Create Bot</h2>
-            <button onClick={createBot} className="px-3 py-2 rounded-md bg-blue-600 text-white shadow hover:bg-blue-700 transition">Create</button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm">Template</label>
-              <select value={template} onChange={e=>{const v=e.target.value;setTemplate(v);if(v==='support'){setBehavior('support');setSystem('Answer customer support questions using provided context. Be concise and helpful.');}else if(v==='sales'){setBehavior('sales');setSystem('Assist with product questions and sales. Use provided context and be persuasive but honest.');}else if(v==='appointment'){setBehavior('appointment');setSystem('Help users schedule appointments. Collect required details and respect constraints from provided context.');}else if(v==='qna'){setBehavior('qna');setSystem('Answer strictly from the provided Q&A knowledge. If not found, say: "I don\'t have that information."');}}} className="px-3 py-2 rounded-md border border-black/10 w-full">
-                <option value="">Select a template</option>
-                <option value="support">Support</option>
-                <option value="sales">Sales</option>
-                <option value="appointment">Appointment</option>
-                <option value="qna">QnA</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm">Name</label>
-              <input value={name} onChange={e=>setName(e.target.value)} placeholder="Name" className="px-3 py-2 rounded-md border border-black/10 w-full" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm">Bot Type</label>
-              <select value={behavior} onChange={e=>setBehavior(e.target.value)} className="px-3 py-2 rounded-md border border-black/10 w-full">
-                <option value="">Behavior</option>
-                <option value="support">Customer Support</option>
-                <option value="sales">Sales</option>
-                <option value="appointment">Appointment Booking</option>
-                <option value="qna">QnA</option>
-              </select>
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <label className="text-sm">Instructions</label>
-              <input value={system} onChange={e=>setSystem(e.target.value)} placeholder="Bot instructions" className="px-3 py-2 rounded-md border border-black/10 w-full" />
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <label className="text-sm">Website</label>
-              <input value={website} onChange={e=>setWebsite(e.target.value)} placeholder="https://..." className="px-3 py-2 rounded-md border border-black/10 w-full" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm">Tone</label>
-              <select value={tone} onChange={e=>setTone(e.target.value)} className="px-3 py-2 rounded-md border border-black/10 w-full">
-                <option value="">Tone</option>
-                <option value="friendly">Friendly</option>
-                <option value="professional">Professional</option>
-                <option value="casual">Casual</option>
-              </select>
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <label className="text-sm">Greeting</label>
-              <input value={welcome} onChange={e=>setWelcome(e.target.value)} placeholder="Greeting message" className="px-3 py-2 rounded-md border border-black/10 w-full" />
-            </div>
+      <Card title="Create Bot" className="p-4" actions={<Button onClick={createBot}>Create</Button>}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Select
+            label="Template"
+            value={template}
+            onChange={e=>{
+              const v = e.target.value;
+              setTemplate(v);
+              const t = TEMPLATE_PROMPTS[v];
+              if (t) {
+                setBehavior(t.behavior);
+                setSystem(t.system);
+              }
+            }}
+            options={[
+              { value: '', label: 'Select a template' },
+              { value: 'support', label: 'Support' },
+              { value: 'sales', label: 'Sales' },
+              { value: 'appointment', label: 'Appointment' },
+              { value: 'qna', label: 'QnA' }
+            ]}
+          />
+          <Input label="Name" value={name} onChange={e=>setName(e.target.value)} placeholder="Display name" />
+          <Select
+            label="Bot Type"
+            value={behavior}
+            onChange={e=>setBehavior(e.target.value)}
+            options={[
+              { value: '', label: 'Behavior' },
+              { value: 'support', label: 'Customer Support' },
+              { value: 'sales', label: 'Sales' },
+              { value: 'appointment', label: 'Appointment Booking' },
+              { value: 'qna', label: 'QnA' }
+            ]}
+          />
+          <Input label="Website" value={website} onChange={e=>setWebsite(e.target.value)} placeholder="https://..." />
+          <Select
+            label="Tone"
+            value={tone}
+            onChange={e=>setTone(e.target.value)}
+            options={[
+              { value: '', label: 'Tone' },
+              { value: 'friendly', label: 'Friendly' },
+              { value: 'professional', label: 'Professional' },
+              { value: 'casual', label: 'Casual' }
+            ]}
+          />
+          <div className="md:col-span-2 space-y-1">
+            <label className="block text-xs font-medium text-[var(--text-soft)]">Instructions</label>
+            <textarea
+              value={system}
+              onChange={e=>setSystem(e.target.value)}
+              placeholder="Bot instructions / system prompt"
+              className="input-base w-full h-28 resize-vertical"
+            />
+            <p className="text-[10px] text-[var(--text-soft)]">Clear guidance improves answer consistency. Templates provide a starting point.</p>
           </div>
         </div>
-      </div>
+      </Card>
 
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Your Bots</h2>
-          <button onClick={load} className="px-3 py-2 rounded-md bg-black/80 text-white">Refresh</button>
-        </div>
-        {!bots.length ? (
-          <div className="rounded-xl border border-black/10 bg-white p-4 text-sm">No bots found</div>
+        <h2 className="text-lg font-semibold tracking-tight">Your Bots</h2>
+        {!filtered.length ? (
+          <Card className="p-6 text-center" subtitle="You haven't created any bots yet">
+            <p className="text-sm text-[var(--text-soft)] mb-4">Use the form above to create your first assistant. It will appear here for management, embedding and usage tracking.</p>
+            <Button onClick={createBot} variant="primary">Create Bot</Button>
+          </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {bots.map(b => (
-              <div key={b.bot_id} className="rounded-xl border border-black/10 bg-white p-4 shadow-sm">
-                <div className="text-sm text-black/60 mb-1">Bot Type: {b.behavior}</div>
-                <div className="font-mono text-sm break-all mb-2">{b.bot_id}</div>
-                <div className="text-xs mb-3">{b.has_key ? "Key active" : "No key"}</div>
+            {filtered.map(b => (
+              <Card
+                key={b.bot_id}
+                className="p-4"
+                title={b.behavior.charAt(0).toUpperCase()+b.behavior.slice(1)}
+                subtitle={b.has_key ? 'Key active' : 'No key'}
+              >
+                <div className="font-mono text-xs break-all mb-3 select-all">{b.bot_id}</div>
                 <div className="flex flex-wrap gap-2">
-                  <Link href={`/usage/${b.bot_id}`} className="px-2 py-1 rounded-md bg-blue-600 text-white text-xs shadow hover:bg-blue-700 transition">Usage</Link>
-                  <Link href={`/usage/${b.bot_id}`} className="px-2 py-1 rounded-md bg-green-600 text-white text-xs shadow hover:bg-green-700 transition">Test</Link>
-                  <Link href={`/embed/${b.bot_id}`} className="px-2 py-1 rounded-md bg-blue-600 text-white text-xs shadow hover:bg-blue-700 transition">Embed</Link>
-                  <Link href={`/bots/${b.bot_id}/config`} className="px-2 py-1 rounded-md bg-blue-600 text-white text-xs shadow hover:bg-blue-700 transition">Config</Link>
-                  <button onClick={()=>rotateKey(b.bot_id)} className="px-2 py-1 rounded-md bg-black/80 text-white text-xs shadow hover:bg-black transition">Rotate Key</button>
-                  <button onClick={()=>clearData(b.bot_id)} className="px-2 py-1 rounded-md bg-red-600 text-white text-xs shadow hover:bg-red-700 transition">Clear Data</button>
-                  <button onClick={()=>deleteBot(b.bot_id)} className="px-2 py-1 rounded-md bg-red-700 text-white text-xs shadow hover:bg-red-800 transition">Delete Bot</button>
+                  <Link href={`/usage/${b.bot_id}`} className="btn-base px-2 py-1 text-xs bg-[var(--accent)] text-white">Usage</Link>
+                  <Link href={`/usage/${b.bot_id}`} className="btn-base px-2 py-1 text-xs bg-emerald-600 text-white">Test</Link>
+                  <Link href={`/embed/${b.bot_id}`} className="btn-base px-2 py-1 text-xs bg-indigo-600 text-white">Embed</Link>
+                  <Link href={`/bots/${b.bot_id}/config`} className="btn-base px-2 py-1 text-xs bg-blue-600 text-white">Config</Link>
+                  <button onClick={()=>rotateKey(b.bot_id)} className="btn-base px-2 py-1 text-xs bg-neutral-800 text-white">Rotate Key</button>
+                  <button onClick={()=>clearData(b.bot_id)} className="btn-base px-2 py-1 text-xs bg-amber-600 text-white">Clear Data</button>
+                  <button onClick={()=>deleteBot(b.bot_id)} className="btn-base px-2 py-1 text-xs bg-red-700 text-white">Delete</button>
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         )}
