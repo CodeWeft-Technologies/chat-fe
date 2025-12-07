@@ -12,7 +12,8 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 }
 
 export function Input({ label, description, error, wrapperClassName, className, id, ...rest }: InputProps) {
-  const inputId = id || React.useId();
+  const uid = React.useId();
+  const inputId = id ?? uid;
   return (
     <div className={cx("space-y-1", wrapperClassName)}>
       {label && (

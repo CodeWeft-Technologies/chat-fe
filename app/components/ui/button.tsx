@@ -28,17 +28,15 @@ export function Button({ variant = "primary", size = "md", loading, disabled, ic
   const baseClasses = `${variantMap[variant]} ${sizeMap[size]} focus-ring disabled:opacity-50 disabled:cursor-not-allowed ${className}`.trim();
 
   if (asChild && React.isValidElement(children)) {
-    // Merge existing child classNames
-    const existing = (children.props as any).className || "";
+    const existing = (children.props as { className?: string }).className || "";
     const composed = `${existing} ${baseClasses}`.trim();
-    // We cannot truly disable non-button elements; simulate via aria-disabled + pointer-events
     const finalClass = (disabled || loading) ? `${composed} pointer-events-none opacity-60` : composed;
-    const extraProps: Record<string, any> = {
+    const extraProps: Record<string, unknown> = {
       ...rest,
       className: finalClass
     };
     if (disabled || loading) {
-      extraProps['aria-disabled'] = true;
+      (extraProps as Record<string, unknown>)['aria-disabled'] = true;
     }
     return React.cloneElement(children, extraProps);
   }

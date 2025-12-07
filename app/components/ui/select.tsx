@@ -18,7 +18,8 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
 }
 
 export function Select({ label, description, error, options, wrapperClassName, className, id, children, ...rest }: SelectProps) {
-  const selectId = id || React.useId();
+  const uid = React.useId();
+  const selectId = id ?? uid;
   return (
     <div className={cx("space-y-1", wrapperClassName)}>
       {label && (

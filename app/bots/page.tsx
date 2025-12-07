@@ -237,6 +237,7 @@ export default function BotsPage() {
                   <Link href={`/usage/${b.bot_id}`} className="btn-base px-2 py-1 text-xs bg-emerald-600 text-white">Test</Link>
                   <Link href={`/embed/${b.bot_id}`} className="btn-base px-2 py-1 text-xs bg-indigo-600 text-white">Embed</Link>
                   <Link href={`/bots/${b.bot_id}/config`} className="btn-base px-2 py-1 text-xs bg-blue-600 text-white">Config</Link>
+                  <Link href={`/bots/${b.bot_id}/calendar`} className="btn-base px-2 py-1 text-xs bg-purple-600 text-white">Calendar</Link>
                   <button onClick={()=>rotateKey(b.bot_id)} className="btn-base px-2 py-1 text-xs bg-neutral-800 text-white">Rotate Key</button>
                   <button onClick={()=>clearData(b.bot_id)} className="btn-base px-2 py-1 text-xs bg-amber-600 text-white">Clear Data</button>
                   <button onClick={()=>deleteBot(b.bot_id)} className="btn-base px-2 py-1 text-xs bg-red-700 text-white">Delete</button>

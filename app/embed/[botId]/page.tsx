@@ -1303,7 +1303,7 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
                   <div className="font-medium mb-2">📖 How to install:</div>
                   <ol className="list-decimal list-inside space-y-1 text-xs">
                     <li>Copy the code above</li>
-                    <li>Paste it into your website's HTML before the closing <code className="bg-gray-200 px-1 rounded">&lt;/body&gt;</code> tag</li>
+                    <li>Paste it into your website&apos;s HTML before the closing <code className="bg-gray-200 px-1 rounded">&lt;/body&gt;</code> tag</li>
                     <li>Save and publish your website</li>
                     <li>Your chatbot will appear automatically! 🎉</li>
                   </ol>

@@ -3,16 +3,44 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
+function NavGroup({ title, items, collapsed, p }: { title: string; items: Array<{href:string,label:string,icon:string}>; collapsed: boolean; p: string | null }) {
+  return (
+    <div>
+      {!collapsed && <div className="text-[10px] font-semibold uppercase tracking-wide text-black/40 dark:text-white/40 mb-2 px-2">{title}</div>}
+      <ul className="space-y-1" role="list">
+        {items.map(({ href, label, icon }) => {
+          const active = p === href || (href !== '/' && p?.startsWith(href));
+          return (
+            <li key={href}>
+              <Link
+                href={href}
+                aria-current={active ? 'page' : undefined}
+                title={collapsed ? label : undefined}
+                className={`relative group flex items-center ${collapsed ? 'justify-center' : 'gap-2'} px-2 py-2 rounded-md text-sm transition-colors outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-neutral-900 ${active ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm' : 'text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/10'}`}
+              >
+                <span className="text-base drop-shadow-sm" aria-hidden>{icon}</span>
+                {!collapsed && <span className="truncate">{label}</span>}
+                {active && !collapsed && <span className="ml-auto text-[10px] font-medium tracking-wide opacity-75">ACTIVE</span>}
+                {collapsed && (
+                  <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap px-2 py-1 rounded bg-black/80 text-white text-[11px] opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">{label}</span>
+                )}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 export default function Sidebar() {
   const p = usePathname();
-  const [collapsed, setCollapsed] = useState<boolean>(false);
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem('sidebar:collapsed') === 'true';
+    return false;
+  });
   const [mobileOpen, setMobileOpen] = useState<boolean>(false);
 
-  // Persist collapsed preference
-  useEffect(() => {
-    const stored = typeof window !== 'undefined' ? localStorage.getItem('sidebar:collapsed') : null;
-    if (stored === 'true') setCollapsed(true);
-  }, []);
   useEffect(() => {
     if (typeof window !== 'undefined') localStorage.setItem('sidebar:collapsed', collapsed ? 'true' : 'false');
   }, [collapsed]);
@@ -22,41 +50,10 @@ export default function Sidebar() {
     { href: '/bots', label: 'Bots', icon: '🤖' },
     { href: '/ingest', label: 'Knowledge', icon: '📚' },
   ];
-  // Removed Usage & Auth per request; keep structure if future items needed
   const secondary: Array<{href:string,label:string,icon:string}> = [];
 
-  function NavGroup({ title, items }: { title: string; items: Array<{href:string,label:string,icon:string}> }) {
-    return (
-      <div>
-        {!collapsed && <div className="text-[10px] font-semibold uppercase tracking-wide text-black/40 dark:text-white/40 mb-2 px-2">{title}</div>}
-        <ul className="space-y-1" role="list">
-          {items.map(({ href, label, icon }) => {
-            const active = p === href || (href !== '/' && p?.startsWith(href));
-            return (
-              <li key={href}>
-                <Link
-                  href={href}
-                  aria-current={active ? 'page' : undefined}
-                  title={collapsed ? label : undefined}
-                  className={`relative group flex items-center ${collapsed ? 'justify-center' : 'gap-2'} px-2 py-2 rounded-md text-sm transition-colors outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-neutral-900 ${active ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm' : 'text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/10'}`}
-                >
-                  <span className="text-base drop-shadow-sm" aria-hidden>{icon}</span>
-                  {!collapsed && <span className="truncate">{label}</span>}
-                  {active && !collapsed && <span className="ml-auto text-[10px] font-medium tracking-wide opacity-75">ACTIVE</span>}
-                  {collapsed && (
-                    <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap px-2 py-1 rounded bg-black/80 text-white text-[11px] opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">{label}</span>
-                  )}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-    );
-  }
-
   return (
-    <>
+    <> 
       {/* Mobile toggle button */}
       <button
         aria-label="Toggle navigation"
@@ -83,7 +80,7 @@ export default function Sidebar() {
           </button>
         </div>
         <div className="px-2 py-4 flex flex-col gap-6 overflow-y-auto scrollbar-thin scrollbar-thumb-black/10 dark:scrollbar-thumb-white/10">
-          <NavGroup title="Main" items={primary} />
+          <NavGroup title="Main" items={primary} collapsed={collapsed} p={p} />
           {/* Secondary group intentionally removed */}
           {!collapsed && (
             <div className="mt-auto text-[11px] text-black/40 dark:text-white/40 px-2 pb-4">
