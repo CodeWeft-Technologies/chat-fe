@@ -13,6 +13,9 @@ type Appointment = {
   phone?: string | null;
   notes?: string | null;
   info?: Record<string, unknown> | null;
+  form_data?: Record<string, unknown> | null;
+  event_description?: string | null;
+  external_event_id?: string | null;
 };
 
 function B() {
@@ -45,14 +48,34 @@ export default function BotCalendarPage({ params }: { params: Promise<{ botId: s
     setBusy(true);
     const headers: Record<string,string> = {};
     if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
+    
+    // Fetch bookings first to get external_event_ids
+    const r2 = await fetch(`${B()}/api/bots/${encodeURIComponent(botId)}/booking/appointments?org_id=${encodeURIComponent(org)}`, { headers });
+    const t2 = await r2.text();
+    let bookings: Appointment[] = [];
+    const externalEventIds = new Set<string>();
+    if (r2.ok) { 
+      try { 
+        const j2 = JSON.parse(t2); 
+        bookings = (j2.appointments||[]) as Appointment[];
+        setAppts(bookings);
+        // Collect external event IDs to filter duplicates
+        bookings.forEach(b => {
+          if (b.external_event_id) externalEventIds.add(b.external_event_id);
+        });
+      } catch {} 
+    }
+    
+    // Fetch Google Calendar events and filter out duplicates
     const r = await fetch(`${B()}/api/bots/${encodeURIComponent(botId)}/calendar/events?org_id=${encodeURIComponent(org)}&time_min_iso=${encodeURIComponent(from)}&time_max_iso=${encodeURIComponent(to)}`, { headers });
     const t = await r.text();
     if (!r.ok) { alert(t); return; }
     const j = JSON.parse(t);
-    setEvents((j.events || []) as GEvent[]);
-    const r2 = await fetch(`${B()}/api/bots/${encodeURIComponent(botId)}/booking/appointments?org_id=${encodeURIComponent(org)}`, { headers });
-    const t2 = await r2.text();
-    if (r2.ok) { try { const j2 = JSON.parse(t2); setAppts((j2.appointments||[]) as Appointment[]); } catch {} }
+    const allEvents = (j.events || []) as GEvent[];
+    // Filter out events that are already in bookings
+    const filteredEvents = allEvents.filter(ev => !externalEventIds.has(ev.id));
+    setEvents(filteredEvents);
+    
     setBusy(false);
   }, [org, botId, from, to]);
   useEffect(() => {
@@ -304,23 +327,41 @@ export default function BotCalendarPage({ params }: { params: Promise<{ botId: s
                 try { const h = now.getHours(); const m = now.getMinutes(); const t = ((h - hourStart) * 60 + m)/60*hourHeight; return <div className="absolute left-0 right-0" style={{ top: t }}><div className="h-px bg-red-500" /></div>; } catch { return null; }
               })() : null}
             </div>
-            {dayList.map((d, i) => (
-              <div key={d.key} className={`relative ${i>0?'border-l':''} border-black/10`} style={{ height: gridHeight }}>
-                {Array.from({ length: hourEnd - hourStart + 1 }).map((_, i2) => (
-                  <div key={i2} className="absolute left-0 right-0 border-t border-black/10" style={{ top: i2 * hourHeight }} />
-                ))}
-                <div className="absolute left-1 right-1 top-1 space-y-1">
-                  {blocksByDay[d.key].filter(b=>b.top===0 && b.h>=gridHeight).map((b, idx) => (
-                    <button key={idx} onClick={()=>setSelected({ type: b.kind, id: b.id, title: b.title, start: b.start, end: b.end })} className={`px-2 py-1 rounded-md text-[11px] ${b.kind==='appt' ? 'bg-green-100 text-green-800 border border-green-400 hover:bg-green-200' : 'bg-blue-100 text-blue-800 border border-blue-400 hover:bg-blue-200'}`}>{b.title}</button>
+            {dayList.map((d, i) => {
+              const timedBlocks = blocksByDay[d.key].filter(b=>!(b.top===0 && b.h>=gridHeight));
+              // Calculate overlaps and assign columns
+              const blocksWithColumns = timedBlocks.map((block, idx) => {
+                const overlapping = timedBlocks.filter((other, oidx) => 
+                  oidx !== idx && 
+                  ((block.top >= other.top && block.top < other.top + other.h) ||
+                   (block.top + block.h > other.top && block.top + block.h <= other.top + other.h) ||
+                   (block.top <= other.top && block.top + block.h >= other.top + other.h))
+                );
+                return { ...block, overlapCount: overlapping.length + 1, column: overlapping.filter(o => timedBlocks.indexOf(o) < idx).length };
+              });
+              return (
+                <div key={d.key} className={`relative ${i>0?'border-l':''} border-black/10`} style={{ height: gridHeight }}>
+                  {Array.from({ length: hourEnd - hourStart + 1 }).map((_, i2) => (
+                    <div key={i2} className="absolute left-0 right-0 border-t border-black/10" style={{ top: i2 * hourHeight }} />
                   ))}
+                  <div className="absolute left-1 right-1 top-1 space-y-1">
+                    {blocksByDay[d.key].filter(b=>b.top===0 && b.h>=gridHeight).map((b, idx) => (
+                      <button key={idx} onClick={()=>setSelected({ type: b.kind, id: b.id, title: b.title, start: b.start, end: b.end })} className={`px-2 py-1 rounded-md text-[11px] w-full ${b.kind==='appt' ? 'bg-green-100 text-green-800 border border-green-400 hover:bg-green-200' : 'bg-blue-100 text-blue-800 border border-blue-400 hover:bg-blue-200'}`}>{b.title}</button>
+                    ))}
+                  </div>
+                  {blocksWithColumns.map((b, idx) => {
+                    const widthPercent = 100 / b.overlapCount;
+                    const leftPercent = (b.column * widthPercent);
+                    return (
+                      <button key={idx} onClick={()=>setSelected({ type: b.kind, id: b.id, title: b.title, start: b.start, end: b.end })} className={`absolute rounded-md px-1 py-1 text-[10px] shadow-sm text-left overflow-hidden ${b.kind==='appt' ? 'bg-green-100 border border-green-400 text-green-800 hover:bg-green-200' : 'bg-blue-100 border border-blue-400 text-blue-800 hover:bg-blue-200'}`} style={{ top: b.top, height: Math.max(b.h, 20), left: `calc(0.25rem + ${leftPercent}%)`, width: `calc(${widthPercent}% - 0.5rem)` }}>
+                        <div className="truncate font-medium">{b.title}</div>
+                        <div className="text-[9px] opacity-70 truncate">{new Date(b.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                      </button>
+                    );
+                  })}
                 </div>
-                {blocksByDay[d.key].filter(b=>!(b.top===0 && b.h>=gridHeight)).map((b, idx) => (
-                  <button key={idx} onClick={()=>setSelected({ type: b.kind, id: b.id, title: b.title, start: b.start, end: b.end })} className={`absolute left-1 right-1 rounded-md px-2 py-1 text-xs shadow-sm text-left ${b.kind==='appt' ? 'bg-green-100 border border-green-400 text-green-800 hover:bg-green-200' : 'bg-blue-100 border border-blue-400 text-blue-800 hover:bg-blue-200'}`} style={{ top: b.top, height: b.h }}>
-                    <div className="truncate">{b.title}</div>
-                  </button>
-                ))}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -377,6 +418,27 @@ export default function BotCalendarPage({ params }: { params: Promise<{ botId: s
                   <div><span className="font-semibold">Phone:</span> {selectedAppt.phone || '—'}</div>
                   <div><span className="font-semibold">Notes:</span> {selectedAppt.notes || '—'}</div>
                   <div><span className="font-semibold">Status:</span> {selectedAppt.status || '—'}</div>
+                  {selectedAppt.form_data && Object.keys(selectedAppt.form_data).length > 0 && (
+                    <div className="mt-3 pt-3 border-t">
+                      <div className="font-semibold mb-2">📋 Form Details:</div>
+                      <div className="space-y-1 pl-2">
+                        {Object.entries(selectedAppt.form_data).map(([key, value]) => (
+                          <div key={key} className="text-sm">
+                            <span className="font-medium">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</span>{' '}
+                            <span className="text-black/70">{Array.isArray(value) ? value.join(', ') : String(value)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {selectedAppt.event_description && (
+                    <div className="mt-3 pt-3 border-t">
+                      <div className="font-semibold mb-2">📄 Calendar Event Description:</div>
+                      <div className="text-sm text-black/70 whitespace-pre-wrap pl-2">
+                        {selectedAppt.event_description}
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
               {selected.type === 'appt' && typeof selected.id === 'number' && (

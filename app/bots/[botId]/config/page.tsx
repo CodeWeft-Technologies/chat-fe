@@ -32,8 +32,6 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
   const [maxFuture, setMaxFuture] = useState<number>(60);
   type Win = { day: string; start: string; end: string };
   const [windowsVal, setWindowsVal] = useState<Win[]>([]);
-  const [requiredFields, setRequiredFields] = useState<string[]>([]);
-  const [rfInput, setRfInput] = useState<string>("");
   const [helper, setHelper] = useState<string>("");
   const [connectBusy, setConnectBusy] = useState<boolean>(false);
   const load = useCallback(async () => {
@@ -69,7 +67,6 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
         setMinNotice(j.min_notice_minutes||60);
         setMaxFuture(j.max_future_days||60);
         setWindowsVal((j.available_windows||[]) as Win[]);
-        setRequiredFields(Array.isArray(j.required_user_fields) ? j.required_user_fields.filter((x: unknown)=>typeof x === 'string') as string[] : []);
       }
     } catch {}
     try {
@@ -161,7 +158,7 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
             </div>
             <div className="flex gap-2">
               <a href={`/bots/${botId}/calendar`} className="px-3 py-2 rounded-md bg-purple-600 text-white text-sm">Open Calendar</a>
-              <button disabled={!!calendarId || connectBusy} onClick={async()=>{
+              <button disabled={connectBusy} onClick={async()=>{
                 try {
                   setConnectBusy(true);
                   const headers: Record<string,string> = {};
@@ -175,7 +172,9 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                 } finally {
                   setConnectBusy(false);
                 }
-              }} className={`px-3 py-2 rounded-md ${calendarId ? 'bg-gray-300 text-gray-700' : 'bg-green-600 text-white'} text-sm`}>{calendarId ? 'Connected' : (connectBusy ? 'Opening...' : 'Connect')}</button>
+              }} className={`px-3 py-2 rounded-md ${calendarId ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white'} text-sm transition-colors`}>
+                {connectBusy ? 'Opening...' : (calendarId ? '🔄 Reconnect' : '✓ Connect')}
+              </button>
             </div>
           </div>
           <div className="text-sm">Calendar: {calendarId || "Not connected"}</div>
@@ -186,34 +185,102 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold">Booking Settings</h2>
-              <p className="text-xs text-black/60">Choose how long each appointment is and when you’re available.</p>
+              <p className="text-xs text-black/60">Choose how long each appointment is and when you're available.</p>
             </div>
-            <button onClick={async()=>{
-              try {
-                const headers: Record<string, string> = { "Content-Type": "application/json" };
-                if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
-                const clean = (windowsVal || []).filter(w => Boolean(w?.day) && Boolean(w?.start) && Boolean(w?.end));
-                for (const w of clean) {
-                  const [sh, sm] = (w.start || "00:00").split(":").map(x=>parseInt(x,10));
-                  const [eh, em] = (w.end || "00:00").split(":").map(x=>parseInt(x,10));
-                  if (eh*60+em <= sh*60+sm) { alert(`On ${w.day}, End must be after Start`); return; }
-                }
-                const payload = { org_id: org, timezone: (tz||undefined), available_windows: (clean.length>0 ? clean : undefined), slot_duration_minutes: slotMin, capacity_per_slot: cap, min_notice_minutes: minNotice, max_future_days: maxFuture, required_user_fields: (requiredFields && requiredFields.length ? requiredFields : undefined) };
-                const r = await fetch(`${B()}/api/bots/${encodeURIComponent(botId)}/booking/settings`, { method: "POST", headers, body: JSON.stringify(payload) });
-                const t = await r.text();
-                if (!r.ok) { alert(t); return; }
-                const j = JSON.parse(t);
-                setTz(j.timezone||""); setSlotMin(j.slot_duration_minutes||30); setCap(j.capacity_per_slot||1); setMinNotice(j.min_notice_minutes||60); setMaxFuture(j.max_future_days||60); setWindowsVal((j.available_windows||[]) as Win[]); setRequiredFields(Array.isArray(j.required_user_fields) ? j.required_user_fields.filter((x: unknown)=>typeof x === 'string') as string[] : []);
-                setHelper("Saved! Your availability is updated.");
-              } catch (e) { alert(String(e||"Failed")); }
-            }} className="px-3 py-2 rounded-md bg-blue-600 text-white text-sm">Save</button>
+            <div className="flex gap-2">
+              <a href={`/bots/${botId}/form-builder`} className="px-3 py-2 rounded-md bg-purple-600 text-white text-sm">Form Builder</a>
+              <button onClick={async()=>{
+                try {
+                  const headers: Record<string, string> = { "Content-Type": "application/json" };
+                  if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
+                  const clean = (windowsVal || []).filter(w => Boolean(w?.day) && Boolean(w?.start) && Boolean(w?.end));
+                  for (const w of clean) {
+                    const [sh, sm] = (w.start || "00:00").split(":").map(x=>parseInt(x,10));
+                    const [eh, em] = (w.end || "00:00").split(":").map(x=>parseInt(x,10));
+                    if (eh*60+em <= sh*60+sm) { alert(`On ${w.day}, End must be after Start`); return; }
+                  }
+                  const payload = { org_id: org, timezone: (tz||undefined), available_windows: (clean.length>0 ? clean : undefined), slot_duration_minutes: slotMin, capacity_per_slot: cap, min_notice_minutes: minNotice, max_future_days: maxFuture };
+                  const r = await fetch(`${B()}/api/bots/${encodeURIComponent(botId)}/booking/settings`, { method: "POST", headers, body: JSON.stringify(payload) });
+                  const t = await r.text();
+                  if (!r.ok) { alert(t); return; }
+                  const j = JSON.parse(t);
+                  setTz(j.timezone||""); setSlotMin(j.slot_duration_minutes||30); setCap(j.capacity_per_slot||1); setMinNotice(j.min_notice_minutes||60); setMaxFuture(j.max_future_days||60); setWindowsVal((j.available_windows||[]) as Win[]);
+                  setHelper("Saved! Your availability is updated.");
+                } catch (e) { alert(String(e||"Failed")); }
+              }} className="px-3 py-2 rounded-md bg-blue-600 text-white text-sm">Save</button>
+            </div>
           </div>
           {helper && <div className="text-xs text-green-600">{helper}</div>}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-sm">Timezone</label>
-              <input value={tz} onChange={e=>setTz(e.target.value)} placeholder="e.g. America/New_York" className="px-3 py-2 rounded-md border border-black/10 w-full" />
-              <button onClick={()=>{ try { const z = Intl.DateTimeFormat().resolvedOptions().timeZone; if (z) setTz(z); } catch {} }} className="mt-1 px-2 py-1 rounded-md bg-black/10 text-xs">Use my timezone</button>
+              <label className="text-sm font-semibold">Timezone</label>
+              <select value={tz} onChange={e=>setTz(e.target.value)} className="px-3 py-2 rounded-md border border-black/10 w-full bg-white">
+                <option value="">Select timezone...</option>
+                {tz && !["Asia/Kolkata","America/New_York","America/Los_Angeles","America/Chicago","Europe/London","Europe/Paris","Asia/Tokyo","Asia/Shanghai","Australia/Sydney","UTC","Asia/Dubai","Asia/Singapore","Asia/Hong_Kong","Asia/Seoul","Asia/Bangkok","Europe/Berlin","Europe/Amsterdam","Europe/Moscow","America/Toronto","America/Denver","America/Phoenix","America/Sao_Paulo","America/Mexico_City","Pacific/Auckland","Pacific/Fiji","Pacific/Honolulu"].includes(tz) && (
+                  <option value={tz}>✓ {tz} (Custom/Auto-detected)</option>
+                )}
+                <optgroup label="Common Timezones">
+                  <option value="Asia/Kolkata">Asia/Kolkata (IST, UTC+5:30)</option>
+                  <option value="America/New_York">America/New_York (EST/EDT, UTC-5/-4)</option>
+                  <option value="America/Los_Angeles">America/Los_Angeles (PST/PDT, UTC-8/-7)</option>
+                  <option value="America/Chicago">America/Chicago (CST/CDT, UTC-6/-5)</option>
+                  <option value="Europe/London">Europe/London (GMT/BST, UTC+0/+1)</option>
+                  <option value="Europe/Paris">Europe/Paris (CET/CEST, UTC+1/+2)</option>
+                  <option value="Asia/Tokyo">Asia/Tokyo (JST, UTC+9)</option>
+                  <option value="Asia/Shanghai">Asia/Shanghai (CST, UTC+8)</option>
+                  <option value="Australia/Sydney">Australia/Sydney (AEDT/AEST, UTC+11/+10)</option>
+                  <option value="UTC">UTC (Coordinated Universal Time)</option>
+                </optgroup>
+                <optgroup label="Asia">
+                  <option value="Asia/Dubai">Asia/Dubai (GST, UTC+4)</option>
+                  <option value="Asia/Singapore">Asia/Singapore (SGT, UTC+8)</option>
+                  <option value="Asia/Hong_Kong">Asia/Hong_Kong (HKT, UTC+8)</option>
+                  <option value="Asia/Seoul">Asia/Seoul (KST, UTC+9)</option>
+                  <option value="Asia/Bangkok">Asia/Bangkok (ICT, UTC+7)</option>
+                </optgroup>
+                <optgroup label="Europe">
+                  <option value="Europe/Berlin">Europe/Berlin (CET/CEST, UTC+1/+2)</option>
+                  <option value="Europe/Amsterdam">Europe/Amsterdam (CET/CEST, UTC+1/+2)</option>
+                  <option value="Europe/Moscow">Europe/Moscow (MSK, UTC+3)</option>
+                </optgroup>
+                <optgroup label="Americas">
+                  <option value="America/Toronto">America/Toronto (EST/EDT, UTC-5/-4)</option>
+                  <option value="America/Denver">America/Denver (MST/MDT, UTC-7/-6)</option>
+                  <option value="America/Phoenix">America/Phoenix (MST, UTC-7)</option>
+                  <option value="America/Sao_Paulo">America/Sao_Paulo (BRT, UTC-3)</option>
+                  <option value="America/Mexico_City">America/Mexico_City (CST/CDT, UTC-6/-5)</option>
+                </optgroup>
+                <optgroup label="Pacific">
+                  <option value="Pacific/Auckland">Pacific/Auckland (NZDT/NZST, UTC+13/+12)</option>
+                  <option value="Pacific/Fiji">Pacific/Fiji (FJT, UTC+12)</option>
+                  <option value="Pacific/Honolulu">Pacific/Honolulu (HST, UTC-10)</option>
+                </optgroup>
+              </select>
+              <button 
+                type="button"
+                onClick={()=>{ 
+                  try { 
+                    const z = Intl.DateTimeFormat().resolvedOptions().timeZone; 
+                    console.log('Detected timezone:', z);
+                    if (z) {
+                      setTz(z);
+                      alert(`Detected timezone: ${z}\n\nIf this timezone is not in the dropdown, it will be saved as-is.`);
+                    } else {
+                      alert('Could not detect browser timezone');
+                    }
+                  } catch (e) { 
+                    console.error('Timezone detection error:', e);
+                    alert('Error detecting timezone: ' + e);
+                  } 
+                }} 
+                className="mt-1 px-2 py-1 rounded-md bg-purple-100 hover:bg-purple-200 text-purple-700 text-xs transition-colors font-medium"
+              >
+                📍 Use my browser timezone
+              </button>
+              {tz && !["Asia/Kolkata","America/New_York","America/Los_Angeles","America/Chicago","Europe/London","Europe/Paris","Asia/Tokyo","Asia/Shanghai","Australia/Sydney","UTC","Asia/Dubai","Asia/Singapore","Asia/Hong_Kong","Asia/Seoul","Asia/Bangkok","Europe/Berlin","Europe/Amsterdam","Europe/Moscow","America/Toronto","America/Denver","America/Phoenix","America/Sao_Paulo","America/Mexico_City","Pacific/Auckland","Pacific/Fiji","Pacific/Honolulu"].includes(tz) && (
+                <div className="text-xs text-orange-600">⚠️ Custom timezone: {tz}</div>
+              )}
+              <p className="text-xs text-black/50">Calendar events will be created in this timezone</p>
             </div>
             <div className="space-y-2">
               <label className="text-sm">Slot minutes</label>
@@ -221,42 +288,25 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
               
             </div>
             <div className="space-y-2">
-              <label className="text-sm">Capacity per slot</label>
-              <input type="number" value={cap} onChange={e=>setCap(Number(e.target.value||1))} className="px-3 py-2 rounded-md border border-black/10 w-full" />
+              <label className="text-sm font-semibold">Capacity per slot</label>
+              <p className="text-xs text-black/50">Maximum number of bookings allowed per time slot</p>
+              <input 
+                type="number" 
+                min="1" 
+                value={cap} 
+                onChange={e=>setCap(Math.max(1, Number(e.target.value||1)))} 
+                className="px-3 py-2 rounded-md border border-black/10 w-full" 
+              />
             </div>
             <div className="space-y-2">
-              <label className="text-sm">Min notice (minutes)</label>
-              <input type="number" value={minNotice} onChange={e=>setMinNotice(Number(e.target.value||60))} className="px-3 py-2 rounded-md border border-black/10 w-full" />
+              <label className="text-sm font-semibold">Min notice (minutes)</label>
+              <p className="text-xs text-black/50">Minimum advance notice required for bookings (e.g., 60 = customers must book at least 1 hour in advance)</p>
+              <input type="number" min="0" value={minNotice} onChange={e=>setMinNotice(Number(e.target.value||60))} className="px-3 py-2 rounded-md border border-black/10 w-full" />
             </div>
             <div className="space-y-2">
-              <label className="text-sm">Max future (days)</label>
-              <input type="number" value={maxFuture} onChange={e=>setMaxFuture(Number(e.target.value||60))} className="px-3 py-2 rounded-md border border-black/10 w-full" />
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <label className="text-sm">Required user fields (for booking)</label>
-              <div className="flex flex-wrap items-center gap-2 text-sm">
-                {['name','email','phone','notes'].map(f => (
-                  <label key={f} className="inline-flex items-center gap-2 px-2 py-1 rounded-md border border-black/10">
-                    <input type="checkbox" checked={requiredFields.includes(f)} onChange={e=>{
-                      const on = e.target.checked;
-                      setRequiredFields(prev => on ? (prev.includes(f) ? prev : [...prev, f]) : prev.filter(x=>x!==f));
-                    }} />
-                    {f}
-                  </label>
-                ))}
-              </div>
-              <div className="flex items-center gap-2">
-                <input value={rfInput} onChange={e=>setRfInput(e.target.value)} placeholder="Custom field (e.g. company)" className="px-3 py-2 rounded-md border border-black/10 w-full" />
-                <button type="button" onClick={()=>{
-                  const v = (rfInput||'').trim();
-                  if (!v) return;
-                  setRequiredFields(prev => prev.includes(v) ? prev : [...prev, v]);
-                  setRfInput('');
-                }} className="px-3 py-2 rounded-md bg-black/10">Add</button>
-              </div>
-              {!!requiredFields.length && (
-                <div className="text-xs text-black/60">Required: {requiredFields.join(', ')}</div>
-              )}
+              <label className="text-sm font-semibold">Max future (days)</label>
+              <p className="text-xs text-black/50">How far in advance customers can book (e.g., 60 = customers can book up to 60 days ahead)</p>
+              <input type="number" min="1" value={maxFuture} onChange={e=>setMaxFuture(Number(e.target.value||60))} className="px-3 py-2 rounded-md border border-black/10 w-full" />
             </div>
           </div>
           <div className="mt-4 border-t pt-4">
