@@ -78,7 +78,7 @@ export default function BotCalendarPage({ params }: { params: Promise<{ botId: s
     const j = JSON.parse(t);
     const allEvents = (j.events || []) as GEvent[];
     // Filter out events that are already in bookings
-    const filteredEvents = allEvents.filter(ev => !externalEventIds.has(ev.id));
+    const filteredEvents = allEvents.filter(ev => ev.id && !externalEventIds.has(ev.id));
     setEvents(filteredEvents);
     
     setBusy(false);
