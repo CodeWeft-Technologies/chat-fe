@@ -1,7 +1,12 @@
 "use client";
 import { use as usePromise, useEffect, useState, useCallback } from "react";
 
-type GEvent = { summary?: string; start?: { dateTime?: string; date?: string }; end?: { dateTime?: string; date?: string } };
+type GEvent = { 
+  id?: string;
+  summary?: string; 
+  start?: { dateTime?: string; date?: string }; 
+  end?: { dateTime?: string; date?: string } 
+};
 type Appointment = {
   id: number;
   summary?: string;
