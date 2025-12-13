@@ -26,8 +26,24 @@ interface Resource {
   resource_code?: string;
   description?: string;
   capacity_per_slot: number;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
   is_active?: boolean;
+}
+
+interface FormConfig {
+  id: string;
+  org_id: string;
+  bot_id: string;
+  name: string;
+  description?: string;
+  industry?: string;
+}
+
+interface Template {
+  id: string;
+  name: string;
+  description?: string;
+  industry?: string;
 }
 
 interface ResourceSchedule {
@@ -46,10 +62,10 @@ export default function FormBuilderPage() {
   const botId = params.botId as string;
   
   const [activeTab, setActiveTab] = useState<'fields' | 'resources' | 'templates'>('fields');
-  const [formConfig, setFormConfig] = useState<any>(null);
+  const [formConfig, setFormConfig] = useState<FormConfig | null>(null);
   const [fields, setFields] = useState<FormField[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
-  const [templates, setTemplates] = useState<any[]>([]);
+  const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Form field state
@@ -111,7 +127,7 @@ export default function FormBuilderPage() {
     setLoading(true);
     try {
       // Load or create form configuration
-      let configRes = await fetch(`${API_BASE}/form-configs/${botId}`);
+      const configRes = await fetch(`${API_BASE}/form-configs/${botId}`);
       let config;
       
       if (configRes.ok) {
@@ -176,6 +192,11 @@ export default function FormBuilderPage() {
   };
 
   const saveField = async (field: FormField) => {
+    if (!formConfig) {
+      alert('Form configuration not loaded');
+      return;
+    }
+    
     try {
       let response;
       if (field.id) {
@@ -252,6 +273,11 @@ export default function FormBuilderPage() {
   const saveFormConfig = async () => {
     if (!formConfigData.name.trim()) {
       alert('Form name is required');
+      return;
+    }
+
+    if (!formConfig) {
+      alert('Form configuration not loaded');
       return;
     }
 
@@ -745,12 +771,12 @@ function FieldFormModal({
     setOptions(options.filter((_, i) => i !== index));
   };
 
-  const updateOption = (index: number, key: 'value' | 'label' | 'capacity', value: any) => {
+  const updateOption = (index: number, key: 'value' | 'label' | 'capacity', value: unknown) => {
     const newOptions = [...options];
     if (key === 'capacity') {
-      newOptions[index][key] = value ? parseInt(value) : undefined;
+      newOptions[index][key] = value ? parseInt(String(value)) : undefined;
     } else {
-      newOptions[index][key] = value;
+      newOptions[index][key] = String(value);
     }
     setOptions(newOptions);
   };
@@ -968,8 +994,8 @@ function FieldFormModal({
               <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
                 <p className="text-xs text-blue-900">
                   <strong>💡 Tips:</strong> <br/>
-                  • <strong>Value</strong>: Internal identifier (e.g., "dr_smith")<br/>
-                  • <strong>Label</strong>: What users see (e.g., "Dr. John Smith")<br/>
+                  • <strong>Value</strong>: Internal identifier (e.g., &quot;dr_smith&quot;)<br/>
+                  • <strong>Label</strong>: What users see (e.g., &quot;Dr. John Smith&quot;)<br/>
                   • <strong>Capacity</strong>: Maximum bookings per slot (optional, for resources)
                 </p>
               </div>

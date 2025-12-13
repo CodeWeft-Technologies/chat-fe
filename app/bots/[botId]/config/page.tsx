@@ -185,7 +185,7 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold">Booking Settings</h2>
-              <p className="text-xs text-black/60">Choose how long each appointment is and when you're available.</p>
+              <p className="text-xs text-black/60">Choose how long each appointment is and when you&apos;re available.</p>
             </div>
             <div className="flex gap-2">
               <a href={`/bots/${botId}/form-builder`} className="px-3 py-2 rounded-md bg-purple-600 text-white text-sm">Form Builder</a>
