@@ -24,6 +24,7 @@ interface Resource {
   resource_type: string;
   resource_name: string;
   resource_code?: string;
+  department?: string;
   description?: string;
   capacity_per_slot: number;
   metadata?: Record<string, unknown>;
@@ -77,6 +78,7 @@ export default function FormBuilderPage() {
   const [showResourceForm, setShowResourceForm] = useState(false);
   const [selectedResource, setSelectedResource] = useState<string | null>(null);
   const [resourceSchedules, setResourceSchedules] = useState<ResourceSchedule[]>([]);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
   
   // Form config editing state
   const [editingFormConfig, setEditingFormConfig] = useState(false);
@@ -191,6 +193,58 @@ export default function FormBuilderPage() {
     }
   };
 
+  useEffect(() => {
+    const f = async () => {
+      if (!selectedResource) return;
+      try {
+        const r = await fetch(`${API_BASE}/resources/${selectedResource}/schedules`);
+        if (r.ok) {
+          const d = await r.json();
+          setResourceSchedules(d.schedules || []);
+          setShowScheduleModal(true);
+        }
+      } catch (e) {
+      }
+    };
+    f();
+  }, [selectedResource]);
+
+  const addSchedule = async (payload: Omit<ResourceSchedule, 'id' | 'resource_id'>) => {
+    if (!selectedResource) return;
+    const body = {
+      resource_id: selectedResource,
+      day_of_week: payload.day_of_week,
+      specific_date: payload.specific_date,
+      start_time: payload.start_time,
+      end_time: payload.end_time,
+      slot_duration_minutes: payload.slot_duration_minutes,
+      is_available: payload.is_available
+    };
+    const r = await fetch(`${API_BASE}/resources/${selectedResource}/schedules`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (r.ok) {
+      const rr = await fetch(`${API_BASE}/resources/${selectedResource}/schedules`);
+      if (rr.ok) {
+        const d = await rr.json();
+        setResourceSchedules(d.schedules || []);
+      }
+    }
+  };
+
+  const removeSchedule = async (scheduleId: string) => {
+    const r = await fetch(`${API_BASE}/schedules/${scheduleId}`, { method: 'DELETE' });
+    if (r.ok && selectedResource) {
+      const rr = await fetch(`${API_BASE}/resources/${selectedResource}/schedules`);
+      if (rr.ok) {
+        const d = await rr.json();
+        setResourceSchedules(d.schedules || []);
+      }
+    }
+  };
+
   const saveField = async (field: FormField) => {
     if (!formConfig) {
       alert('Form configuration not loaded');
@@ -238,6 +292,17 @@ export default function FormBuilderPage() {
     } catch (error) {
       console.error('Error deleting field:', error);
       alert('Failed to delete field');
+    }
+  };
+
+  const deleteResource = async (resourceId: string) => {
+    if (!confirm('Are you sure you want to delete this resource?')) return;
+    try {
+      await fetch(`${API_BASE}/resources/${resourceId}`, { method: 'DELETE' });
+      loadData();
+    } catch (error) {
+      console.error('Error deleting resource:', error);
+      alert('Failed to delete resource');
     }
   };
 
@@ -572,6 +637,7 @@ export default function FormBuilderPage() {
               field={editingField}
               fieldTypes={FIELD_TYPES}
               onSave={saveField}
+              resources={resources}
               onCancel={() => {
                 setShowFieldForm(false);
                 setEditingField(null);
@@ -641,8 +707,9 @@ export default function FormBuilderPage() {
                         {resource.capacity_per_slot} per slot
                       </span>
                     </div>
-                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex gap-2">
                       <button
+                        type="button"
                         onClick={() => {
                           setEditingResource(resource);
                           setShowResourceForm(true);
@@ -652,10 +719,21 @@ export default function FormBuilderPage() {
                         ✏️ Edit
                       </button>
                       <button
-                        onClick={() => setSelectedResource(resource.id!)}
+                        type="button"
+                        onClick={() => {
+                          setSelectedResource(resource.id!);
+                          setShowScheduleModal(true);
+                        }}
                         className="px-3 py-1.5 text-purple-600 hover:bg-purple-50 rounded-lg text-sm font-semibold"
                       >
                         📅 Schedule
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteResource(resource.id!)}
+                        className="px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-lg text-sm font-semibold"
+                      >
+                        🗑️ Delete
                       </button>
                     </div>
                   </div>
@@ -677,6 +755,20 @@ export default function FormBuilderPage() {
             />
           )}
         </div>
+      )}
+
+      {showScheduleModal && selectedResource && (
+        <ScheduleModal
+          schedules={resourceSchedules}
+          days={DAYS_OF_WEEK}
+          onAdd={addSchedule}
+          onDelete={removeSchedule}
+          onClose={() => {
+            setShowScheduleModal(false);
+            setSelectedResource(null);
+            setResourceSchedules([]);
+          }}
+        />
       )}
 
       {/* Templates Tab */}
@@ -740,17 +832,125 @@ export default function FormBuilderPage() {
   );
 }
 
+function ScheduleModal({
+  schedules,
+  days,
+  onAdd,
+  onDelete,
+  onClose
+}: {
+  schedules: ResourceSchedule[];
+  days: Array<{ value: number; label: string }>;
+  onAdd: (payload: Omit<ResourceSchedule, 'id' | 'resource_id'>) => void;
+  onDelete: (id: string) => void;
+  onClose: () => void;
+}) {
+  const [dayOfWeek, setDayOfWeek] = useState<number | undefined>(1);
+  const [specificDate, setSpecificDate] = useState<string | undefined>(undefined);
+  const [startTime, setStartTime] = useState<string>('07:00');
+  const [endTime, setEndTime] = useState<string>('10:00');
+  const [slotMinutes, setSlotMinutes] = useState<number>(30);
+  const [isAvailable, setIsAvailable] = useState<boolean>(true);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onAdd({
+      day_of_week: specificDate ? undefined : dayOfWeek,
+      specific_date: specificDate,
+      start_time: startTime,
+      end_time: endTime,
+      slot_duration_minutes: slotMinutes,
+      is_available: isAvailable
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xl font-bold">Resource Schedules</h3>
+          <button onClick={onClose} className="px-3 py-1.5 text-gray-700 border rounded">Close</button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="border rounded p-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="font-semibold">Add Weekly Slot</div>
+            </div>
+            <form onSubmit={submit} className="space-y-2">
+              <select value={dayOfWeek} onChange={e => setDayOfWeek(parseInt(e.target.value))} className="w-full px-3 py-2 border rounded">
+                {days.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+              </select>
+              <div className="grid grid-cols-2 gap-2">
+                <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className="px-3 py-2 border rounded" />
+                <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className="px-3 py-2 border rounded" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <input type="number" min="5" step="5" value={slotMinutes} onChange={e => setSlotMinutes(parseInt(e.target.value))} className="px-3 py-2 border rounded" />
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={isAvailable} onChange={e => setIsAvailable(e.target.checked)} />
+                  Available
+                </label>
+              </div>
+              <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded">Add</button>
+            </form>
+          </div>
+          <div className="border rounded p-3">
+            <div className="font-semibold mb-2">Add Specific Date Slot</div>
+            <div className="space-y-2">
+              <input type="date" value={specificDate || ''} onChange={e => setSpecificDate(e.target.value || undefined)} className="w-full px-3 py-2 border rounded" />
+              <div className="grid grid-cols-2 gap-2">
+                <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className="px-3 py-2 border rounded" />
+                <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className="px-3 py-2 border rounded" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <input type="number" min="5" step="5" value={slotMinutes} onChange={e => setSlotMinutes(parseInt(e.target.value))} className="px-3 py-2 border rounded" />
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={isAvailable} onChange={e => setIsAvailable(e.target.checked)} />
+                  Available
+                </label>
+              </div>
+              <button onClick={submit} className="px-4 py-2 bg-purple-600 text-white rounded">Add</button>
+            </div>
+          </div>
+        </div>
+        <div className="border rounded p-3">
+          <div className="font-semibold mb-2">Existing Schedules</div>
+          {schedules.length === 0 ? (
+            <div className="text-sm text-gray-500">No schedules</div>
+          ) : (
+            <div className="space-y-2 max-h-64 overflow-auto">
+              {schedules.map(s => (
+                <div key={s.id} className="flex items-center justify-between border rounded p-2">
+                  <div className="text-sm">
+                    <span>{s.specific_date ? s.specific_date : days.find(d => d.value === s.day_of_week)?.label}</span>
+                    <span className="ml-2">{s.start_time} - {s.end_time}</span>
+                    <span className="ml-2">{s.slot_duration_minutes}m</span>
+                    <span className="ml-2">{s.is_available ? 'Available' : 'Unavailable'}</span>
+                  </div>
+                  <button onClick={() => onDelete(s.id!)} className="px-3 py-1.5 text-red-600 hover:bg-red-50 rounded text-sm">Delete</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Field Form Modal Component
 function FieldFormModal({
   field,
   fieldTypes,
   onSave,
-  onCancel
+  onCancel,
+  resources
 }: {
   field: FormField;
   fieldTypes: Array<{ value: string; label: string }>;
   onSave: (field: FormField) => void;
   onCancel: () => void;
+  resources: Resource[];
 }) {
   const [formData, setFormData] = useState(field);
   const [options, setOptions] = useState<Array<{ value: string; label: string; capacity?: number }>>(
@@ -779,6 +979,17 @@ function FieldFormModal({
       newOptions[index][key] = String(value);
     }
     setOptions(newOptions);
+  };
+  
+  const importResourcesAsOptions = () => {
+    try {
+      const mapped = (resources || []).map(r => ({
+        value: String(r.id || r.resource_code || r.resource_name),
+        label: r.department ? `${r.resource_name} (${r.department})` : r.resource_name,
+        capacity: r.capacity_per_slot || undefined
+      }));
+      setOptions(mapped);
+    } catch {}
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -917,6 +1128,13 @@ function FieldFormModal({
                 >
                   ➕ Add Option
                 </button>
+                <button
+                  type="button"
+                  onClick={importResourcesAsOptions}
+                  className="ml-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all shadow-md"
+                >
+                  📥 Load from Resources
+                </button>
               </div>
               
               {options.length === 0 ? (
@@ -996,7 +1214,8 @@ function FieldFormModal({
                   <strong>💡 Tips:</strong> <br/>
                   • <strong>Value</strong>: Internal identifier (e.g., &quot;dr_smith&quot;)<br/>
                   • <strong>Label</strong>: What users see (e.g., &quot;Dr. John Smith&quot;)<br/>
-                  • <strong>Capacity</strong>: Maximum bookings per slot (optional, for resources)
+                  • <strong>Capacity</strong>: Maximum bookings per slot (optional, auto-filled when loading from resources)<br/>
+                  • If you load from resources, the booking form uses these options to show time slots
                 </p>
               </div>
             </div>
