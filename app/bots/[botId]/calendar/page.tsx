@@ -21,6 +21,7 @@ type Appointment = {
   form_data?: Record<string, unknown> | null;
   event_description?: string | null;
   external_event_id?: string | null;
+  calendar_event_id?: string | null;
 };
 
 function B() {
@@ -67,7 +68,7 @@ export default function BotCalendarPage({ params }: { params: Promise<{ botId: s
         // Collect external event IDs to filter duplicates
         bookings.forEach(b => {
           if (b.external_event_id) externalEventIds.add(b.external_event_id);
-          if ((b as any).calendar_event_id) externalEventIds.add((b as any).calendar_event_id as string);
+          if (b.calendar_event_id) externalEventIds.add(b.calendar_event_id);
         });
       } catch {} 
     }
