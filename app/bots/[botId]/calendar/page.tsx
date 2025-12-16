@@ -407,13 +407,13 @@ export default function BotCalendarPage({ params }: { params: Promise<{ botId: s
         </div>
       )}
       {selected && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="w-[95vw] max-w-lg rounded-lg bg-white shadow-lg">
-            <div className="p-4 border-b flex items-center justify-between">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="w-full max-w-lg rounded-lg bg-white shadow-lg max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b flex items-center justify-between sticky top-0 bg-white z-10">
               <div className="text-lg font-semibold">{selected.type === 'appt' ? 'Appointment' : 'Event'}</div>
-              <button onClick={()=>setSelected(null)} className="px-2 py-1 rounded-md bg-black/10">Close</button>
+              <button onClick={()=>setSelected(null)} className="px-2 py-1 rounded-md bg-black/10 hover:bg-black/20 transition-colors">Close</button>
             </div>
-            <div className="p-4 space-y-2 text-sm">
+            <div className="p-4 space-y-2 text-sm overflow-y-auto">
               <div><span className="font-semibold">Title:</span> {selected.title}</div>
               <div><span className="font-semibold">Start:</span> {fmt(selected.start)}</div>
               <div><span className="font-semibold">End:</span> {fmt(selected.end)}</div>
@@ -438,18 +438,10 @@ export default function BotCalendarPage({ params }: { params: Promise<{ botId: s
                       </div>
                     </div>
                   )}
-                  {selectedAppt.event_description && (
-                    <div className="mt-3 pt-3 border-t">
-                      <div className="font-semibold mb-2">📄 Calendar Event Description:</div>
-                      <div className="text-sm text-black/70 whitespace-pre-wrap pl-2">
-                        {selectedAppt.event_description}
-                      </div>
-                    </div>
-                  )}
                 </>
               )}
               {selected.type === 'appt' && typeof selected.id === 'number' && (
-                <div className="flex gap-2 pt-2">
+                <div className="flex gap-2 pt-2 mt-3 border-t">
                   <button onClick={async()=>{
                     try {
                       const headers: Record<string,string> = { 'Content-Type': 'application/json' };
@@ -460,7 +452,7 @@ export default function BotCalendarPage({ params }: { params: Promise<{ botId: s
                       setSelected(null);
                       await load();
                     } catch (e) { alert(String(e||'Failed')); }
-                  }} className="px-3 py-2 rounded-md bg-red-600 text-white">Cancel Appointment</button>
+                  }} className="px-4 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white transition-colors w-full sm:w-auto">Cancel Appointment</button>
                 </div>
               )}
             </div>

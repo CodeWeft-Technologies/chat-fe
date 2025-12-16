@@ -1,5 +1,22 @@
 "use client";
 import { useEffect, useState, use as usePromise } from "react";
+// Utility to check if a string is a direct image URL
+function isDirectImageUrl(url: string) {
+  return /^https?:\/\/.+\.(png|jpe?g|gif|svg|webp|bmp|ico)(\?.*)?$/i.test(url) || url.startsWith('data:image/');
+}
+
+// Utility to get proxied image URL for any image
+function getProxiedImageUrl(url: string) {
+  if (!url) return '';
+  if (url.startsWith('data:image/')) return url;
+  // Always proxy to avoid CORS/hotlink issues
+  return `/api/proxy-image?url=${encodeURIComponent(url)}`;
+}
+
+// Utility to check if a string is a URL
+function isUrl(str: string) {
+  try { new URL(str); return true; } catch { return false; }
+}
 
 function B() {
   const env = process.env.NEXT_PUBLIC_BACKEND_URL || "";
@@ -8,18 +25,59 @@ function B() {
   return "";
 }
 
-export default function EmbedPage({ params }: { params: Promise<{ botId: string }> }) {
+export default function EmbedPage(props: { params: Promise<{ botId: string }> }) {
+  const params = usePromise(props.params);
+  const { botId } = params;
   const [org, setOrg] = useState<string>("");
-  const { botId } = usePromise(params as Promise<{ botId: string }>);
-  const [snippet, setSnippet] = useState<string | null>(null);
   const [widget, setWidget] = useState<string>("bubble");
   const [tpl, setTpl] = useState<string>("bubble-blue");
-  const [copied, setCopied] = useState(false);
+  const [snippet, setSnippet] = useState<string>("");
+  const [copied, setCopied] = useState<boolean>(false);
   const [pubKey, setPubKey] = useState<string | null>(null);
   const [rotatedAt, setRotatedAt] = useState<string | null>(null);
   const [includeKey, setIncludeKey] = useState<boolean>(true);
   const [botName, setBotName] = useState<string>("Assistant");
   const [icon, setIcon] = useState<string>("💬");
+  // For preview: resolved image URL if icon is a non-direct link
+  const [resolvedIcon, setResolvedIcon] = useState<string>("");
+
+  // Effect: If icon is a non-direct link, try to fetch and extract an image, always proxy resolved images
+  useEffect(() => {
+    if (!icon || isDirectImageUrl(icon) || !isUrl(icon)) {
+      setResolvedIcon("");
+      return;
+    }
+    let cancelled = false;
+    setResolvedIcon("");
+    fetch(icon)
+      .then(r => r.text())
+      .then(html => {
+        if (cancelled) return;
+        // Try Open Graph image
+        const og = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"'>]+)["']/i);
+        if (og && og[1]) {
+          setResolvedIcon(getProxiedImageUrl(og[1]));
+          return;
+        }
+        // Try first <img>
+        const img = html.match(/<img[^>]+src=["']([^"'>]+)["']/i);
+        if (img && img[1]) {
+          // Resolve relative URLs
+          let src = img[1];
+          if (!/^https?:\/\//.test(src)) {
+            try {
+              const u = new URL(src, icon);
+              src = u.href;
+            } catch {}
+          }
+          setResolvedIcon(getProxiedImageUrl(src));
+          return;
+        }
+        setResolvedIcon("");
+      })
+      .catch(() => setResolvedIcon(""));
+    return () => { cancelled = true; };
+  }, [icon]);
   // Greeting managed on backend config page; fetched for preview
   const [greeting, setGreeting] = useState<string>("");
   const BRAND_TEXT = "CodeWeft";
@@ -35,6 +93,11 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
   const [theme, setTheme] = useState<"light"|"dark">("light");
   const [position, setPosition] = useState<"right"|"left">("right");
   const [linkAccentButton, setLinkAccentButton] = useState<boolean>(true);
+  const [transparentBubble, setTransparentBubble] = useState<boolean>(false);
+  const [launcherSize, setLauncherSize] = useState<number>(56);
+  const [iconScale, setIconScale] = useState<number>(60);
+  const [bubbleMe, setBubbleMe] = useState<string>("linear-gradient(135deg, #2563eb, #1e40af)");
+  const [bubbleBot, setBubbleBot] = useState<string>("#ffffff");
 
   // --- Color utilities & contrast scoring ---
   function hexToRgb(h: string){
@@ -225,12 +288,15 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
     
     if (templateId === "bubble-blue" || templateId === "bubble-dark") {
       const isDark = templateId === "bubble-dark";
+      const btnBg = transparentBubble ? "transparent" : buttonColor;
+      const btnShadow = transparentBubble ? "none" : "0 4px 12px rgba(0,0,0,0.15)";
+      
       return [
         `<!-- ${isDark ? "Dark bubble" : "Bubble"} chat widget (self-contained) -->`,
         `<div id="chatbot-bubble"></div>`,
         `<style>`,
         `#chatbot-bubble{position:fixed;bottom:24px;${position}:24px;z-index:9999;font-family:system-ui,sans-serif}`,
-        `#chatbot-btn{width:56px;height:56px;border-radius:${radius}px;background:${buttonColor};color:#fff;border:none;font-size:24px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.15);transition:transform 0.2s}`,
+        `#chatbot-btn{width:${launcherSize}px;height:${launcherSize}px;border-radius:${radius}px;background:${btnBg};color:#fff;border:none;font-size:24px;cursor:pointer;box-shadow:${btnShadow};transition:transform 0.2s;display:flex;align-items:center;justify-content:center;padding:0}`,
         `#chatbot-btn:hover{transform:scale(1.05)}`,
         `#chatbot-panel{display:none;position:absolute;bottom:70px;${position}:0;width:350px;height:500px;background:${cardColor};border:1px solid ${isDark ? '#374151' : '#e5e7eb'};border-radius:${radius}px;box-shadow:0 8px 24px rgba(0,0,0,0.2);flex-direction:column;overflow:hidden}`,
         `#chatbot-panel.open{display:flex}`,
@@ -241,8 +307,8 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
         `#chatbot-messages::-webkit-scrollbar{width:6px}`,
         `#chatbot-messages::-webkit-scrollbar-thumb{background:${isDark ? '#4b5563' : '#d1d5db'};border-radius:3px}`,
         `.chat-msg{margin-bottom:8px;padding:10px 12px;border-radius:${Math.max(8, radius-4)}px;max-width:80%;word-wrap:break-word;font-size:14px;line-height:1.4}`,
-        `.chat-msg.user{background:${accent};color:#fff;margin-left:auto;border-bottom-right-radius:4px}`,
-        `.chat-msg.bot{background:${isDark ? '#374151' : '#f3f4f6'};color:${textColor};margin-right:auto;border-bottom-left-radius:4px}`,
+        `.chat-msg.user{background:${bubbleMe};color:#fff;margin-left:auto;border-bottom-right-radius:4px}`,
+        `.chat-msg.bot{background:${bubbleBot};color:${textColor};margin-right:auto;border-bottom-left-radius:4px;border:1px solid ${isDark ? '#374151' : '#e5e7eb'}}`,
         `.typing{display:flex;gap:4px;padding:10px}.typing div{width:8px;height:8px;background:${textColor};border-radius:50%;animation:bounce 1.4s infinite ease-in-out}`,
         `.typing div:nth-child(1){animation-delay:-0.32s}.typing div:nth-child(2){animation-delay:-0.16s}`,
         `@keyframes bounce{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}`,
@@ -256,12 +322,13 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
         `(function(){`,
         `var cfg={botId:'${botId}',orgId:'${org}',apiBase:'${base}',botKey:'${k}',botName:'${botName.replace(/'/g, "\\'")}',icon:'${icon.replace(/'/g, "\\'")}',greeting:'${greeting.replace(/'/g, "\\'")}'};`,
         `var root=document.getElementById('chatbot-bubble');`,
-        `var btn=document.createElement('button');btn.id='chatbot-btn';btn.innerHTML=cfg.icon;`,
+        `var btn=document.createElement('button');btn.id='chatbot-btn';`,
+        `if(/^https?:\\/\\//.test(cfg.icon)){btn.innerHTML='<img src="'+cfg.icon+'" style="${transparentBubble ? `width:100%;height:100%;object-fit:cover;border-radius:${radius}px` : `width:${iconScale}%;height:${iconScale}%;object-fit:cover;border-radius:50%`}">';}else{btn.innerHTML='<span style="font-size:${iconScale*0.4}px">'+cfg.icon+'</span>';}`,
         `var panel=document.createElement('div');panel.id='chatbot-panel';`,
         `var header=document.createElement('div');header.id='chatbot-header';`,
         `header.innerHTML='<div style="display:flex;align-items:center;gap:8px"><div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center">'+cfg.icon+'</div><span style="font-weight:600">'+cfg.botName+'</span></div><button id="chatbot-close">×</button>';`,
         `var msgs=document.createElement('div');msgs.id='chatbot-messages';`,
-        `msgs.innerHTML='<div class="chat-msg bot">'+(cfg.greeting||'')+'</div>';`,
+        `msgs.innerHTML='<div class="chat-msg bot" style="background:${bubbleBot};color:${textColor}">'+(cfg.greeting||'')+'</div>';`,
         `var inputArea=document.createElement('div');inputArea.id='chatbot-input-area';`,
         `inputArea.innerHTML='<input id="chatbot-input" type="text" placeholder="Ask a question..."><button id="chatbot-send">Send</button>';`,
         `panel.appendChild(header);panel.appendChild(msgs);panel.appendChild(inputArea);`,
@@ -290,7 +357,7 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
     if (templateId === "iframe-minimal") {
       return [
         "<!-- Minimal iframe embed -->",
-        `<iframe srcdoc="<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><style>body{font-family:sans-serif;font-size:14px;margin:0;background:${bgColor}}.wrap{padding:10px}.msgs{padding:10px;height:36vh;overflow:auto;border:1px solid #e5e7eb;border-radius:${radius}px;background:#f9fafb;margin-bottom:8px}.m{max-width:80%;margin-bottom:8px;padding:8px 10px;border-radius:${Math.max(6, radius-4)}px;white-space:pre-wrap}.m.u{background:${accent};color:#fff;margin-left:auto;border-bottom-right-radius:4px}.m.b{background:#e2e8f0;color:${textColor};margin-right:auto;border-bottom-left-radius:4px}.inp{display:flex;gap:8px}.inp input{flex:1;padding:10px;border:1px solid #e5e7eb;border-radius:${Math.max(6, radius-4)}px}.inp button{padding:10px 14px;border:none;border-radius:${Math.max(6, radius-4)}px;background:${buttonColor};color:#fff;font-weight:600;cursor:pointer}</style></head><body><div class='wrap'><div class='msgs'><div class='m b'>${greeting.replace(/'/g,"&#39;")}</div></div><div class='inp'><input type='text' placeholder='Ask'><button>Send</button></div></div><script>(function(){var O='${org}',K='${k}',U='${base}/api/chat/stream/${botId}';function s(m,cb){var h={'Content-Type':'application/json'};if(K){h['X-Bot-Key']=K;}var b=JSON.stringify({message:m,org_id:O});fetch(U,{method:'POST',headers:h,body:b}).then(function(r){var rd=r.body.getReader();var d=new TextDecoder();function n(){rd.read().then(function(x){if(x.done){cb(null,true);return;}var t=d.decode(x.value);t.split(\"\\n\\n\").forEach(function(l){if(l.indexOf('data: ')==0){cb(l.slice(6),false);}});n();});}n();});}var msgs=document.querySelector('.msgs');var i=document.querySelector('.inp input');var go=document.querySelector('.inp button');function addU(m){var e=document.createElement('div');e.className='m u';e.textContent=m;msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;}function addB(){var e=document.createElement('div');e.className='m b';msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;return e;}function send(){var q=i.value;if(!q.trim()){return;}i.value='';addU(q);var bot=addB();s(q,function(tok,end){if(end){return;}bot.textContent+=tok;});}go.onclick=send;i.addEventListener('keydown',function(ev){if(ev.key==='Enter'){send();}})})();</script></body></html>" style="width:100%;min-height:280px;border:1px solid #e5e7eb;border-radius:${radius}px"></iframe>`
+        `<iframe srcdoc="<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><style>body{font-family:sans-serif;font-size:14px;margin:0;background:${bgColor}}.wrap{padding:10px}.msgs{padding:10px;height:36vh;overflow:auto;border:1px solid #e5e7eb;border-radius:${radius}px;background:#f9fafb;margin-bottom:8px}.m{max-width:80%;margin-bottom:8px;padding:8px 10px;border-radius:${Math.max(6, radius-4)}px;white-space:pre-wrap}.m.u{background:${bubbleMe};color:#fff;margin-left:auto;border-bottom-right-radius:4px}.m.b{background:${bubbleBot};color:${textColor};margin-right:auto;border-bottom-left-radius:4px}.inp{display:flex;gap:8px}.inp input{flex:1;padding:10px;border:1px solid #e5e7eb;border-radius:${Math.max(6, radius-4)}px}.inp button{padding:10px 14px;border:none;border-radius:${Math.max(6, radius-4)}px;background:${buttonColor};color:#fff;font-weight:600;cursor:pointer}</style></head><body><div class='wrap'><div class='msgs'><div class='m b'>${greeting.replace(/'/g,"&#39;")}</div></div><div class='inp'><input type='text' placeholder='Ask'><button>Send</button></div></div><script>(function(){var O='${org}',K='${k}',U='${base}/api/chat/stream/${botId}';function s(m,cb){var h={'Content-Type':'application/json'};if(K){h['X-Bot-Key']=K;}var b=JSON.stringify({message:m,org_id:O});fetch(U,{method:'POST',headers:h,body:b}).then(function(r){var rd=r.body.getReader();var d=new TextDecoder();function n(){rd.read().then(function(x){if(x.done){cb(null,true);return;}var t=d.decode(x.value);t.split(\"\\n\\n\").forEach(function(l){if(l.indexOf('data: ')==0){cb(l.slice(6),false);}});n();});}n();});}var msgs=document.querySelector('.msgs');var i=document.querySelector('.inp input');var go=document.querySelector('.inp button');function addU(m){var e=document.createElement('div');e.className='m u';e.textContent=m;msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;}function addB(){var e=document.createElement('div');e.className='m b';msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;return e;}function send(){var q=i.value;if(!q.trim()){return;}i.value='';addU(q);var bot=addB();s(q,function(tok,end){if(end){return;}bot.textContent+=tok;});}go.onclick=send;i.addEventListener('keydown',function(ev){if(ev.key==='Enter'){send();}})})();</script></body></html>" style="width:100%;min-height:280px;border:1px solid #e5e7eb;border-radius:${radius}px"></iframe>`
       ].join("\n");
     }
 
@@ -298,7 +365,7 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
       const kcfg = includeKey && pubKey ? `,botKey:'${pubKey}'` : '';
       return [
         "<!-- Default CDN widget: paste near end of body -->",
-        `<script>window.chatbotConfig={botId:'${botId}',orgId:'${org}',apiBase:'${base}',buttonColor:'${buttonColor}',accent:'${accent}',text:'${textColor}',card:'${cardColor}',bg:'${bgColor}',radius:${radius}${kcfg}${botName?`,botName:'${botName.replace(/'/g,"\\'")}'`:''}${icon?`,icon:'${icon.replace(/'/g,"\\'")}'`:''}};</script>`,
+        `<script>window.chatbotConfig={botId:'${botId}',orgId:'${org}',apiBase:'${base}',buttonColor:'${buttonColor}',accent:'${accent}',text:'${textColor}',card:'${cardColor}',bg:'${bgColor}',radius:${radius},bubbleMe:'${bubbleMe}',bubbleBot:'${bubbleBot}'${kcfg}${botName?`,botName:'${botName.replace(/'/g,"\\'")}'`:''}${icon?`,icon:'${icon.replace(/'/g,"\\'")}'`:''},launcherSize:${launcherSize},iconScale:${iconScale},transparentBubble:${transparentBubble}};</script>`,
         `<script src='${base}/api/widget.js' async></script>`
       ].join("\n");
     }
@@ -314,13 +381,13 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
         `var c=document.getElementById('bot-inline-card');c.style.cssText='max-width:560px;margin:24px auto;border:1px solid #e5e7eb;border-radius:${radius}px;box-shadow:0 12px 28px rgba(0,0,0,0.08);overflow:hidden;background:#fff';`,
         `var h=document.createElement('div');h.style.cssText='display:flex;align-items:center;gap:8px;padding:12px;background:${buttonColor};color:#fff';h.innerHTML='<div style="width:24px;height:24px;border-radius:999px;background:#fff;color:${buttonColor};display:flex;align-items:center;justify-content:center;font-size:12px">${icon}</div><div>${botName.replace(/'/g,"\\'")}</div>';`,
         `var msgs=document.createElement('div');msgs.style.cssText='padding:12px;height:40vh;overflow:auto;background:${bgColor}';`,
-        `if(G){var gm=document.createElement('div');gm.style.cssText='max-width:80%;margin-bottom:8px;padding:8px 10px;border-radius:${Math.max(6, radius-4)}px;font-size:14px;line-height:1.5;white-space:pre-wrap;background:#e2e8f0;color:${textColor};margin-right:auto;border-bottom-left-radius:4px';gm.textContent=G;msgs.appendChild(gm);}`,
         `var inp=document.createElement('div');inp.style.cssText='display:flex;gap:8px;padding:12px;border-top:1px solid #e5e7eb;background:#fff';`,
         `var i=document.createElement('input');i.style.cssText='flex:1;padding:10px;border:1px solid #e5e7eb;border-radius:${Math.max(6, radius-4)}px;font-size:14px';i.placeholder='Ask a question';`,
         `var go=document.createElement('button');go.style.cssText='padding:10px 14px;border:none;border-radius:${Math.max(6, radius-4)}px;background:${buttonColor};color:#fff;font-weight:600;cursor:pointer';go.textContent='Send';`,
         `inp.appendChild(i);inp.appendChild(go);c.appendChild(h);c.appendChild(msgs);c.appendChild(inp);`,
-        `function addU(m){var e=document.createElement('div');e.style.cssText='max-width:80%;margin-bottom:8px;padding:8px 10px;border-radius:${Math.max(6, radius-4)}px;font-size:14px;line-height:1.5;white-space:pre-wrap;background:${accent};color:#fff;margin-left:auto;border-bottom-right-radius:4px';e.textContent=m;msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;}`,
-        `function addB(){var e=document.createElement('div');e.style.cssText='max-width:80%;margin-bottom:8px;padding:8px 10px;border-radius:${Math.max(6, radius-4)}px;font-size:14px;line-height:1.5;white-space:pre-wrap;background:#e2e8f0;color:${textColor};margin-right:auto;border-bottom-left-radius:4px';msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;return e;}`,
+        `if(G){var gm=document.createElement('div');gm.style.cssText='max-width:80%;margin-bottom:8px;padding:8px 10px;border-radius:${Math.max(6, radius-4)}px;font-size:14px;line-height:1.5;white-space:pre-wrap;background:${bubbleBot};color:${textColor};margin-right:auto;border-bottom-left-radius:4px';gm.textContent=G;msgs.appendChild(gm);}`,
+        `function addU(m){var e=document.createElement('div');e.style.cssText='max-width:80%;margin-bottom:8px;padding:8px 10px;border-radius:${Math.max(6, radius-4)}px;font-size:14px;line-height:1.5;white-space:pre-wrap;background:${bubbleMe};color:#fff;margin-left:auto;border-bottom-right-radius:4px';e.textContent=m;msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;}`,
+        `function addB(){var e=document.createElement('div');e.style.cssText='max-width:80%;margin-bottom:8px;padding:8px 10px;border-radius:${Math.max(6, radius-4)}px;font-size:14px;line-height:1.5;white-space:pre-wrap;background:${bubbleBot};color:${textColor};margin-right:auto;border-bottom-left-radius:4px';msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;return e;}`,
         `function send(){var q=i.value;if(!q.trim()){return;}i.value='';addU(q);var bot=addB();s(q,function(tok,end){if(end){return;}bot.textContent+=tok;});}`,
         `go.onclick=send;i.addEventListener('keydown',function(ev){if(ev.key==='Enter'){send();}});`,
         `})();`,
@@ -339,13 +406,13 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
         `var c=document.getElementById('bot-fullscreen');c.style.cssText='width:100%;height:100vh;display:flex;flex-direction:column;background:${bgColor}';`,
         `var h=document.createElement('div');h.style.cssText='display:flex;align-items:center;gap:8px;padding:16px;background:${buttonColor};color:#fff;box-shadow:0 2px 4px rgba(0,0,0,0.1)';h.innerHTML='<div style="width:32px;height:32px;border-radius:999px;background:#fff;color:${buttonColor};display:flex;align-items:center;justify-content:center;font-size:16px">${icon}</div><div style="font-size:18px;font-weight:600">${botName}</div>';`,
         `var msgs=document.createElement('div');msgs.style.cssText='flex:1;padding:16px;overflow:auto;background:${bgColor}';`,
-        `if(G){var gm=document.createElement('div');gm.style.cssText='max-width:70%;margin-bottom:12px;padding:12px 16px;border-radius:${radius}px;font-size:16px;line-height:1.5;white-space:pre-wrap;background:#f1f5f9;color:${textColor};margin-right:auto;border-bottom-left-radius:4px';gm.textContent=G;msgs.appendChild(gm);}`,
         `var inp=document.createElement('div');inp.style.cssText='display:flex;gap:12px;padding:16px;border-top:1px solid #e5e7eb;background:#fff';`,
         `var i=document.createElement('input');i.style.cssText='flex:1;padding:12px;border:1px solid #e5e7eb;border-radius:${Math.max(8, radius-4)}px;font-size:16px';i.placeholder='Ask a question...';`,
         `var go=document.createElement('button');go.style.cssText='padding:12px 24px;border:none;border-radius:${Math.max(8, radius-4)}px;background:${buttonColor};color:#fff;font-weight:600;cursor:pointer;font-size:16px';go.textContent='Send';`,
         `inp.appendChild(i);inp.appendChild(go);c.appendChild(h);c.appendChild(msgs);c.appendChild(inp);`,
-        `function addU(m){var e=document.createElement('div');e.style.cssText='max-width:70%;margin-bottom:12px;padding:12px 16px;border-radius:${radius}px;font-size:16px;line-height:1.5;white-space:pre-wrap;background:${accent};color:#fff;margin-left:auto;border-bottom-right-radius:4px';e.textContent=m;msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;}`,
-        `function addB(){var e=document.createElement('div');e.style.cssText='max-width:70%;margin-bottom:12px;padding:12px 16px;border-radius:${radius}px;font-size:16px;line-height:1.5;white-space:pre-wrap;background:#f1f5f9;color:${textColor};margin-right:auto;border-bottom-left-radius:4px';msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;return e;}`,
+        `if(G){var gm=document.createElement('div');gm.style.cssText='max-width:70%;margin-bottom:12px;padding:12px 16px;border-radius:${radius}px;font-size:16px;line-height:1.5;white-space:pre-wrap;background:${bubbleBot};color:${textColor};margin-right:auto;border-bottom-left-radius:4px';gm.textContent=G;msgs.appendChild(gm);}`,
+        `function addU(m){var e=document.createElement('div');e.style.cssText='max-width:70%;margin-bottom:12px;padding:12px 16px;border-radius:${radius}px;font-size:16px;line-height:1.5;white-space:pre-wrap;background:${bubbleMe};color:#fff;margin-left:auto;border-bottom-right-radius:4px';e.textContent=m;msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;}`,
+        `function addB(){var e=document.createElement('div');e.style.cssText='max-width:70%;margin-bottom:12px;padding:12px 16px;border-radius:${radius}px;font-size:16px;line-height:1.5;white-space:pre-wrap;background:${bubbleBot};color:${textColor};margin-right:auto;border-bottom-left-radius:4px';msgs.appendChild(e);msgs.scrollTop=msgs.scrollHeight;return e;}`,
         `function send(){var q=i.value;if(!q.trim()){return;}i.value='';addU(q);var bot=addB();s(q,function(tok,end){if(end){return;}bot.textContent+=tok;});}`,
         `go.onclick=send;i.addEventListener('keydown',function(ev){if(ev.key==='Enter'){send();}});`,
         `})();`,
@@ -430,14 +497,25 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
           {/* Chat Button */}
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="fixed bottom-6 right-6 w-14 h-14 shadow-lg flex items-center justify-center text-2xl transition-transform hover:scale-105"
+            className={`fixed bottom-6 right-6 ${transparentBubble ? '' : 'shadow-lg'} flex items-center justify-center text-2xl transition-transform hover:scale-105 overflow-hidden`}
             style={{ 
-              backgroundColor: buttonColor,
+              width: `${launcherSize}px`,
+              height: `${launcherSize}px`,
+              backgroundColor: transparentBubble ? 'transparent' : buttonColor,
               color: '#fff',
-              borderRadius: `${radius}px`
+              borderRadius: `${radius}px`,
+              padding: 0
             }}
           >
-            {icon || '💬'}
+            {icon && (isDirectImageUrl(icon) || resolvedIcon) ? (
+              <img src={resolvedIcon || getProxiedImageUrl(icon)} alt="Bot" className={`object-cover ${transparentBubble ? '' : 'rounded-full'}`} style={{
+                borderRadius: transparentBubble ? `${radius}px` : undefined,
+                width: `${iconScale}%`,
+                height: `${iconScale}%`
+              }} />
+            ) : (
+              <span style={{ fontSize: `${iconScale * 0.4}px` }}>{icon || '💬'}</span>
+            )}
           </button>
           
           {/* Chat Panel */}
@@ -460,8 +538,12 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
                 }}
               >
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center text-sm" style={{ color: buttonColor }}>
-                    {icon || '🤖'}
+                  <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center text-sm overflow-hidden" style={{ color: buttonColor }}>
+                    {icon && (isDirectImageUrl(icon) || resolvedIcon) ? (
+                      <img src={resolvedIcon || getProxiedImageUrl(icon)} alt="Bot" className="w-full h-full object-cover" />
+                    ) : (
+                      <span>{icon || '🤖'}</span>
+                    )}
                   </div>
                   <span className="font-semibold">{botName}</span>
                 </div>
@@ -483,7 +565,7 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
                   <div 
                     className="text-sm p-3 rounded-lg max-w-[80%]"
                     style={{
-                      backgroundColor: theme === 'dark' ? '#374151' : '#f3f4f6',
+                      background: bubbleBot,
                       color: textColor,
                       borderRadius: `${Math.max(8, radius-4)}px`
                     }}
@@ -498,7 +580,7 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
                       msg.type === 'user' ? 'ml-auto' : 'mr-auto'
                     }`}
                     style={{
-                      backgroundColor: msg.type === 'user' ? accent : (theme === 'dark' ? '#374151' : '#f3f4f6'),
+                      background: msg.type === 'user' ? bubbleMe : bubbleBot,
                       color: msg.type === 'user' ? '#fff' : textColor,
                       borderRadius: `${Math.max(8, radius-4)}px`
                     }}
@@ -588,7 +670,7 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
               <div
                 className="text-sm p-2"
                 style={{
-                  backgroundColor: theme === 'dark' ? '#374151' : '#e2e8f0',
+                  background: bubbleBot,
                   color: textColor,
                   borderRadius: `${Math.max(6, radius-6)}px`
                 }}
@@ -603,7 +685,7 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
                   msg.type === 'user' ? 'ml-auto' : 'mr-auto'
                 }`}
                 style={{
-                  backgroundColor: msg.type === 'user' ? accent : (theme === 'dark' ? '#374151' : '#e2e8f0'),
+                  background: msg.type === 'user' ? bubbleMe : bubbleBot,
                   color: msg.type === 'user' ? '#fff' : textColor,
                   borderRadius: `${Math.max(6, radius-6)}px`
                 }}
@@ -615,7 +697,7 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
               <div 
                 className="text-sm p-2 max-w-[80%] mr-auto flex items-center gap-1"
                 style={{
-                  backgroundColor: theme === 'dark' ? '#374151' : '#e2e8f0',
+                  background: bubbleBot,
                   color: textColor,
                   borderRadius: `${Math.max(6, radius-6)}px`
                 }}
@@ -679,8 +761,12 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
               color: '#fff'
             }}
           >
-            <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center text-sm" style={{ color: buttonColor }}>
-              {icon || '🤖'}
+            <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center text-sm overflow-hidden" style={{ color: buttonColor }}>
+              {icon && (isDirectImageUrl(icon) || resolvedIcon) ? (
+                <img src={resolvedIcon || getProxiedImageUrl(icon)} alt="Bot" className="w-full h-full object-cover" />
+              ) : (
+                <span>{icon || '🤖'}</span>
+              )}
             </div>
             <span className="font-semibold">{botName}</span>
           </div>
@@ -693,7 +779,7 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
             {messages.length === 0 && (
               <div 
                 className="text-sm p-2"
-                style={{ color: textColor }}
+                style={{ background: bubbleBot, color: textColor }}
               >
                 {greeting}
               </div>
@@ -705,7 +791,7 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
                   msg.type === 'user' ? 'ml-auto' : 'mr-auto'
                 }`}
                 style={{
-                  backgroundColor: msg.type === 'user' ? accent : '#f1f5f9',
+                  background: msg.type === 'user' ? bubbleMe : bubbleBot,
                   color: msg.type === 'user' ? '#fff' : textColor,
                   borderRadius: `${Math.max(6, radius-4)}px`
                 }}
@@ -767,8 +853,12 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
               borderBottomColor: '#e5e7eb'
             }}
           >
-            <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-lg" style={{ color: buttonColor }}>
-              {icon || '🤖'}
+            <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-lg overflow-hidden" style={{ color: buttonColor }}>
+              {icon && (isDirectImageUrl(icon) || resolvedIcon) ? (
+                <img src={resolvedIcon || getProxiedImageUrl(icon)} alt="Bot" className="w-full h-full object-cover" />
+              ) : (
+                <span>{icon || '🤖'}</span>
+              )}
             </div>
             <div className="text-lg font-semibold">{botName}</div>
           </div>
@@ -778,7 +868,11 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
             {messages.length === 0 && (
               <div 
                 className="p-3"
-                style={{ color: textColor }}
+                style={{ 
+                  background: bubbleBot,
+                  color: textColor,
+                  borderRadius: `${radius}px`
+                }}
               >
                 {greeting}
               </div>
@@ -790,7 +884,7 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
                   msg.type === 'user' ? 'ml-auto' : 'mr-auto'
                 }`}
                 style={{
-                  backgroundColor: msg.type === 'user' ? accent : '#f1f5f9',
+                  background: msg.type === 'user' ? bubbleMe : bubbleBot,
                   color: msg.type === 'user' ? '#fff' : textColor,
                   borderRadius: `${radius}px`
                 }}
@@ -840,14 +934,18 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
           {/* Chat Button */}
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="fixed bottom-6 right-6 w-14 h-14 shadow-lg flex items-center justify-center text-2xl transition-transform hover:scale-105"
+            className="fixed bottom-6 right-6 w-14 h-14 shadow-lg flex items-center justify-center text-2xl transition-transform hover:scale-105 overflow-hidden"
             style={{ 
               backgroundColor: buttonColor,
               color: '#fff',
               borderRadius: `${radius}px`
             }}
           >
-            {icon || '💬'}
+            {icon && (isDirectImageUrl(icon) || resolvedIcon) ? (
+              <img src={resolvedIcon || getProxiedImageUrl(icon)} alt="Bot" className="w-8 h-8 rounded-full object-cover" />
+            ) : (
+              <span>{icon || '💬'}</span>
+            )}
           </button>
           
           {/* Chat Panel */}
@@ -871,10 +969,14 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
               >
                 <div className="flex items-center gap-2">
                   <div 
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-sm"
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-sm overflow-hidden"
                     style={{ backgroundColor: buttonColor, color: '#fff' }}
                   >
-                    {icon || '🤖'}
+                    {icon && (isDirectImageUrl(icon) || resolvedIcon) ? (
+                      <img src={resolvedIcon || getProxiedImageUrl(icon)} alt="Bot" className="w-full h-full object-cover" />
+                    ) : (
+                      <span>{icon || '🤖'}</span>
+                    )}
                   </div>
                   <span className="font-semibold">{botName}</span>
                 </div>
@@ -1112,13 +1214,17 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Bot Icon</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Bot Icon
+                    <span className="text-xs font-normal text-gray-500 ml-2">(emoji or image URL)</span>
+                  </label>
                   <input 
                     value={icon} 
                     onChange={e=>setIcon(e.target.value)} 
-                    placeholder="💬 🤖 👋" 
+                    placeholder="💬 or https://example.com/bot.png" 
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
                   />
+                  <p className="text-xs text-gray-500 mt-1">Use an emoji (💬 🤖 👋) or image URL</p>
                 </div>
               </div>
               {/* Greeting input removed; configure welcome message on the backend config page */}
@@ -1212,6 +1318,55 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
                       <div className={`font-mono text-xs text-gray-700 ${linkAccentButton?'opacity-40':''}`}>{buttonColor}</div>
                       <span title="Button vs Page Background" className={`text-[10px] text-white px-1.5 py-0.5 rounded ${badge(contrastButtonOnBg, compactContrast).cls}`}>{badge(contrastButtonOnBg, compactContrast).label}</span>
                     </div>
+                    {/* Transparent Bubble Toggle */}
+                    <div className="flex items-center gap-2 mt-2">
+                      <input
+                        type="checkbox"
+                        id="transparent-bubble"
+                        checked={transparentBubble}
+                        onChange={(e) => setTransparentBubble(e.target.checked)}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <label htmlFor="transparent-bubble" className="text-xs text-gray-700 select-none cursor-pointer">
+                        Transparent Background (Only Icon/Image)
+                      </label>
+                    </div>
+                    {/* Launcher Size Slider */}
+                    <div className="space-y-1 mt-2">
+                      <div className="flex justify-between items-center">
+                        <label htmlFor="launcher-size" className="text-xs text-gray-700 select-none">
+                          Launcher Size
+                        </label>
+                        <span className="text-xs text-gray-500 font-mono">{launcherSize}px</span>
+                      </div>
+                      <input
+                        type="range"
+                        id="launcher-size"
+                        min="40"
+                        max="100"
+                        value={launcherSize}
+                        onChange={(e) => setLauncherSize(Number(e.target.value))}
+                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                      />
+                    </div>
+                    {/* Icon Scale Slider */}
+                    <div className="space-y-1 mt-2">
+                      <div className="flex justify-between items-center">
+                        <label htmlFor="icon-scale" className="text-xs text-gray-700 select-none">
+                          Icon Scale
+                        </label>
+                        <span className="text-xs text-gray-500 font-mono">{iconScale}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        id="icon-scale"
+                        min="20"
+                        max="100"
+                        value={iconScale}
+                        onChange={(e) => setIconScale(Number(e.target.value))}
+                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                      />
+                    </div>
                   </div>
                   {/* Text */}
                   <div className="space-y-1">
@@ -1250,19 +1405,65 @@ export default function EmbedPage({ params }: { params: Promise<{ botId: string 
                       <span title="Text vs Page Background" className={`text-[10px] text-white px-1.5 py-0.5 rounded ${badge(contrastTextOnBg, compactContrast).cls}`}>{badge(contrastTextOnBg, compactContrast).label}</span>
                     </div>
                   </div>
+                  {/* User Message Bubble */}
+                  <div className="space-y-1">
+                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <span className="w-4 h-4 rounded-md border border-gray-300" style={{background: bubbleMe}}></span>
+                      User Message Bubble
+                    </label>
+                    <div className="flex items-center gap-3 bg-white rounded-lg p-2 border border-gray-300">
+                      <input aria-label="User message bubble color picker" type="color" value={bubbleMe.startsWith('#') ? bubbleMe : '#2563eb'} onChange={e=>setBubbleMe(e.target.value)} className="h-10 w-10 cursor-pointer rounded shadow-sm p-0 border-none" />
+                      <input 
+                        aria-label="User message bubble background" 
+                        type="text" 
+                        value={bubbleMe} 
+                        onChange={e=>setBubbleMe(e.target.value)} 
+                        placeholder="e.g., #2563eb or linear-gradient(...)"
+                        className="flex-1 px-2 py-1 border border-gray-200 rounded font-mono text-xs" 
+                      />
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      <button type="button" onClick={()=>setBubbleMe("linear-gradient(135deg, #2563eb, #1e40af)")} className="text-[10px] px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-100 flex items-center gap-1"><span className="inline-block w-3 h-3 rounded" style={{background:"linear-gradient(135deg, #2563eb, #1e40af)"}}></span>Blue</button>
+                      <button type="button" onClick={()=>setBubbleMe("linear-gradient(135deg, #10b981, #059669)")} className="text-[10px] px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-100 flex items-center gap-1"><span className="inline-block w-3 h-3 rounded" style={{background:"linear-gradient(135deg, #10b981, #059669)"}}></span>Green</button>
+                      <button type="button" onClick={()=>setBubbleMe("linear-gradient(135deg, #8b5cf6, #6d28d9)")} className="text-[10px] px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-100 flex items-center gap-1"><span className="inline-block w-3 h-3 rounded" style={{background:"linear-gradient(135deg, #8b5cf6, #6d28d9)"}}></span>Purple</button>
+                    </div>
+                  </div>
+                  {/* Bot Message Bubble */}
+                  <div className="space-y-1">
+                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <span className="w-4 h-4 rounded-md border border-gray-300" style={{background: bubbleBot}}></span>
+                      Bot Message Bubble
+                    </label>
+                    <div className="flex items-center gap-3 bg-white rounded-lg p-2 border border-gray-300">
+                      <input aria-label="Bot message bubble color picker" type="color" value={bubbleBot.startsWith('#') ? bubbleBot : '#ffffff'} onChange={e=>setBubbleBot(e.target.value)} className="h-10 w-10 cursor-pointer rounded shadow-sm p-0 border-none" />
+                      <input 
+                        aria-label="Bot message bubble background" 
+                        type="text" 
+                        value={bubbleBot} 
+                        onChange={e=>setBubbleBot(e.target.value)} 
+                        placeholder="e.g., #ffffff or rgba(...)"
+                        className="flex-1 px-2 py-1 border border-gray-200 rounded font-mono text-xs" 
+                      />
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      <button type="button" onClick={()=>setBubbleBot("#ffffff")} className="text-[10px] px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-100 flex items-center gap-1"><span className="inline-block w-3 h-3 rounded border" style={{background:"#ffffff"}}></span>White</button>
+                      <button type="button" onClick={()=>setBubbleBot("#f3f4f6")} className="text-[10px] px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-100 flex items-center gap-1"><span className="inline-block w-3 h-3 rounded" style={{background:"#f3f4f6"}}></span>Gray</button>
+                      <button type="button" onClick={()=>setBubbleBot("#e5e7eb")} className="text-[10px] px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-100 flex items-center gap-1"><span className="inline-block w-3 h-3 rounded" style={{background:"#e5e7eb"}}></span>Darker</button>
+                    </div>
+                  </div>
                   {/* Swatch preview */}
                   <div className="col-span-full mt-2 grid grid-cols-2 gap-2 text-[10px]">
                     <div className="rounded-md border p-2 space-y-1" style={{backgroundColor: bgColor}}>
                       <div className="font-semibold">Bg Preview</div>
                       <div className="p-1 rounded" style={{backgroundColor: cardColor, color:textColor}}>Card / Text</div>
-                      <div className="p-1 rounded" style={{backgroundColor: accent, color:'#fff'}}>User Msg</div>
-                      <div className="p-1 rounded" style={{backgroundColor: buttonColor, color:'#fff'}}>Button</div>
+                      <div className="p-1 rounded" style={{background: bubbleMe, color:'#fff'}}>User Msg</div>
+                      <div className="p-1 rounded" style={{background: bubbleBot, color:textColor}}>Bot Msg</div>
                     </div>
                     <div className="rounded-md border p-2 space-y-1" style={{backgroundColor: theme==='dark'? '#0b111a':'#ffffff'}}>
                       <div className="font-semibold">Theme Contrast</div>
-                      <div className="p-1 rounded" style={{backgroundColor: theme==='dark'? '#162131':'#f1f5f9', color:textColor}}>Neutral Surface</div>
-                      <div className="p-1 rounded" style={{backgroundColor: accent, color:'#fff'}}>Accent</div>
-                      <div className="p-1 rounded" style={{backgroundColor: cardColor, color:textColor}}>Card</div>
+                      <div className="p-1 rounded" style={{background: bubbleMe, color:'#fff'}}>User</div>
+                      <div className="p-1 rounded" style={{background: bubbleBot, color:textColor}}>Bot</div>
+                      <div className="p-1 rounded" style={{backgroundColor: buttonColor, color:'#fff'}}>Button</div>
                     </div>
                   </div>
                 </div>

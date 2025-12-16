@@ -17,6 +17,12 @@ interface FormField {
   options?: Array<{ value: string; label: string; capacity?: number }>;
   default_value?: string;
   is_active?: boolean;
+  // Validation fields
+  country_code?: string;
+  phone_digits?: number;
+  min_value?: number;
+  max_value?: number;
+  pattern?: string;
 }
 
 interface Resource {
@@ -94,12 +100,7 @@ export default function FormBuilderPage() {
     { value: 'phone', label: 'Phone' },
     { value: 'number', label: 'Number' },
     { value: 'select', label: 'Dropdown (Select)' },
-    { value: 'multiselect', label: 'Multiple Select' },
     { value: 'radio', label: 'Radio Buttons' },
-    { value: 'checkbox', label: 'Checkbox' },
-    { value: 'date', label: 'Date' },
-    { value: 'time', label: 'Time' },
-    { value: 'datetime', label: 'Date & Time' },
     { value: 'textarea', label: 'Text Area' }
   ];
   
@@ -169,7 +170,8 @@ export default function FormBuilderPage() {
         const fieldsRes = await fetch(`${API_BASE}/form-configs/${config.id}/fields`);
         if (fieldsRes.ok) {
           const fieldsData = await fieldsRes.json();
-          setFields(fieldsData.fields || []);
+          const allFields = fieldsData.fields || [];
+          setFields(allFields);
         }
       }
       
@@ -543,8 +545,8 @@ export default function FormBuilderPage() {
         <div className="bg-white rounded-2xl shadow-lg p-6">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">Custom Form Fields</h2>
-              <p className="text-gray-600 mt-1">Add fields to collect information from your customers</p>
+              <h2 className="text-2xl font-bold text-gray-900">Form Fields</h2>
+              <p className="text-gray-600 mt-1">Customize what information to collect from customers</p>
             </div>
             <button
               onClick={() => {
@@ -554,7 +556,7 @@ export default function FormBuilderPage() {
                   field_type: 'text',
                   field_order: fields.length,
                   is_required: false
-                });
+                } as FormField);
                 setShowFieldForm(true);
               }}
               className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold hover:shadow-xl transition-all transform hover:-translate-y-0.5"
@@ -566,7 +568,7 @@ export default function FormBuilderPage() {
           {fields.length === 0 ? (
             <div className="text-center py-16 bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl border-2 border-dashed border-gray-300">
               <div className="text-6xl mb-4">📋</div>
-              <h3 className="text-xl font-semibold text-gray-700 mb-2">No fields yet</h3>
+              <h3 className="text-xl font-semibold text-gray-700 mb-2">No form fields yet</h3>
               <p className="text-gray-500 mb-6">Add your first custom field or apply a template to get started</p>
               <button
                 onClick={() => setActiveTab('templates')}
@@ -983,11 +985,23 @@ function FieldFormModal({
   
   const importResourcesAsOptions = () => {
     try {
-      const mapped = (resources || []).map(r => ({
-        value: String(r.id || r.resource_code || r.resource_name),
-        label: r.department ? `${r.resource_name} (${r.department})` : r.resource_name,
-        capacity: r.capacity_per_slot || undefined
-      }));
+      const mapped = (resources || []).map(r => {
+        // Create clean value: use resource_code if available, otherwise create slug from name
+        let cleanValue = r.resource_code;
+        if (!cleanValue) {
+          // Create slug from resource_name: "Dr Sanket Patil" -> "dr_sanket_patil"
+          cleanValue = (r.resource_name || '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, '');
+        }
+        
+        return {
+          value: cleanValue || String(r.id),
+          label: r.department ? `${r.resource_name} (${r.department})` : r.resource_name,
+          capacity: r.capacity_per_slot || undefined
+        };
+      });
       setOptions(mapped);
     } catch {}
   };
@@ -998,8 +1012,8 @@ function FieldFormModal({
     // Create updated field data
     const updatedField = { ...formData };
     
-    // Add options to formData if it's a select/multiselect/radio field
-    if (['select', 'multiselect', 'radio'].includes(formData.field_type)) {
+    // Add options to formData if it's a select/radio field
+    if (['select', 'radio'].includes(formData.field_type)) {
       updatedField.options = options.filter(opt => opt.value && opt.label);
     } else {
       // Remove options for non-select fields
@@ -1112,7 +1126,149 @@ function FieldFormModal({
             <p className="text-xs text-gray-500 mt-1">Additional guidance shown below the field</p>
           </div>
 
-          {['select', 'multiselect', 'radio'].includes(formData.field_type) && (
+          {formData.field_type === 'email' && (
+            <div className="border-2 border-blue-200 bg-blue-50 p-6 rounded-xl">
+              <div className="mb-4">
+                <label className="block text-sm font-bold text-gray-800 mb-2">
+                  📧 Email Validation Settings
+                </label>
+                <p className="text-xs text-gray-600">Control which email addresses are allowed</p>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold mb-2 text-gray-700">
+                    Email Domain Restriction <span className="text-gray-400">(optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.pattern || ''}
+                    onChange={(e) => setFormData({ ...formData, pattern: e.target.value })}
+                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                    placeholder="e.g., company.com or gmail.com, yahoo.com"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Leave empty to allow all email addresses, or enter allowed domain(s) separated by commas
+                  </p>
+                </div>
+                <div className="p-4 bg-white rounded-lg border border-blue-200">
+                  <p className="text-sm font-semibold text-gray-700 mb-2">How it works:</p>
+                  <div className="space-y-2 text-xs text-gray-600">
+                    <div className="flex items-start gap-2">
+                      <span className="text-green-600 font-bold">✓</span>
+                      <span><strong>Leave empty:</strong> Accept any email (user@gmail.com, user@company.com, etc.)</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="text-blue-600 font-bold">→</span>
+                      <span><strong>Single domain:</strong> Enter &quot;company.com&quot; to only allow @company.com emails</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="text-purple-600 font-bold">→</span>
+                      <span><strong>Multiple domains:</strong> Enter &quot;company.com, partner.org&quot; to allow both domains</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 bg-blue-100 rounded-lg">
+                  <span className="text-2xl">💡</span>
+                  <p className="text-xs text-blue-900">
+                    <strong>Tip:</strong> Use this to restrict emails to your company domain or specific partner organizations
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {formData.field_type === 'phone' && (
+            <div className="border-2 border-green-200 bg-green-50 p-6 rounded-xl">
+              <div className="mb-4">
+                <label className="block text-sm font-bold text-gray-800 mb-2">
+                  📞 Phone Validation Settings
+                </label>
+                <p className="text-xs text-gray-600">Configure phone number format validation</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold mb-2 text-gray-700">
+                    Country Code <span className="text-gray-400">(optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.country_code || ''}
+                    onChange={(e) => setFormData({ ...formData, country_code: e.target.value })}
+                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all"
+                    placeholder="e.g., +1, +91, +44"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Default country code prefix</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2 text-gray-700">
+                    Number of Digits <span className="text-gray-400">(optional)</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.phone_digits || ''}
+                    onChange={(e) => setFormData({ ...formData, phone_digits: e.target.value ? parseInt(e.target.value) : undefined })}
+                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all"
+                    placeholder="e.g., 10"
+                    min="1"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Expected number of digits</p>
+                </div>
+              </div>
+              <div className="mt-3 p-3 bg-white rounded-lg border border-green-200">
+                <p className="text-xs text-green-900">
+                  <strong>💡 Example:</strong> For US numbers, use country code <code className="bg-green-100 px-1 rounded">+1</code> and <code className="bg-green-100 px-1 rounded">10</code> digits.
+                  For India, use <code className="bg-green-100 px-1 rounded">+91</code> and <code className="bg-green-100 px-1 rounded">10</code> digits.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {formData.field_type === 'number' && (
+            <div className="border-2 border-orange-200 bg-orange-50 p-6 rounded-xl">
+              <div className="mb-4">
+                <label className="block text-sm font-bold text-gray-800 mb-2">
+                  🔢 Number Validation Settings
+                </label>
+                <p className="text-xs text-gray-600">Configure numeric value constraints</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold mb-2 text-gray-700">
+                    Minimum Value <span className="text-gray-400">(optional)</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.min_value || ''}
+                    onChange={(e) => setFormData({ ...formData, min_value: e.target.value ? parseFloat(e.target.value) : undefined })}
+                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-xl focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all"
+                    placeholder="e.g., 0"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Minimum allowed value</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2 text-gray-700">
+                    Maximum Value <span className="text-gray-400">(optional)</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.max_value || ''}
+                    onChange={(e) => setFormData({ ...formData, max_value: e.target.value ? parseFloat(e.target.value) : undefined })}
+                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-xl focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all"
+                    placeholder="e.g., 100"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Maximum allowed value</p>
+                </div>
+              </div>
+              <div className="mt-3 p-3 bg-white rounded-lg border border-orange-200">
+                <p className="text-xs text-orange-900">
+                  <strong>💡 Example:</strong> For age input, set min to <code className="bg-orange-100 px-1 rounded">0</code> and max to <code className="bg-orange-100 px-1 rounded">120</code>.
+                  For percentage, use <code className="bg-orange-100 px-1 rounded">0</code> to <code className="bg-orange-100 px-1 rounded">100</code>.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {['select', 'radio'].includes(formData.field_type) && (
             <div className="border-2 border-purple-200 bg-purple-50 p-6 rounded-xl">
               <div className="flex justify-between items-center mb-4">
                 <div>
