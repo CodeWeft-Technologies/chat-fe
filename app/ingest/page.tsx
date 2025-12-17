@@ -98,17 +98,57 @@ export default function IngestPage() {
   function updatePair(i: number, field: "q"|"a", val: string) {
     setQna(v=>v.map((p,idx)=>idx===i?{...p,[field]:val}:p));
   }
+  function downloadTemplate() {
+    const csvContent = "What is your return policy?,You can return items within 30 days.\nHow do I reset my password?,Go to settings and click reset.";
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", "qna_template.csv");
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  }
+
   async function importCsv(file: File) {
     const text = await file.text();
-    const lines = text.split(/\r?\n/).filter(l=>l.trim().length>0);
+    const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
     const out: { q: string; a: string }[] = [];
+
     for (const line of lines) {
-      const m = line.split(",");
-      const q = (m[0]||"").trim();
-      const a = (m[1]||"").trim();
+      const parts: string[] = [];
+      let current = '';
+      let inQuote = false;
+      
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        
+        if (char === '"') {
+          if (inQuote && line[i + 1] === '"') {
+            current += '"';
+            i++; 
+          } else {
+            inQuote = !inQuote;
+          }
+        } else if (char === ',' && !inQuote) {
+          parts.push(current.trim());
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      parts.push(current.trim());
+      
+      const q = (parts[0] || "").trim();
+      const a = (parts[1] || "").trim();
+      
       if (q && a) out.push({ q, a });
     }
-    if (out.length) setQna(out);
+    
+    if (out.length) setQna(prev => [...prev, ...out]);
   }
   async function ingestUrl() {
     if (!org || !bot || !url) return;
@@ -266,6 +306,32 @@ export default function IngestPage() {
                                     <Button onClick={addPair} variant="secondary">
                                         + Add Row
                                     </Button>
+                                </div>
+                            </div>
+
+                            <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 text-sm text-blue-800 space-y-3">
+                                <div className="flex justify-between items-center">
+                                    <div className="font-semibold flex items-center gap-2">
+                                        <span>📊</span> CSV Format Guide
+                                    </div>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        onClick={downloadTemplate} 
+                                        className="h-8 text-blue-700 hover:text-blue-900 hover:bg-blue-100 -mr-2"
+                                    >
+                                        ⬇️ Download Template
+                                    </Button>
+                                </div>
+                                <div className="grid sm:grid-cols-2 gap-4 text-xs opacity-90">
+                                    <ul className="list-disc list-inside space-y-1">
+                                        <li><strong>Structure:</strong> 2 columns (Question, Answer)</li>
+                                        <li><strong>Headers:</strong> Optional (auto-detected as data)</li>
+                                    </ul>
+                                    <div className="bg-white/50 p-2 rounded border border-blue-100 font-mono">
+                                        &quot;What is X?&quot;,&quot;It is Y&quot;<br/>
+                                        &quot;How to Z?&quot;,&quot;Step 1...&quot;
+                                    </div>
                                 </div>
                             </div>
 
