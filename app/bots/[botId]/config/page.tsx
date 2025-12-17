@@ -280,22 +280,69 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                                     <option value="Europe/London">London</option>
                                     <option value="Asia/Tokyo">Tokyo</option>
                                 </optgroup>
-                                {/* Truncated for brevity, but you get the idea */}
+                                <optgroup label="Asia">
+                                    <option value="Asia/Kolkata">Kolkata (IST)</option>
+                                    <option value="Asia/Dubai">Dubai</option>
+                                    <option value="Asia/Singapore">Singapore</option>
+                                </optgroup>
+                                <optgroup label="Europe">
+                                    <option value="Europe/Paris">Paris</option>
+                                    <option value="Europe/Berlin">Berlin</option>
+                                </optgroup>
                              </select>
-                             <button type="button" onClick={()=>{try{const z=Intl.DateTimeFormat().resolvedOptions().timeZone;if(z){setTz(z);}}catch{}}} className="text-[10px] text-blue-600 hover:underline">
-                                Detect My Timezone
-                             </button>
+                             <div className="flex justify-between items-center">
+                                <p className="text-[10px] text-gray-500">Bot operates in this timezone.</p>
+                                <button type="button" onClick={()=>{try{const z=Intl.DateTimeFormat().resolvedOptions().timeZone;if(z){setTz(z);}}catch{}}} className="text-[10px] text-blue-600 hover:underline">
+                                    Detect My Timezone
+                                </button>
+                             </div>
                         </div>
-                        <Input type="number" label="Slot Duration (min)" value={slotMin} onChange={e=>setSlotMin(Number(e.target.value||30))} />
-                        <Input type="number" label="Capacity per Slot" value={cap} onChange={e=>setCap(Number(e.target.value||1))} min={1} />
-                        <Input type="number" label="Min Notice (min)" value={minNotice} onChange={e=>setMinNotice(Number(e.target.value||60))} min={0} />
-                        <Input type="number" label="Max Future (days)" value={maxFuture} onChange={e=>setMaxFuture(Number(e.target.value||60))} min={1} />
+                        <Input 
+                            type="number" 
+                            label="Slot Duration (min)" 
+                            description="Length of each appointment slot."
+                            value={slotMin} 
+                            onChange={e=>setSlotMin(Number(e.target.value||30))} 
+                        />
+                        <Input 
+                            type="number" 
+                            label="Capacity per Slot" 
+                            description="Max bookings allowed per time slot."
+                            value={cap} 
+                            onChange={e=>setCap(Number(e.target.value||1))} 
+                            min={1} 
+                        />
+                        <Input 
+                            type="number" 
+                            label="Min Notice (min)" 
+                            description="Minimum time before booking allowed."
+                            value={minNotice} 
+                            onChange={e=>setMinNotice(Number(e.target.value||60))} 
+                            min={0} 
+                        />
+                        <Input 
+                            type="number" 
+                            label="Max Future (days)" 
+                            description="How far in advance users can book."
+                            value={maxFuture} 
+                            onChange={e=>setMaxFuture(Number(e.target.value||60))} 
+                            min={1} 
+                        />
                     </div>
 
                     <div className="border-t border-gray-100 pt-4">
                         <div className="flex items-center justify-between mb-3">
-                            <h4 className="text-sm font-medium text-gray-900">Weekly Schedule</h4>
-                            <span className="text-xs text-gray-400">Green = Available</span>
+                            <div>
+                                <h4 className="text-sm font-medium text-gray-900">Weekly Schedule</h4>
+                                <p className="text-xs text-gray-500">
+                                    {windowsVal.length > 0 
+                                        ? `Currently active on ${windowsVal.length} days.` 
+                                        : "No active days set (Bot is unavailable)."}
+                                </p>
+                            </div>
+                            <span className="text-xs px-2 py-1 bg-green-50 text-green-700 rounded-full border border-green-100">
+                                {windowsVal.length > 0 ? "Active" : "Inactive"}
+                            </span>
                         </div>
                         <Builder value={windowsVal} onChange={useCallback((val: Win[])=>setWindowsVal(val), [])} />
                     </div>
