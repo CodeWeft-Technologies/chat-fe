@@ -1,5 +1,10 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Select } from "../components/ui/select";
+import { Textarea } from "../components/ui/textarea";
 
 function B() {
   const env = process.env.NEXT_PUBLIC_BACKEND_URL || "";
@@ -21,7 +26,7 @@ export default function IngestPage() {
   const [pdf, setPdf] = useState<File | null>(null);
   const [tab, setTab] = useState<'text'|'qna'|'website'|'pdf'>('pdf');
   const [qna, setQna] = useState<{ q: string; a: string }[]>([]);
-  const [qnaCsv, setQnaCsv] = useState<File | null>(null);
+  // const [qnaCsv, setQnaCsv] = useState<File | null>(null);
   const [addingQna, setAddingQna] = useState(false);
 
   const loadBots = useCallback(async () => {
@@ -137,114 +142,245 @@ export default function IngestPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Add Knowledge</h1>
-      </div>
-      <div className="rounded-xl border border-black/10 bg-white shadow-sm">
-        <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-          {mounted && (
-            <div className="space-y-2">
-              <label className="text-sm">Org</label>
-              <input value={org} readOnly className="px-3 py-2 rounded-md border border-black/10 w-full" />
-            </div>
-          )}
-          <div className="space-y-2">
-            <label className="text-sm">Bot</label>
-            <select value={bot} onChange={e=>setBot(e.target.value)} className="px-3 py-2 rounded-md border border-black/10 w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="">Select a bot</option>
-              {bots.map(b => (
-                <option key={b.bot_id} value={b.bot_id}>{b.name || b.bot_id}</option>
-              ))}
-            </select>
-            <div className="text-xs text-black/60">{botKey ? 'Bot key active: requests include X-Bot-Key' : 'No bot key: using bearer token'}</div>
-          </div>
-
+    <div className="max-w-5xl mx-auto space-y-8 pb-12">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Knowledge Base</h1>
+          <p className="text-gray-500 mt-1">Add content sources for your chatbot to learn from</p>
         </div>
       </div>
 
-      <div className="rounded-xl border border-black/10 bg-white p-4 shadow-sm">
-        <div className="space-y-2 text-sm text-black/70">
-          <div className="font-semibold text-black/80">About Ingestion</div>
-          <p>Add knowledge sources that your bot can reference during chat. Paste text, ingest URLs, or upload PDFs. Your organization is fixed to protect access; content is scoped per org and bot.</p>
-        </div>
-      </div>
+      <div className="grid lg:grid-cols-3 gap-8">
+        {/* Left Column: Configuration */}
+        <div className="space-y-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-lg">Target Bot</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {mounted && (
+                        <Input
+                            label="Organization ID"
+                            value={org}
+                            readOnly
+                            className="bg-gray-50 text-gray-500"
+                        />
+                    )}
+                    <Select
+                        label="Select Bot"
+                        value={bot}
+                        onChange={(e) => setBot(e.target.value)}
+                        options={[
+                            { value: "", label: "Select a bot..." },
+                            ...bots.map(b => ({ value: b.bot_id, label: b.name || b.bot_id }))
+                        ]}
+                        description={botKey ? 'Active API Key found' : 'Using Bearer Token'}
+                    />
+                </CardContent>
+            </Card>
 
-      <div className="rounded-xl border border-black/10 bg-white shadow-sm">
-        <div className="px-4 pt-4">
-          <div className="flex items-center gap-2">
-            {(['pdf','text','qna','website'] as const).map(k=> (
-              <button key={k} onClick={()=>setTab(k)} className={`px-3 py-2 rounded-md text-sm ${tab===k? 'bg-black/90 text-white' : 'bg-black/5 text-black hover:bg-black/10'}`}>{k.toUpperCase()}</button>
-            ))}
-          </div>
-        </div>
-        <div className="p-4">
-          {tab==='text' && (
-            <div>
-              <h2 className="text-lg font-semibold mb-3">Add Text</h2>
-              <div className="mb-3 rounded-md border border-blue-200 bg-blue-50 text-blue-900 p-3 text-xs">
-                Paste plain text. It will be chunked and embedded for retrieval.
-              </div>
-              <textarea value={text} onChange={e=>setText(e.target.value)} placeholder="Paste text" className="w-full min-h-32 px-3 py-2 rounded-md border border-black/10 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              <div className="mt-3">
-                <button onClick={ingestText} className="px-3 py-2 rounded-md bg-blue-600 text-white shadow hover:bg-blue-700 transition">Add Text</button>
-              </div>
-            </div>
-          )}
-          {tab==='qna' && (
-            <div>
-              <h2 className="text-lg font-semibold mb-3">Add QnA</h2>
-              <div className="mb-3 rounded-md border border-yellow-300 bg-yellow-50 text-yellow-900 p-3 text-xs">
-                Upload a CSV with two columns: <span className="font-medium">question,answer</span> (header optional) or add rows below. Each row becomes a Q&A pair in your knowledge.
-              </div>
-              <div className="space-y-3">
-                {qna.map((p,i)=> (
-                  <div key={i} className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    <input value={p.q} onChange={e=>updatePair(i,'q',e.target.value)} placeholder="Question" className="px-3 py-2 rounded-md border border-black/10 w-full" />
-                    <input value={p.a} onChange={e=>updatePair(i,'a',e.target.value)} placeholder="Answer" className="px-3 py-2 rounded-md border border-black/10 w-full" />
-                    <div className="md:col-span-2 flex gap-2">
-                      <button onClick={()=>removePair(i)} className="px-2 py-1 rounded-md bg-red-600 text-white text-xs">Remove</button>
+            <Card className="bg-blue-50/50 border-blue-100">
+                <CardContent className="p-4 text-sm text-blue-800 space-y-2">
+                    <div className="font-semibold flex items-center gap-2">
+                        <span>ℹ️</span> About Ingestion
                     </div>
-                  </div>
+                    <p className="leading-relaxed opacity-90">
+                        Content added here is processed, chunked, and stored in the vector database.
+                        Your bot uses this knowledge to answer user queries accurately.
+                    </p>
+                </CardContent>
+            </Card>
+        </div>
+
+        {/* Right Column: Ingestion Tools */}
+        <div className="lg:col-span-2 space-y-6">
+            {/* Tabs */}
+            <div className="flex p-1 bg-gray-100/80 rounded-xl gap-1 overflow-x-auto">
+                {(['pdf', 'text', 'qna', 'website'] as const).map(k => (
+                    <button
+                        key={k}
+                        onClick={() => setTab(k)}
+                        className={`flex-1 min-w-[80px] px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                            tab === k
+                                ? 'bg-white text-blue-600 shadow-sm ring-1 ring-black/5'
+                                : 'text-gray-500 hover:bg-white/50 hover:text-gray-700'
+                        }`}
+                    >
+                        {k === 'pdf' && '📄 PDF'}
+                        {k === 'text' && '📝 Text'}
+                        {k === 'qna' && '💬 Q&A'}
+                        {k === 'website' && '🌐 Website'}
+                    </button>
                 ))}
-                <div className="flex flex-wrap items-center gap-3">
-                  <button onClick={addPair} className="px-3 py-2 rounded-md bg-black/80 text-white text-sm">Add Row</button>
-                  <input type="file" accept=".csv" onChange={e=>{const f=e.target.files?.[0]||null; setQnaCsv(f); if(f) importCsv(f);}} />
-                </div>
-                <div>
-                  <button onClick={ingestQna} className="px-3 py-2 rounded-md bg-blue-600 text-white shadow hover:bg-blue-700 transition" disabled={addingQna}>{addingQna? 'Adding…' : 'Add QnA'}</button>
-                </div>
-              </div>
             </div>
-          )}
-          {tab==='website' && (
-            <div>
-              <h2 className="text-lg font-semibold mb-3">Add Website</h2>
-              <div className="mb-3 rounded-md border border-blue-200 bg-blue-50 text-blue-900 p-3 text-xs">
-                Enter a full URL. The page content is fetched and cleaned (AMP and canonical pages considered), then chunked and embedded.
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <input value={url} onChange={e=>setUrl(e.target.value)} placeholder="https://..." className="px-3 py-2 rounded-md border border-black/10 w-full sm:w-96 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                <button onClick={ingestUrl} className="px-3 py-2 rounded-md bg-blue-600 text-white shadow hover:bg-blue-700 transition">Add Website</button>
-              </div>
-            </div>
-          )}
-          {tab==='pdf' && (
-            <div>
-              <h2 className="text-lg font-semibold mb-3">Add PDF</h2>
-              <div className="mb-3 rounded-md border border-blue-200 bg-blue-50 text-blue-900 p-3 text-xs">
-                Upload a single <span className="font-medium">.pdf</span> file. Text is extracted from all pages and embedded for retrieval.
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <input type="file" accept="application/pdf" onChange={e=>setPdf(e.target.files?.[0]||null)} />
-                <button onClick={ingestPdf} className="px-3 py-2 rounded-md bg-blue-600 text-white shadow hover:bg-blue-700 transition">Add PDF</button>
-              </div>
-            </div>
-          )}
+
+            <Card className="min-h-[400px]">
+                <CardContent className="p-6">
+                    {tab === 'text' && (
+                        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                            <div className="space-y-1">
+                                <h2 className="text-lg font-semibold text-gray-900">Paste Text Content</h2>
+                                <p className="text-sm text-gray-500">
+                                    Directly paste articles, notes, or documentation.
+                                </p>
+                            </div>
+                            <Textarea
+                                value={text}
+                                onChange={e => setText(e.target.value)}
+                                placeholder="Paste your content here..."
+                                className="min-h-[200px] font-mono text-sm"
+                            />
+                            <div className="flex justify-end">
+                                <Button onClick={ingestText} disabled={!text || !bot}>
+                                    Process & Save
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
+                    {tab === 'qna' && (
+                        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                            <div className="flex justify-between items-start">
+                                <div className="space-y-1">
+                                    <h2 className="text-lg font-semibold text-gray-900">Q&A Pairs</h2>
+                                    <p className="text-sm text-gray-500">
+                                        Train your bot with specific question-answer examples.
+                                    </p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <label className="cursor-pointer">
+                                        <input 
+                                            type="file" 
+                                            accept=".csv" 
+                                            className="hidden" 
+                                            onChange={e => {
+                                                const f = e.target.files?.[0] || null;
+                                                // setQnaCsv(f);
+                                                if (f) importCsv(f);
+                                            }} 
+                                        />
+                                        <Button variant="outline" asChild>
+                                            <span>📂 Import CSV</span>
+                                        </Button>
+                                    </label>
+                                    <Button onClick={addPair} variant="secondary">
+                                        + Add Row
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                                {qna.length === 0 && (
+                                    <div className="text-center py-10 border-2 border-dashed border-gray-200 rounded-xl">
+                                        <p className="text-gray-400">No pairs added yet. Click &quot;Add Row&quot; or import a CSV.</p>
+                                    </div>
+                                )}
+                                {qna.map((p, i) => (
+                                    <div key={i} className="flex gap-3 items-start group">
+                                        <div className="flex-1 space-y-2">
+                                            <Input
+                                                value={p.q}
+                                                onChange={e => updatePair(i, 'q', e.target.value)}
+                                                placeholder="User asks..."
+                                                className="bg-gray-50/50"
+                                            />
+                                            <Textarea
+                                                value={p.a}
+                                                onChange={e => updatePair(i, 'a', e.target.value)}
+                                                placeholder="Bot answers..."
+                                                className="min-h-[60px]"
+                                            />
+                                        </div>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => removePair(i)}
+                                            className="text-gray-400 hover:text-red-600 mt-1"
+                                        >
+                                            ✕
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="flex justify-end pt-4 border-t border-gray-100">
+                                <Button 
+                                    onClick={ingestQna} 
+                                    disabled={addingQna || qna.length === 0 || !bot}
+                                    className="min-w-[120px]"
+                                >
+                                    {addingQna ? 'Processing...' : 'Save Q&A Pairs'}
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
+                    {tab === 'website' && (
+                        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                            <div className="space-y-1">
+                                <h2 className="text-lg font-semibold text-gray-900">Crawl Website</h2>
+                                <p className="text-sm text-gray-500">
+                                    Enter a URL to fetch, clean, and ingest content.
+                                </p>
+                            </div>
+                            <div className="flex gap-3">
+                                <div className="flex-1">
+                                    <Input
+                                        value={url}
+                                        onChange={e => setUrl(e.target.value)}
+                                        placeholder="https://example.com/page"
+                                        type="url"
+                                    />
+                                </div>
+                                <Button onClick={ingestUrl} disabled={!url || !bot}>
+                                    Fetch & Process
+                                </Button>
+                            </div>
+                            <div className="bg-amber-50 text-amber-800 text-sm p-3 rounded-lg border border-amber-100">
+                                Note: This will attempt to extract the main content from the page, ignoring navigation and footers where possible.
+                            </div>
+                        </div>
+                    )}
+
+                    {tab === 'pdf' && (
+                        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                            <div className="space-y-1">
+                                <h2 className="text-lg font-semibold text-gray-900">Upload PDF Document</h2>
+                                <p className="text-sm text-gray-500">
+                                    Extract text from PDF files for your knowledge base.
+                                </p>
+                            </div>
+                            
+                            <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center hover:bg-gray-50 transition-colors">
+                                <input
+                                    type="file"
+                                    accept="application/pdf"
+                                    onChange={e => setPdf(e.target.files?.[0] || null)}
+                                    className="hidden"
+                                    id="pdf-upload"
+                                />
+                                <label htmlFor="pdf-upload" className="cursor-pointer flex flex-col items-center gap-2">
+                                    <span className="text-4xl">📄</span>
+                                    <span className="font-medium text-gray-700">
+                                        {pdf ? pdf.name : "Click to select a PDF file"}
+                                    </span>
+                                    <span className="text-sm text-gray-400">
+                                        {pdf ? `${(pdf.size / 1024 / 1024).toFixed(2)} MB` : "Supports standard PDF documents"}
+                                    </span>
+                                </label>
+                            </div>
+
+                            <div className="flex justify-end">
+                                <Button onClick={ingestPdf} disabled={!pdf || !bot}>
+                                    Upload & Process
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
         </div>
       </div>
-
-      
     </div>
   );
 }

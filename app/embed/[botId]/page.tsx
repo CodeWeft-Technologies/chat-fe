@@ -1,5 +1,12 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 import { useEffect, useState, use as usePromise } from "react";
+import Link from "next/link";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Select } from "../../components/ui/select";
+
 // Utility to check if a string is a direct image URL
 function isDirectImageUrl(url: string) {
   return /^https?:\/\/.+\.(png|jpe?g|gif|svg|webp|bmp|ico)(\?.*)?$/i.test(url) || url.startsWith('data:image/');
@@ -29,12 +36,13 @@ export default function EmbedPage(props: { params: Promise<{ botId: string }> })
   const params = usePromise(props.params);
   const { botId } = params;
   const [org, setOrg] = useState<string>("");
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [widget, setWidget] = useState<string>("bubble");
   const [tpl, setTpl] = useState<string>("bubble-blue");
-  const [snippet, setSnippet] = useState<string>("");
+  // const [snippet, setSnippet] = useState<string>("");
   const [copied, setCopied] = useState<boolean>(false);
   const [pubKey, setPubKey] = useState<string | null>(null);
-  const [rotatedAt, setRotatedAt] = useState<string | null>(null);
+  // const [rotatedAt, setRotatedAt] = useState<string | null>(null);
   const [includeKey, setIncludeKey] = useState<boolean>(true);
   const [botName, setBotName] = useState<string>("Assistant");
   const [icon, setIcon] = useState<string>("💬");
@@ -80,8 +88,8 @@ export default function EmbedPage(props: { params: Promise<{ botId: string }> })
   }, [icon]);
   // Greeting managed on backend config page; fetched for preview
   const [greeting, setGreeting] = useState<string>("");
-  const BRAND_TEXT = "CodeWeft";
-  const BRAND_LINK = "https://codeweft.in/";
+  // const BRAND_TEXT = "CodeWeft";
+  // const BRAND_LINK = "https://codeweft.in/";
   
   // Color and theme controls
   const [accent, setAccent] = useState<string>("#2563eb");
@@ -150,6 +158,21 @@ export default function EmbedPage(props: { params: Promise<{ botId: string }> })
     const darkLum = luminance(p.bg); if(darkLum < 0.25) setTheme('dark'); else setTheme('light');
   }
 
+  function handleThemeChange(t: "light"|"dark") {
+    setTheme(t);
+    if(t === 'dark') {
+      setBgColor('#0f172a');
+      setCardColor('#1e293b');
+      setTextColor('#f8fafc');
+      setBubbleBot('#334155');
+    } else {
+      setBgColor('#ffffff');
+      setCardColor('#ffffff');
+      setTextColor('#0f172a');
+      setBubbleBot('#ffffff');
+    }
+  }
+
   // Auto-fix for contrast issues
   function tweakColor(hex:string, targetBg:string, minRatio:number):string{
     let h = hex;
@@ -172,27 +195,19 @@ export default function EmbedPage(props: { params: Promise<{ botId: string }> })
     setTextColor(newText); setAccent(newAccent); if(linkAccentButton){ setButtonColor(newAccent);} else { setButtonColor(newButton);} }
 
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
-  const [compactContrast, setCompactContrast] = useState<boolean>(true);
-
-  const contrastTextOnBg = contrastRatio(textColor, bgColor);
-  const contrastTextOnCard = contrastRatio(textColor, cardColor);
-  const contrastAccentOnBg = contrastRatio(accent, bgColor);
-  const contrastAccentOnCard = contrastRatio(accent, cardColor);
-  const contrastButtonOnBg = contrastRatio(buttonColor, bgColor);
+  const [compactContrast] = useState<boolean>(true);
 
   // Auto link accent -> button color if enabled
   useEffect(()=>{ if(linkAccentButton) setButtonColor(accent); }, [accent, linkAccentButton]);
 
   // Suggest safer colors in dark mode if poor contrast
-  function suggestForDark(hex: string){
-    if(theme!=='dark') return null;
-    const lum=luminance(hex);
-    if(lum>0.6) return '#1e40af'; // too light -> deeper blue
-    if(lum<0.08) return '#3b82f6'; // too dark -> mid blue
-    return null;
-  }
-  const accentSuggestion = suggestForDark(accent);
-  const textSuggestion = theme==='dark' && (contrastTextOnBg<4.5? '#f1f5f9': null);
+  // function suggestForDark(hex: string){
+  //   if(theme!=='dark') return null;
+  //   const lum=luminance(hex);
+  //   if(lum>0.6) return '#1e40af'; // too light -> deeper blue
+  //   if(lum<0.08) return '#3b82f6'; // too dark -> mid blue
+  //   return null;
+  // }
 
   // Load org from localStorage on client side only
   useEffect(() => {
@@ -203,27 +218,6 @@ export default function EmbedPage(props: { params: Promise<{ botId: string }> })
   useEffect(() => {
     if (!org) return;
     (async () => {
-      try {
-        const headers: Record<string, string> = {};
-        if (typeof window !== "undefined") { 
-          const t = localStorage.getItem("token"); 
-          if (t) headers["Authorization"] = `Bearer ${t}`; 
-        }
-        const r = await fetch(`${B()}/api/bots/${encodeURIComponent(botId)}/embed?org_id=${encodeURIComponent(org)}&widget=${encodeURIComponent(widget)}`, { headers });
-        if (!r.ok) throw new Error(`http${r.status}`);
-        const d = await r.json();
-        const base = B().replace(/\/$/, "");
-        const sn: string = String(d.snippet || "");
-        const fixed = sn
-          .replace(/apiBase\s*:\s*'[^']*'/, `apiBase:'${base}'`)
-          .replace(/src=("|')https?:\/\/[^"']+\/api\/widget\.js\1/g, `src='${base}/api/widget.js'`)
-          .replace(/U=\'https?:\\\/\\\/[^']+\\\/api\\\/chat\\\/stream\\\/${botId}\'/, `U='${base}/api/chat/stream/${botId}'`);
-        setSnippet(fixed);
-      } catch {
-        // Fallback for when API is not available
-        setSnippet(`<script>window.chatbotConfig={botId:'${botId}',orgId:'${org}',apiBase:'${B().replace(/\/$/, "")}',botKey:''};</script><script src='${B().replace(/\/$/, "")}/api/widget.js' async></script>`);
-      }
-
       // Fetch public key
       try {
         const headers2: Record<string, string> = {};
@@ -235,11 +229,11 @@ export default function EmbedPage(props: { params: Promise<{ botId: string }> })
         if (rk.ok) {
           const kj = await rk.json();
           setPubKey(kj.public_api_key || null);
-          setRotatedAt(kj.rotated_at || null);
+          // setRotatedAt(kj.rotated_at || null);
         }
       } catch {}
     })();
-  }, [org, botId, widget]);
+  }, [org, botId]);
 
   // Fetch backend-configured greeting (welcome_message) for preview
   useEffect(() => {
@@ -365,7 +359,7 @@ export default function EmbedPage(props: { params: Promise<{ botId: string }> })
       const kcfg = includeKey && pubKey ? `,botKey:'${pubKey}'` : '';
       return [
         "<!-- Default CDN widget: paste near end of body -->",
-        `<script>window.chatbotConfig={botId:'${botId}',orgId:'${org}',apiBase:'${base}',buttonColor:'${buttonColor}',accent:'${accent}',text:'${textColor}',card:'${cardColor}',bg:'${bgColor}',radius:${radius},bubbleMe:'${bubbleMe}',bubbleBot:'${bubbleBot}'${kcfg}${botName?`,botName:'${botName.replace(/'/g,"\\'")}'`:''}${icon?`,icon:'${icon.replace(/'/g,"\\'")}'`:''},launcherSize:${launcherSize},iconScale:${iconScale},transparentBubble:${transparentBubble}};</script>`,
+        `<script>window.chatbotConfig={botId:'${botId}',orgId:'${org}',apiBase:'${base}',buttonColor:'${buttonColor}',accent:'${accent}',text:'${textColor}',card:'${cardColor}',bg:'${bgColor}',radius:${radius},bubbleMe:'${bubbleMe}',bubbleBot:'${bubbleBot}'${kcfg}${botName?`,botName:'${botName.replace(/'/g,"\\'")}'`:''}${icon?`,icon:'${icon.replace(/'/g,"\\'")}'`:''},launcherSize:${launcherSize},iconScale:${iconScale},transparentBubble:${transparentBubble},position:'${position}'};</script>`,
         `<script src='${base}/api/widget.js' async></script>`
       ].join("\n");
     }
@@ -476,7 +470,7 @@ export default function EmbedPage(props: { params: Promise<{ botId: string }> })
             }
           }
         }
-      } catch (error) {
+      } catch {
         setMessages(prev => [...prev, { type: 'bot', text: 'Sorry, I encountered an error. Please try again.' }]);
       } finally {
         setIsTyping(false);
@@ -497,7 +491,7 @@ export default function EmbedPage(props: { params: Promise<{ botId: string }> })
           {/* Chat Button */}
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className={`fixed bottom-6 right-6 ${transparentBubble ? '' : 'shadow-lg'} flex items-center justify-center text-2xl transition-transform hover:scale-105 overflow-hidden`}
+            className={`absolute bottom-6 ${position === 'left' ? 'left-6' : 'right-6'} ${transparentBubble ? '' : 'shadow-lg'} flex items-center justify-center text-2xl transition-transform hover:scale-105 overflow-hidden`}
             style={{ 
               width: `${launcherSize}px`,
               height: `${launcherSize}px`,
@@ -521,7 +515,7 @@ export default function EmbedPage(props: { params: Promise<{ botId: string }> })
           {/* Chat Panel */}
           {isOpen && (
             <div 
-              className="fixed bottom-20 right-6 w-80 h-96 shadow-2xl overflow-hidden transition-all"
+              className={`absolute bottom-20 ${position === 'left' ? 'left-6' : 'right-6'} w-80 h-96 shadow-2xl overflow-hidden transition-all`}
               style={{
                 backgroundColor: cardColor,
                 border: `1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'}`,
@@ -934,24 +928,31 @@ export default function EmbedPage(props: { params: Promise<{ botId: string }> })
           {/* Chat Button */}
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="fixed bottom-6 right-6 w-14 h-14 shadow-lg flex items-center justify-center text-2xl transition-transform hover:scale-105 overflow-hidden"
+            className={`absolute bottom-6 ${position === 'left' ? 'left-6' : 'right-6'} ${transparentBubble ? '' : 'shadow-lg'} flex items-center justify-center text-2xl transition-transform hover:scale-105 overflow-hidden`}
             style={{ 
-              backgroundColor: buttonColor,
+              width: `${launcherSize}px`,
+              height: `${launcherSize}px`,
+              backgroundColor: transparentBubble ? 'transparent' : buttonColor,
               color: '#fff',
-              borderRadius: `${radius}px`
+              borderRadius: `${radius}px`,
+              padding: 0
             }}
           >
             {icon && (isDirectImageUrl(icon) || resolvedIcon) ? (
-              <img src={resolvedIcon || getProxiedImageUrl(icon)} alt="Bot" className="w-8 h-8 rounded-full object-cover" />
+              <img src={resolvedIcon || getProxiedImageUrl(icon)} alt="Bot" className={`object-cover ${transparentBubble ? '' : 'rounded-full'}`} style={{
+                borderRadius: transparentBubble ? `${radius}px` : undefined,
+                width: `${iconScale}%`,
+                height: `${iconScale}%`
+              }} />
             ) : (
-              <span>{icon || '💬'}</span>
+              <span style={{ fontSize: `${iconScale * 0.4}px` }}>{icon || '💬'}</span>
             )}
           </button>
           
           {/* Chat Panel */}
           {isOpen && (
             <div 
-              className="fixed bottom-20 right-6 w-80 h-96 shadow-2xl overflow-hidden transition-all"
+              className={`absolute bottom-20 ${position === 'left' ? 'left-6' : 'right-6'} w-80 h-96 shadow-2xl overflow-hidden transition-all`}
               style={{
                 backgroundColor: cardColor,
                 border: `1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'}`,
@@ -1092,489 +1093,505 @@ export default function EmbedPage(props: { params: Promise<{ botId: string }> })
     );
   }
 
+  const contrastAccentOnBg = contrastRatio(accent, bgColor);
+  const contrastTextOnBg = contrastRatio(textColor, bgColor);
+  const contrastButtonOnBg = contrastRatio(buttonColor, bgColor);
+
   const displayCode = generateCode(tpl);
 
   return (
-    <div className="space-y-6">
-      <div className="text-center max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-3">🚀 Add Chat to Your Website</h1>
-        <p className="text-lg text-gray-600 mb-6">Create a customized chatbot widget for your website in 3 simple steps. No coding experience needed!</p>
-        <div className="flex items-center justify-center gap-8 text-sm text-gray-500">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">1</div>
-            <span>Choose Style</span>
+    <div className="min-h-screen bg-gray-50/50 p-6">
+      <div className="max-w-7xl mx-auto space-y-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Embed Chatbot</h1>
+            <p className="text-sm text-gray-500 mt-1">Customize and integrate your chatbot into your website</p>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">2</div>
-            <span>Customize Look</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">3</div>
-            <span>Copy & Paste</span>
-          </div>
+          <Link href={`/bots/${botId}/config`}>
+            <Button variant="outline">Back to Configuration</Button>
+          </Link>
         </div>
-      </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Configuration Panel */}
-        <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-          <div className="p-6 space-y-6">
+
+        <div className="grid lg:grid-cols-12 gap-8 items-start">
+          {/* Configuration Panel */}
+          <div className="lg:col-span-7 space-y-6">
             
-            {/* Step 1: Choose Chat Style */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">1</div>
-                <h3 className="text-lg font-semibold text-gray-900">Choose Your Chat Style</h3>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => {setWidget('bubble'); setTpl('bubble-blue');}}
-                  className={`p-4 border-2 rounded-lg text-left transition-all ${
-                    tpl === 'bubble-blue' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="text-2xl mb-2">💬</div>
-                  <div className="font-medium text-sm text-gray-900">Bubble Chat</div>
-                  <div className="text-xs text-gray-500">Floating button</div>
-                </button>
-                
-                <button
-                  onClick={() => {setWidget('bubble'); setTpl('bubble-dark');}}
-                  className={`p-4 border-2 rounded-lg text-left transition-all ${
-                    tpl === 'bubble-dark' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="text-2xl mb-2">🌙</div>
-                  <div className="font-medium text-sm text-gray-900">Dark Bubble</div>
-                  <div className="text-xs text-gray-500">Dark theme</div>
-                </button>
-                
-                <button
-                  onClick={() => {setWidget('iframe'); setTpl('iframe-minimal');}}
-                  className={`p-4 border-2 rounded-lg text-left transition-all ${
-                    tpl === 'iframe-minimal' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="text-2xl mb-2">📝</div>
-                  <div className="font-medium text-sm text-gray-900">Embedded</div>
-                  <div className="text-xs text-gray-500">Inline chat</div>
-                </button>
-                
-                <button
-                  onClick={() => {setWidget('cdn'); setTpl('cdn-default');}}
-                  className={`p-4 border-2 rounded-lg text-left transition-all ${
-                    tpl === 'cdn-default' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="text-2xl mb-2">🔧</div>
-                  <div className="font-medium text-sm text-gray-900">CDN Widget</div>
-                  <div className="text-xs text-gray-500">Advanced</div>
-                </button>
-                
-                <button
-                  onClick={() => {setWidget('inline'); setTpl('inline-card');}}
-                  className={`p-4 border-2 rounded-lg text-left transition-all ${
-                    tpl === 'inline-card' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="text-2xl mb-2">🃏</div>
-                  <div className="font-medium text-sm text-gray-900">Card Style</div>
-                  <div className="text-xs text-gray-500">Clean design</div>
-                </button>
-                
-                <button
-                  onClick={() => {setWidget('fullscreen'); setTpl('fullscreen');}}
-                  className={`p-4 border-2 rounded-lg text-left transition-all ${
-                    tpl === 'fullscreen' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="text-2xl mb-2">🖥️</div>
-                  <div className="font-medium text-sm text-gray-900">Full Screen</div>
-                  <div className="text-xs text-gray-500">Large chat</div>
-                </button>
-              </div>
-            </div>
-
-            {/* Step 2: Customize Your Bot */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">2</div>
-                <h3 className="text-lg font-semibold text-gray-900">Customize Your Bot</h3>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Bot Name</label>
-                  <input 
-                    value={botName} 
-                    onChange={e=>setBotName(e.target.value)} 
-                    placeholder="e.g., Support Assistant" 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Bot Icon
-                    <span className="text-xs font-normal text-gray-500 ml-2">(emoji or image URL)</span>
-                  </label>
-                  <input 
-                    value={icon} 
-                    onChange={e=>setIcon(e.target.value)} 
-                    placeholder="💬 or https://example.com/bot.png" 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Use an emoji (💬 🤖 👋) or image URL</p>
-                </div>
-              </div>
-              {/* Greeting input removed; configure welcome message on the backend config page */}
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Theme</label>
-                  <select value={theme} onChange={e=>setTheme(e.target.value as ("light"|"dark"))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    <option value="light">☀️ Light</option>
-                    <option value="dark">🌙 Dark</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Position</label>
-                  <select value={position} onChange={e=>setPosition(e.target.value as ("right"|"left"))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    <option value="right">➡️ Right</option>
-                    <option value="left">⬅️ Left</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Corner Radius: {radius}px</label>
-                  <input 
-                    type="range" 
-                    min={8} 
-                    max={24} 
-                    value={radius} 
-                    onChange={e=>setRadius(Number(e.target.value))} 
-                    className="w-full h-10 accent-blue-500 cursor-pointer" 
-                  />
-                  <div className="flex justify-between text-xs text-gray-500 px-1">
-                    <span>8</span>
-                    <span>24</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="text-sm font-semibold text-gray-900">🎨 Palette & Accessibility</div>
-                    <div className="text-xs text-gray-500">Live contrast feedback</div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button onClick={()=>autoFix()} className="text-xs px-2 py-1 rounded-md bg-blue-600 text-white hover:bg-blue-700">Auto Fix</button>
-                    <button onClick={()=>setCompactContrast(c=>!c)} className="text-xs px-2 py-1 rounded-md bg-gray-200 hover:bg-gray-300" title={compactContrast? 'Show verbose labels (AA/AAA)' : 'Show numeric only'}>{compactContrast? 'Numbers' : 'Labels'}</button>
-                    <button onClick={()=>setShowAdvanced(s=>!s)} className="text-xs px-2 py-1 rounded-md bg-gray-200 hover:bg-gray-300">{showAdvanced? 'Hide':'Show'} Legend</button>
-                  </div>
-                </div>
-                {showAdvanced && (
-                  <div className="flex items-center gap-3 text-[10px]">
-                    <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-600"></span>AAA ≥7</div>
-                    <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span>AA ≥4.5</div>
-                    <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500"></span>Low &lt;4.5</div>
-                    <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500"></span>Poor &lt;3</div>
-                  </div>
-                )}
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {presets.map(p=> (
-                    <button key={p.name} onClick={()=>applyPreset(p.values)} className="text-[10px] px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-100 flex items-center gap-1">
-                      <span className="inline-block w-3 h-3 rounded" style={{backgroundColor:p.values.accent}}></span>{p.name}
+            {/* Step 1: Layout */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-600">1</span>
+                  Choose Layout
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4">
+                  {[
+                    { id: 'bubble-blue', icon: '💬', label: 'Bubble Chat', desc: 'Floating button' },
+                    { id: 'bubble-dark', icon: '🌙', label: 'Dark Bubble', desc: 'Dark theme' },
+                    { id: 'iframe-minimal', icon: '📝', label: 'Embedded', desc: 'Inline component' },
+                    { id: 'cdn-default', icon: '🔧', label: 'CDN Widget', desc: 'Universal script' },
+                    { id: 'inline-card', icon: '🃏', label: 'Card Style', desc: 'Compact card' },
+                    { id: 'fullscreen', icon: '🖥️', label: 'Full Screen', desc: 'Immersive view' },
+                  ].map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        setWidget(item.id.includes('iframe') ? 'iframe' : item.id.includes('cdn') ? 'cdn' : item.id.includes('inline') ? 'inline' : item.id.includes('fullscreen') ? 'fullscreen' : 'bubble');
+                        setTpl(item.id);
+                      }}
+                      className={`relative p-4 rounded-xl text-left transition-all duration-200 border-2 ${
+                        tpl === item.id 
+                          ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600' 
+                          : 'border-gray-100 hover:border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="text-2xl mb-2">{item.icon}</div>
+                      <div className="font-semibold text-gray-900 text-sm">{item.label}</div>
+                      <div className="text-xs text-gray-500">{item.desc}</div>
                     </button>
                   ))}
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
-                  {/* Button / Accent link toggle */}
-                  <div className="col-span-full flex items-center gap-2 mb-2">
-                    <input id="linkAB" type="checkbox" checked={linkAccentButton} onChange={e=>setLinkAccentButton(e.target.checked)} className="w-4 h-4" />
-                    <label htmlFor="linkAB" className="text-xs text-gray-600">Link Chat Button color to Accent (user messages)</label>
-                  </div>
-                  {/* Accent */}
-                  <div className="space-y-1">
-                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                      <span className="w-4 h-4 rounded-md border border-gray-300" style={{backgroundColor: accent}}></span>
-                      Accent / User Bubble
-                    </label>
-                    <div className="flex items-center gap-3 bg-white rounded-lg p-2 border border-gray-300">
-                      <input aria-label="Accent color" type="color" value={accent} onChange={e=>setAccent(e.target.value)} className="h-10 w-10 cursor-pointer rounded shadow-sm p-0 border-none" />
-                      <div className="font-mono text-xs text-gray-700">{accent}</div>
-                      <span title="Accent vs Page Background" className={`text-[10px] text-white px-1.5 py-0.5 rounded ${badge(contrastAccentOnBg, compactContrast).cls}`}>{badge(contrastAccentOnBg, compactContrast).label}</span>
+              </CardContent>
+            </Card>
+
+            {/* Step 2: Customize */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-600">2</span>
+                  Customize Appearance
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-8">
+                {/* Identity */}
+                <div className="space-y-4">
+                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Identity</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <Input
+                      label="Bot Name"
+                      value={botName}
+                      onChange={e=>setBotName(e.target.value)}
+                      placeholder="e.g., Support Assistant"
+                    />
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Bot Icon</label>
+                      <div className="flex gap-2">
+                         <div className="flex-shrink-0 w-9 h-9 rounded-md bg-gray-100 border border-gray-200 flex items-center justify-center text-lg overflow-hidden">
+                           {icon && (isDirectImageUrl(icon) || resolvedIcon) ? (
+                              <img src={resolvedIcon || getProxiedImageUrl(icon)} alt="Icon" className="w-full h-full object-cover" />
+                           ) : (
+                              <span>{icon || '💬'}</span>
+                           )}
+                         </div>
+                         <Input
+                           wrapperClassName="flex-1"
+                           value={icon} 
+                           onChange={e=>setIcon(e.target.value)} 
+                           placeholder="Emoji or Image URL" 
+                         />
+                      </div>
                     </div>
-                    {accentSuggestion && <div className="text-[10px] text-amber-600">Suggestion (dark): try {accentSuggestion}</div>}
                   </div>
-                  {/* Button */}
-                  <div className="space-y-1">
-                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                      <span className="w-4 h-4 rounded-md border border-gray-300" style={{backgroundColor: buttonColor}}></span>
-                      Chat Button
-                    </label>
-                    <div className="flex items-center gap-3 bg-white rounded-lg p-2 border border-gray-300">
-                      <input aria-label="Button color" type="color" value={buttonColor} onChange={e=>setButtonColor(e.target.value)} disabled={linkAccentButton} className={`h-10 w-10 cursor-pointer rounded shadow-sm p-0 border-none ${linkAccentButton?'opacity-40 cursor-not-allowed':''}`} />
-                      <div className={`font-mono text-xs text-gray-700 ${linkAccentButton?'opacity-40':''}`}>{buttonColor}</div>
-                      <span title="Button vs Page Background" className={`text-[10px] text-white px-1.5 py-0.5 rounded ${badge(contrastButtonOnBg, compactContrast).cls}`}>{badge(contrastButtonOnBg, compactContrast).label}</span>
-                    </div>
-                    {/* Transparent Bubble Toggle */}
-                    <div className="flex items-center gap-2 mt-2">
-                      <input
-                        type="checkbox"
-                        id="transparent-bubble"
-                        checked={transparentBubble}
-                        onChange={(e) => setTransparentBubble(e.target.checked)}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                </div>
+
+                <hr className="border-gray-100" />
+
+                {/* Layout & Theme */}
+                <div className="space-y-4">
+                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Layout & Theme</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                    <Select
+                      label="Theme Mode"
+                      value={theme}
+                      onChange={e=>handleThemeChange(e.target.value as ("light"|"dark"))}
+                      options={[
+                        { value: "light", label: "☀️ Light Mode" },
+                        { value: "dark", label: "🌙 Dark Mode" }
+                      ]}
+                    />
+                    
+                    <Select
+                      label="Position"
+                      value={position}
+                      onChange={e=>setPosition(e.target.value as ("right"|"left"))}
+                      options={[
+                        { value: "right", label: "➡️ Bottom Right" },
+                        { value: "left", label: "⬅️ Bottom Left" }
+                      ]}
+                    />
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Corner Radius: {radius}px</label>
+                      <input 
+                        type="range" 
+                        min={0} 
+                        max={24} 
+                        value={radius} 
+                        onChange={e=>setRadius(Number(e.target.value))} 
+                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600" 
                       />
-                      <label htmlFor="transparent-bubble" className="text-xs text-gray-700 select-none cursor-pointer">
-                        Transparent Background (Only Icon/Image)
+                    </div>
+                  </div>
+                </div>
+
+                <hr className="border-gray-100" />
+
+                {/* Colors */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Colors & Styling</h4>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={()=>autoFix()} 
+                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-8"
+                    >
+                      ✨ Auto Fix Contrast
+                    </Button>
+                  </div>
+                  
+                  {/* Presets */}
+                  <div className="flex flex-wrap gap-2">
+                    {presets.map(p=> (
+                      <button 
+                        key={p.name} 
+                        onClick={()=>applyPreset(p.values)} 
+                        className="group flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm transition-all"
+                      >
+                        <span className="w-3 h-3 rounded-full border border-gray-100 shadow-sm" style={{backgroundColor:p.values.accent}}></span>
+                        <span className="text-xs text-gray-600 group-hover:text-gray-900">{p.name}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Main Colors Grid - keeping custom color picker UI as it's specialized */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50/50 rounded-xl p-5 border border-gray-200/60">
+                    
+                    {/* Brand Color */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-gray-500 flex items-center justify-between">
+                        <span>Brand / Accent Color</span>
+                        <span title="Contrast Score" className={`text-[10px] px-1.5 py-0.5 rounded font-bold text-white ${badge(contrastAccentOnBg, compactContrast).cls}`}>
+                          {badge(contrastAccentOnBg, compactContrast).label}
+                        </span>
                       </label>
-                    </div>
-                    {/* Launcher Size Slider */}
-                    <div className="space-y-1 mt-2">
-                      <div className="flex justify-between items-center">
-                        <label htmlFor="launcher-size" className="text-xs text-gray-700 select-none">
-                          Launcher Size
-                        </label>
-                        <span className="text-xs text-gray-500 font-mono">{launcherSize}px</span>
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <input 
+                            type="color" 
+                            value={accent} 
+                            onChange={e=>setAccent(e.target.value)} 
+                            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                          />
+                          <div className="w-full h-9 rounded-md border border-gray-200 flex items-center px-3 gap-2 bg-white">
+                            <div className="w-5 h-5 rounded border border-gray-200 shadow-sm" style={{backgroundColor: accent}}></div>
+                            <span className="text-xs font-mono text-gray-600 uppercase">{accent}</span>
+                          </div>
+                        </div>
                       </div>
-                      <input
-                        type="range"
-                        id="launcher-size"
-                        min="40"
-                        max="100"
-                        value={launcherSize}
-                        onChange={(e) => setLauncherSize(Number(e.target.value))}
-                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                      />
-                    </div>
-                    {/* Icon Scale Slider */}
-                    <div className="space-y-1 mt-2">
-                      <div className="flex justify-between items-center">
-                        <label htmlFor="icon-scale" className="text-xs text-gray-700 select-none">
-                          Icon Scale
-                        </label>
-                        <span className="text-xs text-gray-500 font-mono">{iconScale}%</span>
+                      <div className="flex items-center gap-2 mt-2">
+                        <input id="linkAB" type="checkbox" checked={linkAccentButton} onChange={e=>setLinkAccentButton(e.target.checked)} className="w-3.5 h-3.5 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
+                        <label htmlFor="linkAB" className="text-xs text-gray-600 cursor-pointer select-none">Use this for chat button too</label>
                       </div>
-                      <input
-                        type="range"
-                        id="icon-scale"
-                        min="20"
-                        max="100"
-                        value={iconScale}
-                        onChange={(e) => setIconScale(Number(e.target.value))}
-                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                      />
                     </div>
-                  </div>
-                  {/* Text */}
-                  <div className="space-y-1">
-                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                      <span className="w-4 h-4 rounded-md border border-gray-300" style={{backgroundColor: textColor}}></span>
-                      Text
-                    </label>
-                    <div className="flex items-center gap-3 bg-white rounded-lg p-2 border border-gray-300">
-                      <input aria-label="Text color" type="color" value={textColor} onChange={e=>setTextColor(e.target.value)} className="h-10 w-10 cursor-pointer rounded shadow-sm p-0 border-none" />
-                      <div className="font-mono text-xs text-gray-700">{textColor}</div>
-                      <span title="Text vs Page Background" className={`text-[10px] text-white px-1.5 py-0.5 rounded ${badge(contrastTextOnBg, compactContrast).cls}`}>{badge(contrastTextOnBg, compactContrast).label}</span>
-                    </div>
-                    {textSuggestion && <div className="text-[10px] text-amber-600">Suggestion: use {textSuggestion} for better legibility</div>}
-                  </div>
-                  {/* Card */}
-                  <div className="space-y-1">
-                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                      <span className="w-4 h-4 rounded-md border border-gray-300" style={{backgroundColor: cardColor}}></span>
-                      Card Background
-                    </label>
-                    <div className="flex items-center gap-3 bg-white rounded-lg p-2 border border-gray-300">
-                      <input aria-label="Card background color" type="color" value={cardColor} onChange={e=>setCardColor(e.target.value)} className="h-10 w-10 cursor-pointer rounded shadow-sm p-0 border-none" />
-                      <div className="font-mono text-xs text-gray-700">{cardColor}</div>
-                      <span title="Text vs Card Background" className={`text-[10px] text-white px-1.5 py-0.5 rounded ${badge(contrastTextOnCard, compactContrast).cls}`}>{badge(contrastTextOnCard, compactContrast).label}</span>
-                    </div>
-                  </div>
-                  {/* Page BG */}
-                  <div className="space-y-1">
-                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                      <span className="w-4 h-4 rounded-md border border-gray-300" style={{backgroundColor: bgColor}}></span>
-                      Page Background
-                    </label>
-                    <div className="flex items-center gap-3 bg-white rounded-lg p-2 border border-gray-300">
-                      <input aria-label="Page background color" type="color" value={bgColor} onChange={e=>setBgColor(e.target.value)} className="h-10 w-10 cursor-pointer rounded shadow-sm p-0 border-none" />
-                      <div className="font-mono text-xs text-gray-700">{bgColor}</div>
-                      <span title="Text vs Page Background" className={`text-[10px] text-white px-1.5 py-0.5 rounded ${badge(contrastTextOnBg, compactContrast).cls}`}>{badge(contrastTextOnBg, compactContrast).label}</span>
-                    </div>
-                  </div>
-                  {/* User Message Bubble */}
-                  <div className="space-y-1">
-                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                      <span className="w-4 h-4 rounded-md border border-gray-300" style={{background: bubbleMe}}></span>
-                      User Message Bubble
-                    </label>
-                    <div className="flex items-center gap-3 bg-white rounded-lg p-2 border border-gray-300">
-                      <input aria-label="User message bubble color picker" type="color" value={bubbleMe.startsWith('#') ? bubbleMe : '#2563eb'} onChange={e=>setBubbleMe(e.target.value)} className="h-10 w-10 cursor-pointer rounded shadow-sm p-0 border-none" />
-                      <input 
-                        aria-label="User message bubble background" 
-                        type="text" 
-                        value={bubbleMe} 
-                        onChange={e=>setBubbleMe(e.target.value)} 
-                        placeholder="e.g., #2563eb or linear-gradient(...)"
-                        className="flex-1 px-2 py-1 border border-gray-200 rounded font-mono text-xs" 
-                      />
-                    </div>
-                    <div className="flex gap-2 flex-wrap">
-                      <button type="button" onClick={()=>setBubbleMe("linear-gradient(135deg, #2563eb, #1e40af)")} className="text-[10px] px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-100 flex items-center gap-1"><span className="inline-block w-3 h-3 rounded" style={{background:"linear-gradient(135deg, #2563eb, #1e40af)"}}></span>Blue</button>
-                      <button type="button" onClick={()=>setBubbleMe("linear-gradient(135deg, #10b981, #059669)")} className="text-[10px] px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-100 flex items-center gap-1"><span className="inline-block w-3 h-3 rounded" style={{background:"linear-gradient(135deg, #10b981, #059669)"}}></span>Green</button>
-                      <button type="button" onClick={()=>setBubbleMe("linear-gradient(135deg, #8b5cf6, #6d28d9)")} className="text-[10px] px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-100 flex items-center gap-1"><span className="inline-block w-3 h-3 rounded" style={{background:"linear-gradient(135deg, #8b5cf6, #6d28d9)"}}></span>Purple</button>
-                    </div>
-                  </div>
-                  {/* Bot Message Bubble */}
-                  <div className="space-y-1">
-                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                      <span className="w-4 h-4 rounded-md border border-gray-300" style={{background: bubbleBot}}></span>
-                      Bot Message Bubble
-                    </label>
-                    <div className="flex items-center gap-3 bg-white rounded-lg p-2 border border-gray-300">
-                      <input aria-label="Bot message bubble color picker" type="color" value={bubbleBot.startsWith('#') ? bubbleBot : '#ffffff'} onChange={e=>setBubbleBot(e.target.value)} className="h-10 w-10 cursor-pointer rounded shadow-sm p-0 border-none" />
-                      <input 
-                        aria-label="Bot message bubble background" 
-                        type="text" 
-                        value={bubbleBot} 
-                        onChange={e=>setBubbleBot(e.target.value)} 
-                        placeholder="e.g., #ffffff or rgba(...)"
-                        className="flex-1 px-2 py-1 border border-gray-200 rounded font-mono text-xs" 
-                      />
-                    </div>
-                    <div className="flex gap-2 flex-wrap">
-                      <button type="button" onClick={()=>setBubbleBot("#ffffff")} className="text-[10px] px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-100 flex items-center gap-1"><span className="inline-block w-3 h-3 rounded border" style={{background:"#ffffff"}}></span>White</button>
-                      <button type="button" onClick={()=>setBubbleBot("#f3f4f6")} className="text-[10px] px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-100 flex items-center gap-1"><span className="inline-block w-3 h-3 rounded" style={{background:"#f3f4f6"}}></span>Gray</button>
-                      <button type="button" onClick={()=>setBubbleBot("#e5e7eb")} className="text-[10px] px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-100 flex items-center gap-1"><span className="inline-block w-3 h-3 rounded" style={{background:"#e5e7eb"}}></span>Darker</button>
-                    </div>
-                  </div>
-                  {/* Swatch preview */}
-                  <div className="col-span-full mt-2 grid grid-cols-2 gap-2 text-[10px]">
-                    <div className="rounded-md border p-2 space-y-1" style={{backgroundColor: bgColor}}>
-                      <div className="font-semibold">Bg Preview</div>
-                      <div className="p-1 rounded" style={{backgroundColor: cardColor, color:textColor}}>Card / Text</div>
-                      <div className="p-1 rounded" style={{background: bubbleMe, color:'#fff'}}>User Msg</div>
-                      <div className="p-1 rounded" style={{background: bubbleBot, color:textColor}}>Bot Msg</div>
-                    </div>
-                    <div className="rounded-md border p-2 space-y-1" style={{backgroundColor: theme==='dark'? '#0b111a':'#ffffff'}}>
-                      <div className="font-semibold">Theme Contrast</div>
-                      <div className="p-1 rounded" style={{background: bubbleMe, color:'#fff'}}>User</div>
-                      <div className="p-1 rounded" style={{background: bubbleBot, color:textColor}}>Bot</div>
-                      <div className="p-1 rounded" style={{backgroundColor: buttonColor, color:'#fff'}}>Button</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
 
-            {/* Step 3: Copy and Install */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">3</div>
-                <h3 className="text-lg font-semibold text-gray-900">Add to Your Website</h3>
-              </div>
-              
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="text-lg">📋</div>
-                    <span className="font-medium text-gray-900">Website Code</span>
-                  </div>
-                  <button 
-                    onClick={() => copy(displayCode)} 
-                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                      copied 
-                        ? 'bg-green-500 text-white' 
-                        : 'bg-blue-500 hover:bg-blue-600 text-white'
-                    }`} 
-                    disabled={!displayCode}
-                  >
-                    {copied ? '✅ Copied!' : '📋 Copy Code'}
-                  </button>
-                </div>
-                
-                <div className="bg-white rounded-lg border border-gray-200 p-4 font-mono text-sm overflow-x-auto max-h-40">
-                  <pre className="whitespace-pre-wrap text-gray-700">{displayCode}</pre>
-                </div>
-                
-                <div className="mt-3 text-sm text-gray-600">
-                  <div className="font-medium mb-2">📖 How to install:</div>
-                  <ol className="list-decimal list-inside space-y-1 text-xs">
-                    <li>Copy the code above</li>
-                    <li>Paste it into your website&apos;s HTML before the closing <code className="bg-gray-200 px-1 rounded">&lt;/body&gt;</code> tag</li>
-                    <li>Save and publish your website</li>
-                    <li>Your chatbot will appear automatically! 🎉</li>
-                  </ol>
-                </div>
-              </div>
+                    {/* Button Color */}
+                    <div className={`space-y-2 ${linkAccentButton ? 'opacity-50 pointer-events-none' : ''}`}>
+                      <label className="text-xs font-medium text-gray-500 flex items-center justify-between">
+                        <span>Chat Button Color</span>
+                        <span title="Contrast Score" className={`text-[10px] px-1.5 py-0.5 rounded font-bold text-white ${badge(contrastButtonOnBg, compactContrast).cls}`}>
+                          {badge(contrastButtonOnBg, compactContrast).label}
+                        </span>
+                      </label>
+                      <div className="relative">
+                        <input 
+                          type="color" 
+                          value={buttonColor} 
+                          onChange={e=>setButtonColor(e.target.value)} 
+                          disabled={linkAccentButton}
+                          className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                        />
+                        <div className="w-full h-9 rounded-md border border-gray-200 flex items-center px-3 gap-2 bg-white">
+                          <div className="w-5 h-5 rounded border border-gray-200 shadow-sm" style={{backgroundColor: buttonColor}}></div>
+                          <span className="text-xs font-mono text-gray-600 uppercase">{buttonColor}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Advanced Toggle */}
+                    <div className="col-span-full">
+                       <Button 
+                         variant="ghost"
+                         size="sm"
+                         onClick={()=>setShowAdvanced(!showAdvanced)}
+                         className="flex items-center gap-2 text-xs text-blue-600 hover:text-blue-700 h-8 px-0"
+                       >
+                         {showAdvanced ? 'Hide Advanced Colors' : 'Show Advanced Colors'}
+                         <svg className={`w-3 h-3 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                       </Button>
+                    </div>
 
-              {/* API Key Management */}
-              <div className="rounded-lg border border-gray-200 p-4 bg-gray-50">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-gray-700">Bot API Key</span>
-                  <span className="text-xs text-gray-500">Last rotated: {rotatedAt ? new Date(rotatedAt).toLocaleString() : "Not set"}</span>
+                    {/* Advanced Colors */}
+                    {showAdvanced && (
+                      <div className="col-span-full grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-200/60">
+                        {/* Text Color */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-gray-500 flex items-center justify-between">
+                          <span>Text Color</span>
+                          <span title="Contrast Score" className={`text-[10px] px-1.5 py-0.5 rounded font-bold text-white ${badge(contrastTextOnBg, compactContrast).cls}`}>
+                            {badge(contrastTextOnBg, compactContrast).label}
+                          </span>
+                        </label>
+                        <div className="relative">
+                            <input type="color" value={textColor} onChange={e=>setTextColor(e.target.value)} className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
+                            <div className="w-full h-9 rounded-md border border-gray-200 flex items-center px-3 gap-2 bg-white">
+                              <div className="w-5 h-5 rounded border border-gray-200 shadow-sm" style={{backgroundColor: textColor}}></div>
+                              <span className="text-xs font-mono text-gray-600 uppercase">{textColor}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Card Background */}
+                        <div className="space-y-2">
+                          <label className="text-xs font-medium text-gray-500">Card Background</label>
+                          <div className="relative">
+                            <input type="color" value={cardColor} onChange={e=>setCardColor(e.target.value)} className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
+                            <div className="w-full h-9 rounded-md border border-gray-200 flex items-center px-3 gap-2 bg-white">
+                              <div className="w-5 h-5 rounded border border-gray-200 shadow-sm" style={{backgroundColor: cardColor}}></div>
+                              <span className="text-xs font-mono text-gray-600 uppercase">{cardColor}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Page Background (Preview Only) */}
+                        <div className="space-y-2">
+                          <label className="text-xs font-medium text-gray-500">Page Background (Preview)</label>
+                          <div className="relative">
+                            <input type="color" value={bgColor} onChange={e=>setBgColor(e.target.value)} className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
+                            <div className="w-full h-9 rounded-md border border-gray-200 flex items-center px-3 gap-2 bg-white">
+                              <div className="w-5 h-5 rounded border border-gray-200 shadow-sm" style={{backgroundColor: bgColor}}></div>
+                              <span className="text-xs font-mono text-gray-600 uppercase">{bgColor}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* User Bubble & Bot Bubble Logic kept similar but styled */}
+                        <div className="space-y-3">
+                           <div className="flex items-center justify-between">
+                             <label className="text-xs font-medium text-gray-500">User Bubble</label>
+                             <div className="flex bg-gray-100 p-0.5 rounded-md">
+                               <button 
+                                 onClick={() => {
+                                   const matches = bubbleMe.match(/#[a-fA-F0-9]{6}/g);
+                                   setBubbleMe(matches ? matches[0] : '#2563eb');
+                                 }}
+                                 className={`px-2 py-0.5 text-[10px] font-medium rounded transition-all ${!bubbleMe.startsWith('linear-gradient') ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                               >
+                                 Solid
+                               </button>
+                               <button 
+                                 onClick={() => {
+                                   if (!bubbleMe.startsWith('linear-gradient')) {
+                                      setBubbleMe(`linear-gradient(135deg, ${bubbleMe}, ${tweakColor(bubbleMe, '#000000', 1.2)})`);
+                                   }
+                                 }}
+                                 className={`px-2 py-0.5 text-[10px] font-medium rounded transition-all ${bubbleMe.startsWith('linear-gradient') ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                               >
+                                 Gradient
+                               </button>
+                             </div>
+                           </div>
+
+                           {!bubbleMe.startsWith('linear-gradient') ? (
+                             <div className="relative">
+                               <input type="color" value={bubbleMe.startsWith('#')?bubbleMe:'#2563eb'} onChange={e=>setBubbleMe(e.target.value)} className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
+                               <div className="w-full h-9 rounded-md border border-gray-200 flex items-center px-3 gap-2 bg-white overflow-hidden">
+                                 <div className="w-5 h-5 rounded border border-gray-200 shadow-sm flex-shrink-0" style={{background: bubbleMe}}></div>
+                                 <span className="text-xs font-mono text-gray-600 truncate">{bubbleMe}</span>
+                               </div>
+                             </div>
+                           ) : (
+                             <div className="space-y-2">
+                               <div className="grid grid-cols-2 gap-3">
+                                 <div>
+                                   <label className="text-[10px] text-gray-400 mb-1 block">Start</label>
+                                   <div className="relative">
+                                     <input 
+                                       type="color" 
+                                       value={bubbleMe.match(/#[a-fA-F0-9]{6}/g)?.[0] || '#2563eb'} 
+                                       onChange={e => {
+                                          const end = bubbleMe.match(/#[a-fA-F0-9]{6}/g)?.[1] || '#1e40af';
+                                          setBubbleMe(`linear-gradient(135deg, ${e.target.value}, ${end})`);
+                                       }} 
+                                       className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" 
+                                     />
+                                     <div className="w-full h-8 rounded-md border border-gray-200 flex items-center px-2 gap-2 bg-white overflow-hidden">
+                                       <div className="w-4 h-4 rounded border border-gray-200 shadow-sm flex-shrink-0" style={{background: bubbleMe.match(/#[a-fA-F0-9]{6}/g)?.[0] || '#2563eb'}}></div>
+                                     </div>
+                                   </div>
+                                 </div>
+                                 <div>
+                                   <label className="text-[10px] text-gray-400 mb-1 block">End</label>
+                                   <div className="relative">
+                                     <input 
+                                       type="color" 
+                                       value={bubbleMe.match(/#[a-fA-F0-9]{6}/g)?.[1] || '#1e40af'} 
+                                       onChange={e => {
+                                          const start = bubbleMe.match(/#[a-fA-F0-9]{6}/g)?.[0] || '#2563eb';
+                                          setBubbleMe(`linear-gradient(135deg, ${start}, ${e.target.value})`);
+                                       }} 
+                                       className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" 
+                                     />
+                                     <div className="w-full h-8 rounded-md border border-gray-200 flex items-center px-2 gap-2 bg-white overflow-hidden">
+                                       <div className="w-4 h-4 rounded border border-gray-200 shadow-sm flex-shrink-0" style={{background: bubbleMe.match(/#[a-fA-F0-9]{6}/g)?.[1] || '#1e40af'}}></div>
+                                     </div>
+                                   </div>
+                                 </div>
+                               </div>
+                             </div>
+                           )}
+                        </div>
+                        
+                        {/* Bot Bubble */}
+                        <div className="space-y-2">
+                           <label className="text-xs font-medium text-gray-500">Bot Bubble</label>
+                           <div className="relative">
+                             <input type="color" value={bubbleBot.startsWith('#')?bubbleBot:'#ffffff'} onChange={e=>setBubbleBot(e.target.value)} className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
+                             <div className="w-full h-9 rounded-md border border-gray-200 flex items-center px-3 gap-2 bg-white overflow-hidden">
+                               <div className="w-5 h-5 rounded border border-gray-200 shadow-sm flex-shrink-0" style={{background: bubbleBot}}></div>
+                               <span className="text-xs font-mono text-gray-600 truncate">{bubbleBot}</span>
+                             </div>
+                           </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Sizing & Toggles */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                     <div className="flex items-start gap-3 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
+                        <input
+                          type="checkbox"
+                          id="transparent-bubble"
+                          checked={transparentBubble}
+                          onChange={(e) => setTransparentBubble(e.target.checked)}
+                          className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <label htmlFor="transparent-bubble" className="text-sm text-gray-700 cursor-pointer">
+                          <span className="font-medium block text-gray-900">Transparent Button</span>
+                          <span className="text-xs text-gray-500">Remove background color from launcher button</span>
+                        </label>
+                     </div>
+
+                     <div className="space-y-4">
+                        <div>
+                           <div className="flex justify-between items-center mb-1">
+                              <label className="text-xs font-medium text-gray-500">Launcher Size</label>
+                              <span className="text-xs font-mono text-gray-500">{launcherSize}px</span>
+                           </div>
+                           <input
+                             type="range"
+                             min="40"
+                             max="100"
+                             value={launcherSize}
+                             onChange={(e) => setLauncherSize(Number(e.target.value))}
+                             className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                           />
+                        </div>
+                        <div>
+                           <div className="flex justify-between items-center mb-1">
+                              <label className="text-xs font-medium text-gray-500">Icon Scale</label>
+                              <span className="text-xs font-mono text-gray-500">{iconScale}%</span>
+                           </div>
+                           <input
+                             type="range"
+                             min="20"
+                             max="100"
+                             value={iconScale}
+                             onChange={(e) => setIconScale(Number(e.target.value))}
+                             className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                           />
+                        </div>
+                     </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <input 
-                    readOnly 
-                    value={pubKey || ""} 
-                    placeholder="No key generated" 
-                    className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded text-sm font-mono" 
-                  />
-                  <button 
-                    onClick={async()=>{
-                      const k = pubKey || ""; 
-                      if(!k) return; 
-                      await copy(k);
-                    }} 
-                    className="px-3 py-2 bg-gray-600 text-white text-sm rounded hover:bg-gray-700"
-                  >
-                    Copy
-                  </button>
-                </div>
-                <div className="flex items-center gap-2 mt-2">
-                  <input
-                    type="checkbox"
-                    id="include-key"
-                    checked={includeKey}
-                    onChange={(e) => setIncludeKey(e.target.checked)}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                  />
-                  <label htmlFor="include-key" className="text-xs text-gray-600">
-                    Include API key in generated code (recommended for security)
-                  </label>
-                </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
+
+            {/* Step 3: Install */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-600">3</span>
+                  Get The Code
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                 <div className="bg-gray-900 rounded-xl p-4 shadow-inner overflow-hidden relative group">
+                    <div className="absolute top-3 right-3 z-10">
+                       <Button 
+                        size="sm"
+                        variant={copied ? "primary" : "secondary"}
+                        onClick={() => copy(displayCode)} 
+                        className={copied ? "bg-green-600 hover:bg-green-700" : ""}
+                      >
+                         {copied ? "Copied!" : "Copy Code"}
+                       </Button>
+                    </div>
+                    <pre className="font-mono text-sm text-gray-300 whitespace-pre-wrap overflow-x-auto max-h-64 p-2 custom-scrollbar">
+                       {displayCode}
+                    </pre>
+                 </div>
+
+                 <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 text-sm text-blue-900">
+                    <p className="font-semibold mb-1">Installation Instructions:</p>
+                    <ol className="list-decimal list-inside space-y-1 text-blue-800">
+                       <li>Copy the code above.</li>
+                       <li>Paste it into your website&apos;s HTML source code, just before the closing <code className="bg-blue-100 px-1 rounded">&lt;/body&gt;</code> tag.</li>
+                       <li>Save your changes and refresh your website.</li>
+                    </ol>
+                 </div>
+
+                 <div className="flex items-center gap-2 pt-2">
+                    <input
+                      type="checkbox"
+                      id="include-key"
+                      checked={includeKey}
+                      onChange={(e) => setIncludeKey(e.target.checked)}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <label htmlFor="include-key" className="text-sm text-gray-600">
+                      Include API key in generated code (recommended for public websites)
+                    </label>
+                 </div>
+              </CardContent>
+            </Card>
           </div>
-        </div>
 
-        {/* Preview Panel */}
-        <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-          <div className="p-6 space-y-4">
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <div className="text-2xl">👀</div>
-                <h3 className="text-lg font-semibold text-gray-900">Live Preview</h3>
-              </div>
-              <p className="text-sm text-gray-600">This is exactly how your chatbot will look on your website</p>
-            </div>
-            
-            <div className="bg-gray-50 rounded-lg p-4">
-              <ChatPreview template={tpl} />
-            </div>
-            
-            {tpl && (
-              <div className="text-center">
-                <div className="inline-flex items-center gap-2 px-3 py-2 bg-green-100 text-green-800 rounded-lg text-sm">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span>Try typing a message above! ⬆️</span>
-                </div>
-              </div>
-            )}
+          {/* Sticky Preview Panel */}
+          <div className="lg:col-span-5 mt-8 lg:mt-0">
+             <div className="sticky top-8">
+                <Card className="shadow-lg border-blue-100 overflow-hidden">
+                   <CardHeader className="bg-gray-50/50 pb-4 border-b border-gray-100">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="flex items-center gap-2 text-base">
+                           <span>👀</span>
+                           Live Preview
+                        </CardTitle>
+                        <span className="text-[10px] font-medium text-gray-500 bg-white px-2 py-1 rounded border border-gray-200 uppercase tracking-wide">Interactive</span>
+                      </div>
+                   </CardHeader>
+                   <div className="p-4 bg-gray-100/50 min-h-[400px] flex flex-col items-center justify-center">
+                      <ChatPreview template={tpl} />
+                   </div>
+                   <div className="p-3 bg-white border-t border-gray-100 text-center">
+                      <p className="text-xs text-gray-400">
+                         Try typing a message in the preview to test your bot!
+                      </p>
+                   </div>
+                </Card>
+             </div>
           </div>
         </div>
       </div>

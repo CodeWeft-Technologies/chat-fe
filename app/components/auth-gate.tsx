@@ -13,6 +13,6 @@ export default function AuthGate() {
         router.push("/login");
       }
     } catch {}
-  }, [pathname]);
+  }, [pathname, router]);
   return null;
 }

@@ -32,23 +32,27 @@ function B() {
   return "";
 }
 
-type BotItem = { bot_id: string; behavior: string; has_key: boolean };
+type BotItem = { bot_id: string; behavior: string; has_key: boolean; name?: string };
 
 export default function BotsPage() {
   const [mounted, setMounted] = useState(false);
   const [org, setOrg] = useState("");
   useEffect(() => { setMounted(true); const d = typeof window !== "undefined" ? (localStorage.getItem("orgId") || "") : ""; setOrg(d); }, []);
   useEffect(() => { if (org) localStorage.setItem("orgId", org); }, [org]);
+  
   const [bots, setBots] = useState<BotItem[]>([]);
+  const [isCreating, setIsCreating] = useState(false);
+  
+  // Create Form State
   const [name, setName] = useState("");
   const [behavior, setBehavior] = useState("");
   const [system, setSystem] = useState("");
   const [website, setWebsite] = useState("");
   const [tone, setTone] = useState("");
   const [template, setTemplate] = useState("");
+  
   const [search, setSearch] = useState("");
   
-
   async function api<T = unknown>(path: string, opts?: RequestInit): Promise<T> {
     const headers: Record<string, string> = {};
     if (opts?.headers) {
@@ -67,22 +71,24 @@ export default function BotsPage() {
     }
     try { return JSON.parse(t) as T; } catch { return t as unknown as T; }
   }
+
   const load = useCallback(async () => {
     if (!org) return;
     const d = await api<{ bots: BotItem[] }>(`/api/bots?org_id=${encodeURIComponent(org)}`);
     setBots(d.bots || []);
   }, [org]);
+
   useEffect(() => {
     load();
   }, [load]);
-  
   
   async function createBot() {
     if (!org) { alert("Set Org ID"); return; }
     if (!behavior) { alert("Select a behavior"); return; }
     try {
       await api(`/api/bots`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ org_id: org, behavior, system_prompt: system || null, name: name || null, website_url: website || null, tone: tone || null }) });
-      setName(""); setBehavior(""); setSystem(""); setWebsite(""); setTone("");
+      setName(""); setBehavior(""); setSystem(""); setWebsite(""); setTone(""); setTemplate("");
+      setIsCreating(false);
       await load();
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -90,163 +96,229 @@ export default function BotsPage() {
     }
   }
 
-  async function rotateKey(botId: string) {
-    await api(`/api/bots/${botId}/key/rotate`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ org_id: org }) });
-    await load();
-  }
-
-  async function clearData(botId: string) {
-    if (!org) { alert("Missing org"); return; }
-    if (!confirm("Remove all saved content for this bot? This cannot be undone.")) return;
-    try {
-      const keyInfo = await api<{ public_api_key: string | null }>(`/api/bots/${botId}/key?org_id=${encodeURIComponent(org)}`);
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (keyInfo?.public_api_key) { headers["X-Bot-Key"] = keyInfo.public_api_key; }
-      const res = await api<{ deleted: number }>(`/api/ingest/clear/${botId}`, { method: "POST", headers, body: JSON.stringify({ org_id: org, confirm: true }) });
-      alert(`Removed ${res.deleted} items`);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      alert(msg || "Failed to clear data");
-    }
-  }
-
-  async function deleteBot(botId: string) {
-    if (!org) { alert("Missing org"); return; }
-    if (!confirm("Delete this bot and ALL of its data? This cannot be undone.")) return;
-    try {
-      const res = await api<{ deleted: Record<string, number> }>(`/api/bots/${botId}/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ org_id: org, confirm: true }) });
-      const total = Object.values(res.deleted || {}).reduce((a, b) => a + (b || 0), 0);
-      alert(`Bot deleted. Rows removed: ${total}`);
-      await load();
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      alert(msg || "Failed to delete bot");
-    }
-  }
-
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return bots;
-    return bots.filter(b => b.bot_id.toLowerCase().includes(q) || b.behavior.toLowerCase().includes(q));
+    return bots.filter(b => 
+      b.bot_id.toLowerCase().includes(q) || 
+      b.behavior.toLowerCase().includes(q) ||
+      (b.name && b.name.toLowerCase().includes(q))
+    );
   }, [bots, search]);
 
+  const getBotIcon = (behavior: string) => {
+    switch(behavior.toLowerCase()) {
+      case 'sales': return '💼';
+      case 'appointment': return '📅';
+      case 'support': return '🎧';
+      case 'qna': return '❓';
+      default: return '🤖';
+    }
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Bots</h1>
-        <div className="flex gap-2">
-          <Input
-            placeholder="Search bots..."
-            value={search}
-            onChange={e=>setSearch(e.target.value)}
-            className="sm:w-64"
-          />
-          <Button variant="outline" onClick={load}>Refresh</Button>
+    <div className="space-y-8 max-w-7xl mx-auto pb-12">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-gray-200 pb-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900">My Assistants</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage your AI chatbots and their configurations</p>
+        </div>
+        <div className="flex items-center gap-3">
+          {mounted && (
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-full border border-gray-200 text-xs text-gray-600">
+              <span className="font-medium">Org:</span>
+              <input 
+                value={org} 
+                readOnly 
+                className="bg-transparent border-none p-0 w-24 focus:ring-0 text-gray-900 font-mono" 
+              />
+            </div>
+          )}
+          <Button onClick={() => setIsCreating(!isCreating)} variant={isCreating ? "outline" : "primary"}>
+            {isCreating ? "Cancel" : "Create New Bot"}
+          </Button>
         </div>
       </div>
 
-      {mounted && (
-        <Card title="Organization" subtitle="Context for all bot operations" className="p-4">
-          <Input label="Org ID" value={org} readOnly description="Stored locally for convenience." />
-        </Card>
+      {/* Create Form */}
+      {isCreating && (
+        <div className="animate-in slide-in-from-top-4 duration-200 fade-in">
+          <Card className="border-blue-100 shadow-lg ring-1 ring-blue-50 overflow-hidden" padding="lg">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold text-gray-900">Create New Assistant</h2>
+              <button onClick={() => setIsCreating(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <Select
+                  label="Quick Template"
+                  value={template}
+                  onChange={e=>{
+                    const v = e.target.value;
+                    setTemplate(v);
+                    const t = TEMPLATE_PROMPTS[v];
+                    if (t) {
+                      setBehavior(t.behavior);
+                      setSystem(t.system);
+                    }
+                  }}
+                  options={[
+                    { value: '', label: 'Start from scratch...' },
+                    { value: 'support', label: 'Customer Support' },
+                    { value: 'sales', label: 'Sales Representative' },
+                    { value: 'appointment', label: 'Appointment Scheduler' },
+                    { value: 'qna', label: 'Knowledge Base Q&A' }
+                  ]}
+                  className="bg-blue-50/50"
+                />
+                
+                <Input 
+                  label="Bot Name" 
+                  value={name} 
+                  onChange={e=>setName(e.target.value)} 
+                  placeholder="e.g. Sales Assistant" 
+                />
+                
+                <Select
+                  label="Core Behavior"
+                  value={behavior}
+                  onChange={e=>setBehavior(e.target.value)}
+                  options={[
+                    { value: '', label: 'Select behavior type...' },
+                    { value: 'support', label: 'Customer Support' },
+                    { value: 'sales', label: 'Sales' },
+                    { value: 'appointment', label: 'Appointment Booking' },
+                    { value: 'qna', label: 'QnA' }
+                  ]}
+                />
+              </div>
+
+              <div className="space-y-4">
+                 <div className="grid grid-cols-2 gap-4">
+                    <Input 
+                      label="Website URL" 
+                      value={website} 
+                      onChange={e=>setWebsite(e.target.value)} 
+                      placeholder="https://example.com" 
+                    />
+                    <Select
+                      label="Tone of Voice"
+                      value={tone}
+                      onChange={e=>setTone(e.target.value)}
+                      options={[
+                        { value: '', label: 'Default' },
+                        { value: 'friendly', label: 'Friendly & Warm' },
+                        { value: 'professional', label: 'Professional & Formal' },
+                        { value: 'casual', label: 'Casual & Relaxed' }
+                      ]}
+                    />
+                 </div>
+                 
+                 <div className="space-y-1">
+                    <label className="block text-xs font-medium text-[var(--text-soft)]">System Instructions</label>
+                    <textarea
+                      value={system}
+                      onChange={e=>setSystem(e.target.value)}
+                      placeholder="Define how the bot should behave..."
+                      className="input-base w-full h-32 resize-none text-sm leading-relaxed"
+                    />
+                 </div>
+              </div>
+            </div>
+            
+            <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-gray-100">
+              <Button variant="outline" onClick={() => setIsCreating(false)}>Cancel</Button>
+              <Button onClick={createBot}>Create Assistant</Button>
+            </div>
+          </Card>
+        </div>
       )}
 
-      <Card title="About Bots" className="p-4" subtitle="Isolated assistants with configurable instructions and usage keys">
-        <p className="text-xs leading-relaxed text-[var(--text-soft)]">Create assistants tailored to support, sales, appointment booking or constrained Q&amp;A. Rotate keys when embedding publicly. Organization scoping prevents cross-tenant leakage.</p>
-      </Card>
-
-      <Card title="Create Bot" className="p-4" actions={<Button onClick={createBot}>Create</Button>}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Select
-            label="Template"
-            value={template}
-            onChange={e=>{
-              const v = e.target.value;
-              setTemplate(v);
-              const t = TEMPLATE_PROMPTS[v];
-              if (t) {
-                setBehavior(t.behavior);
-                setSystem(t.system);
-              }
-            }}
-            options={[
-              { value: '', label: 'Select a template' },
-              { value: 'support', label: 'Support' },
-              { value: 'sales', label: 'Sales' },
-              { value: 'appointment', label: 'Appointment' },
-              { value: 'qna', label: 'QnA' }
-            ]}
-          />
-          <Input label="Name" value={name} onChange={e=>setName(e.target.value)} placeholder="Display name" />
-          <Select
-            label="Bot Type"
-            value={behavior}
-            onChange={e=>setBehavior(e.target.value)}
-            options={[
-              { value: '', label: 'Behavior' },
-              { value: 'support', label: 'Customer Support' },
-              { value: 'sales', label: 'Sales' },
-              { value: 'appointment', label: 'Appointment Booking' },
-              { value: 'qna', label: 'QnA' }
-            ]}
-          />
-          <Input label="Website" value={website} onChange={e=>setWebsite(e.target.value)} placeholder="https://..." />
-          <Select
-            label="Tone"
-            value={tone}
-            onChange={e=>setTone(e.target.value)}
-            options={[
-              { value: '', label: 'Tone' },
-              { value: 'friendly', label: 'Friendly' },
-              { value: 'professional', label: 'Professional' },
-              { value: 'casual', label: 'Casual' }
-            ]}
-          />
-          <div className="md:col-span-2 space-y-1">
-            <label className="block text-xs font-medium text-[var(--text-soft)]">Instructions</label>
-            <textarea
-              value={system}
-              onChange={e=>setSystem(e.target.value)}
-              placeholder="Bot instructions / system prompt"
-              className="input-base w-full h-28 resize-vertical"
-            />
-            <p className="text-[10px] text-[var(--text-soft)]">Clear guidance improves answer consistency. Templates provide a starting point.</p>
+      {/* Controls & Search */}
+      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+        <div className="relative w-full sm:w-72">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+            🔍
           </div>
+          <Input
+            placeholder="Search bots by name or ID..."
+            value={search}
+            onChange={e=>setSearch(e.target.value)}
+            className="pl-9"
+          />
         </div>
-      </Card>
-
-      <div className="space-y-3">
-        <h2 className="text-lg font-semibold tracking-tight">Your Bots</h2>
-        {!filtered.length ? (
-          <Card className="p-6 text-center" subtitle="You haven't created any bots yet">
-            <p className="text-sm text-[var(--text-soft)] mb-4">Use the form above to create your first assistant. It will appear here for management, embedding and usage tracking.</p>
-            <Button onClick={createBot} variant="primary">Create Bot</Button>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map(b => (
-              <Card
-                key={b.bot_id}
-                className="p-4"
-                title={b.behavior.charAt(0).toUpperCase()+b.behavior.slice(1)}
-                subtitle={b.has_key ? 'Key active' : 'No key'}
-              >
-                <div className="font-mono text-xs break-all mb-3 select-all">{b.bot_id}</div>
-                <div className="flex flex-wrap gap-2">
-                  <Link href={`/usage/${b.bot_id}`} className="btn-base px-2 py-1 text-xs bg-[var(--accent)] text-white">Usage</Link>
-                  <Link href={`/usage/${b.bot_id}`} className="btn-base px-2 py-1 text-xs bg-emerald-600 text-white">Test</Link>
-                  <Link href={`/embed/${b.bot_id}`} className="btn-base px-2 py-1 text-xs bg-indigo-600 text-white">Embed</Link>
-                  <Link href={`/bots/${b.bot_id}/config`} className="btn-base px-2 py-1 text-xs bg-blue-600 text-white">Config</Link>
-                  <Link href={`/bots/${b.bot_id}/calendar`} className="btn-base px-2 py-1 text-xs bg-purple-600 text-white">Calendar</Link>
-                  <button onClick={()=>rotateKey(b.bot_id)} className="btn-base px-2 py-1 text-xs bg-neutral-800 text-white">Rotate Key</button>
-                  <button onClick={()=>clearData(b.bot_id)} className="btn-base px-2 py-1 text-xs bg-amber-600 text-white">Clear Data</button>
-                  <button onClick={()=>deleteBot(b.bot_id)} className="btn-base px-2 py-1 text-xs bg-red-700 text-white">Delete</button>
-                </div>
-              </Card>
-            ))}
-          </div>
-        )}
+        <Button variant="ghost" onClick={load} className="text-gray-500 hover:text-gray-900">
+          ↻ Refresh List
+        </Button>
       </div>
+
+      {/* Bot Grid */}
+      {!filtered.length ? (
+        <div className="text-center py-20 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
+          <div className="text-4xl mb-4">🤖</div>
+          <h3 className="text-lg font-medium text-gray-900">No bots found</h3>
+          <p className="text-sm text-gray-500 max-w-sm mx-auto mt-2 mb-6">
+            {search ? "Try adjusting your search terms." : "Get started by creating your first AI assistant to help your customers."}
+          </p>
+          {!search && (
+            <Button onClick={() => setIsCreating(true)} variant="primary">Create Your First Bot</Button>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filtered.map(b => (
+            <div key={b.bot_id} className="group bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-200 flex flex-col overflow-hidden">
+              {/* Card Header */}
+              <div className="p-5 flex-1">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-600 flex items-center justify-center text-xl shadow-sm ring-1 ring-blue-100">
+                    {getBotIcon(b.behavior)}
+                  </div>
+                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider ${b.has_key ? 'bg-green-50 text-green-700 ring-1 ring-green-100' : 'bg-amber-50 text-amber-700 ring-1 ring-amber-100'}`}>
+                    {b.has_key ? 'Active' : 'Draft'}
+                  </span>
+                </div>
+                
+                <h3 className="font-semibold text-gray-900 mb-1 truncate" title={b.name || 'Untitled Bot'}>
+                  {b.name || 'Untitled Bot'}
+                </h3>
+                <p className="text-xs text-gray-500 capitalize mb-4">{b.behavior} Assistant</p>
+                
+                <div className="flex items-center gap-1.5 p-1.5 bg-gray-50 rounded-md border border-gray-100 max-w-full">
+                  <span className="text-[10px] text-gray-400 font-mono select-none">ID:</span>
+                  <code className="text-[10px] font-mono text-gray-600 truncate flex-1 select-all" title={b.bot_id}>
+                    {b.bot_id}
+                  </code>
+                </div>
+              </div>
+
+              {/* Card Actions */}
+              <div className="bg-gray-50/50 p-3 grid grid-cols-2 gap-2 border-t border-gray-100">
+                <Link 
+                  href={`/bots/${b.bot_id}/config`} 
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm"
+                >
+                  <span>⚙️</span> Config
+                </Link>
+                <Link 
+                  href={`/embed/${b.bot_id}`} 
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-white bg-blue-600 border border-blue-600 rounded-lg hover:bg-blue-700 hover:border-blue-700 transition-all shadow-sm group-hover:shadow-blue-100"
+                >
+                  <span>🚀</span> Embed
+                </Link>
+                <Link 
+                  href={`/usage/${b.bot_id}`} 
+                  className="col-span-2 flex items-center justify-center gap-1.5 px-3 py-1.5 text-[10px] font-medium text-gray-500 hover:text-gray-900 transition-colors"
+                >
+                  View Usage & Analytics →
+                </Link>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

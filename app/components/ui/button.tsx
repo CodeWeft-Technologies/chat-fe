@@ -1,10 +1,10 @@
 "use client";
 import React from "react";
 
-type Variant = "primary" | "outline" | "danger" | "ghost";
+type Variant = "primary" | "outline" | "danger" | "ghost" | "destructive" | "secondary";
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "icon";
   loading?: boolean;
   iconLeft?: React.ReactNode;
   iconRight?: React.ReactNode;
@@ -15,13 +15,16 @@ const sizeMap = {
   sm: "h-8 px-3 text-xs",
   md: "h-10 px-4 text-sm",
   lg: "h-12 px-5 text-base",
+  icon: "h-10 w-10 p-2 flex items-center justify-center",
 };
 
 const variantMap: Record<Variant, string> = {
   primary: "btn-base btn-primary",
   outline: "btn-base btn-outline",
-  danger: "btn-base bg-danger text-white hover:brightness-110",
+  danger: "btn-base bg-red-600 text-white hover:bg-red-700",
+  destructive: "btn-base bg-red-600 text-white hover:bg-red-700 shadow-sm",
   ghost: "btn-base bg-transparent hover:bg-black/5 dark:hover:bg-white/10",
+  secondary: "btn-base bg-gray-100 text-gray-900 hover:bg-gray-200 shadow-sm",
 };
 
 export function Button({ variant = "primary", size = "md", loading, disabled, iconLeft, iconRight, children, className = "", asChild = false, ...rest }: ButtonProps) {

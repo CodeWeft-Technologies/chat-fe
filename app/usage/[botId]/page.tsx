@@ -1,5 +1,10 @@
 "use client";
 import { useEffect, useState, use as usePromise } from "react";
+import Link from "next/link";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Select } from "../../components/ui/select";
 
 function B() {
   const env = process.env.NEXT_PUBLIC_BACKEND_URL || "";
@@ -23,23 +28,39 @@ export default function UsagePage({ params }: { params: Promise<{ botId: string 
   const [answer, setAnswer] = useState<string>("");
   const [similarity, setSimilarity] = useState<number | null>(null);
   const [asking, setAsking] = useState(false);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     if (!org) return;
+    setLoading(true);
     (async () => {
-      const headers: Record<string, string> = {};
-      if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
-      const s = await fetch(`${B()}/api/usage/summary/${encodeURIComponent(org)}/${encodeURIComponent(botId)}?days=${days}`, { headers });
-      const d = await fetch(`${B()}/api/usage/${encodeURIComponent(org)}/${encodeURIComponent(botId)}?days=${days}`, { headers });
-      setData(await s.json());
-      const dj = await d.json();
-      setDaily(dj.daily || []);
       try {
-        const k = await fetch(`${B()}/api/bots/${encodeURIComponent(botId)}/key?org_id=${encodeURIComponent(org)}`, { headers });
-        const kj = await k.json();
-        setBotKey(kj.public_api_key || null);
-      } catch { setBotKey(null); }
+        const headers: Record<string, string> = {};
+        if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
+        const s = await fetch(`${B()}/api/usage/summary/${encodeURIComponent(org)}/${encodeURIComponent(botId)}?days=${days}`, { headers });
+        const d = await fetch(`${B()}/api/usage/${encodeURIComponent(org)}/${encodeURIComponent(botId)}?days=${days}`, { headers });
+        
+        if (s.ok) setData(await s.json());
+        if (d.ok) {
+            const dj = await d.json();
+            setDaily(dj.daily || []);
+        }
+        
+        try {
+          const k = await fetch(`${B()}/api/bots/${encodeURIComponent(botId)}/key?org_id=${encodeURIComponent(org)}`, { headers });
+          if (k.ok) {
+              const kj = await k.json();
+              setBotKey(kj.public_api_key || null);
+          }
+        } catch { setBotKey(null); }
+      } catch (e) {
+        console.error("Failed to load usage data", e);
+      } finally {
+        setLoading(false);
+      }
     })();
   }, [org, botId, days]);
+
   async function ask() {
     if (!org) { alert("Missing org"); return; }
     const q = question.trim();
@@ -60,86 +81,205 @@ export default function UsagePage({ params }: { params: Promise<{ botId: string 
       setAnswer(`Error: ${msg}`);
     } finally { setAsking(false); }
   }
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Activity</h1>
-        <button onClick={async()=>{
-          if(!org){ alert('Missing org'); return; }
-          if(!confirm('Remove all saved content for this bot? This cannot be undone.')) return;
-          try {
-            const headers: Record<string,string> = { 'Content-Type':'application/json' };
-            if (typeof window !== 'undefined') { const t = localStorage.getItem('token'); if (t) headers['Authorization'] = `Bearer ${t}`; }
-            if (botKey) headers['X-Bot-Key'] = botKey;
-            const r = await fetch(`${B()}/api/ingest/clear/${encodeURIComponent(botId)}`, { method:'POST', headers, body: JSON.stringify({ org_id: org, confirm: true }) });
-            const t = await r.text();
-            if(!r.ok){ try { const j = JSON.parse(t); throw new Error(j.detail || t); } catch { throw new Error(t); } }
-            const j = JSON.parse(t);
-            alert(`Removed ${j.deleted} items`);
-            setData({ chats: 0, successes: 0, fallbacks: 0, avg_similarity: 0 });
-            setDaily([]);
-          } catch(e) {
-            const msg = e instanceof Error ? e.message : String(e);
-            alert(msg || 'Failed to clear data');
-          }
-        }} className="px-3 py-2 rounded-md bg-red-600 text-white text-sm shadow hover:bg-red-700 transition">Clear Data</button>
-      </div>
-      <div className="rounded-xl border border-black/10 bg-white p-4 shadow-sm">
-        <div className="flex flex-wrap items-center gap-3">
-          <input value={question} onChange={e=>setQuestion(e.target.value)} placeholder="Type a test question" className="px-3 py-2 rounded-md border border-black/10 w-full sm:w-96" />
-          <button onClick={ask} disabled={asking} className="px-3 py-2 rounded-md bg-blue-600 text-white text-sm shadow hover:bg-blue-700 transition">{asking? 'Asking...' : 'Ask'}</button>
+    <div className="max-w-6xl mx-auto space-y-8 pb-12">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <Link 
+            href={`/bots/${botId}/config`} 
+            className="text-sm text-gray-500 hover:text-blue-600 flex items-center gap-1 mb-2 transition-colors"
+          >
+            ← Back to Configuration
+          </Link>
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900">Analytics & Playground</h1>
+          <p className="text-gray-500">Monitor performance and test your bot&apos;s responses</p>
         </div>
-        {!!answer && (
-          <div className="mt-3 text-sm">
-            <div className="font-semibold mb-1">Answer</div>
-            <div className="rounded-md border border-black/10 bg-black/5 p-3 whitespace-pre-wrap">{answer}</div>
-            {similarity!=null && <div className="text-xs text-black/60 mt-1">Similarity: {Math.round((similarity||0)*100)/100}</div>}
+        <div className="flex items-center gap-3">
+            <Select
+                value={days.toString()}
+                onChange={(e) => setDays(Number(e.target.value))}
+                options={[
+                    { value: "7", label: "Last 7 days" },
+                    { value: "30", label: "Last 30 days" },
+                    { value: "90", label: "Last 90 days" }
+                ]}
+                className="w-40"
+            />
+            <Button 
+                variant="destructive"
+                onClick={async()=>{
+                if(!org){ alert('Missing org'); return; }
+                if(!confirm('Remove all saved content for this bot? This cannot be undone.')) return;
+                try {
+                    const headers: Record<string,string> = { 'Content-Type':'application/json' };
+                    if (typeof window !== 'undefined') { const t = localStorage.getItem('token'); if (t) headers['Authorization'] = `Bearer ${t}`; }
+                    if (botKey) headers['X-Bot-Key'] = botKey;
+                    const r = await fetch(`${B()}/api/ingest/clear/${encodeURIComponent(botId)}`, { method:'POST', headers, body: JSON.stringify({ org_id: org, confirm: true }) });
+                    const t = await r.text();
+                    if(!r.ok){ try { const j = JSON.parse(t); throw new Error(j.detail || t); } catch { throw new Error(t); } }
+                    const j = JSON.parse(t);
+                    alert(`Removed ${j.deleted} items`);
+                    setData({ chats: 0, successes: 0, fallbacks: 0, avg_similarity: 0 });
+                    setDaily([]);
+                } catch(e) {
+                    const msg = e instanceof Error ? e.message : String(e);
+                    alert(msg || 'Failed to clear data');
+                }
+                }} 
+            >
+                Clear Data
+            </Button>
+        </div>
+      </div>
+
+      {/* Playground Section */}
+      <Card className="border-blue-100 shadow-sm overflow-hidden">
+        <CardHeader className="bg-blue-50/50 border-b border-blue-100">
+            <CardTitle className="flex items-center gap-2 text-blue-900">
+                <span>💬</span> Test Playground
+            </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6 space-y-4">
+          <div className="flex flex-col md:flex-row gap-3">
+            <div className="flex-1">
+                <Input 
+                    value={question} 
+                    onChange={e=>setQuestion(e.target.value)} 
+                    placeholder="Type a message to test your bot..." 
+                    onKeyDown={e => e.key === 'Enter' && ask()}
+                />
+            </div>
+            <Button onClick={ask} disabled={asking || !question.trim()} className="w-full md:w-auto">
+                {asking ? 'Sending...' : 'Send Message'}
+            </Button>
           </div>
-        )}
-      </div>
-      <div className="flex items-center gap-3">
-        <label className="text-sm">Range</label>
-        <select value={days} onChange={e=>setDays(Number(e.target.value))} className="px-3 py-2 rounded-md border border-black/10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-          <option value={7}>7 days</option>
-          <option value={30}>30 days</option>
-          <option value={90}>90 days</option>
-        </select>
-      </div>
-      {!data ? (
-        <div>Loading...</div>
+          
+          {!!answer && (
+            <div className="mt-4 bg-gray-50 rounded-xl p-4 border border-gray-100 animate-in fade-in slide-in-from-top-2">
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Bot Response</span>
+                {similarity !== null && (
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        similarity > 0.8 ? 'bg-green-100 text-green-700' : 
+                        similarity > 0.5 ? 'bg-amber-100 text-amber-700' : 
+                        'bg-red-100 text-red-700'
+                    }`}>
+                        Confidence: {Math.round((similarity||0)*100)}%
+                    </span>
+                )}
+              </div>
+              <div className="prose prose-sm max-w-none text-gray-800 whitespace-pre-wrap">
+                {answer}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {loading ? (
+        <div className="py-20 text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-200 border-t-blue-600 mb-4"></div>
+            <p className="text-gray-500">Loading analytics...</p>
+        </div>
+      ) : !data ? (
+        <div className="text-center py-10 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+            <p className="text-gray-500">No data available for the selected period</p>
+        </div>
       ) : (
-        <div className="space-y-3">
-          <p className="text-sm">
-            Conversations: {data.chats} • Helpful Answers: {data.successes} • No‑Answer: {data.fallbacks} • Answer Confidence: {Math.round((data.avg_similarity||0)*100)/100}
-          </p>
-          <div className="rounded-xl border border-black/10 bg-white p-4 shadow-sm">
-            <Chart daily={daily} />
-          </div>
-          <div className="overflow-x-auto rounded-xl border border-black/10 bg-white shadow-sm">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="bg-black/5 text-black/80">
-                  <th className="p-2 text-left font-medium">Day</th>
-                  <th className="p-2 text-left font-medium">Conversations</th>
-                  <th className="p-2 text-left font-medium">Helpful Answers</th>
-                  <th className="p-2 text-left font-medium">No‑Answer</th>
-                  <th className="p-2 text-left font-medium">Answer Confidence</th>
-                </tr>
-              </thead>
-              <tbody>
-                {daily.map(d=> (
-                  <tr key={d.day} className="border-t border-black/10 odd:bg-black/5 hover:bg-black/10">
-                    <td className="p-2">{d.day}</td>
-                    <td className="p-2">{d.chats}</td>
-                    <td className="p-2">{d.successes}</td>
-                    <td className="p-2">{d.fallbacks}</td>
-                    <td className="p-2">{Math.round((d.avg_similarity||0)*100)/100}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <>
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card>
+                    <CardContent className="p-6">
+                        <p className="text-sm font-medium text-gray-500 mb-1">Total Conversations</p>
+                        <p className="text-3xl font-bold text-gray-900">{data.chats}</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent className="p-6">
+                        <p className="text-sm font-medium text-gray-500 mb-1">Helpful Answers</p>
+                        <p className="text-3xl font-bold text-green-600">{data.successes}</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent className="p-6">
+                        <p className="text-sm font-medium text-gray-500 mb-1">No Answer / Fallback</p>
+                        <p className="text-3xl font-bold text-amber-600">{data.fallbacks}</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent className="p-6">
+                        <p className="text-sm font-medium text-gray-500 mb-1">Avg. Confidence</p>
+                        <p className="text-3xl font-bold text-blue-600">{Math.round((data.avg_similarity||0)*100)}%</p>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Chart Section */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Conversation Activity</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="w-full overflow-x-auto pb-2">
+                        <Chart daily={daily} />
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Detailed Table */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Daily Breakdown</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left">
+                            <thead className="bg-gray-50 text-gray-500 font-medium border-b border-gray-100">
+                                <tr>
+                                    <th className="px-6 py-3">Date</th>
+                                    <th className="px-6 py-3">Conversations</th>
+                                    <th className="px-6 py-3">Helpful</th>
+                                    <th className="px-6 py-3">Fallbacks</th>
+                                    <th className="px-6 py-3">Confidence</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {daily.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                                            No activity recorded in this period
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    daily.map(d => (
+                                        <tr key={d.day} className="hover:bg-gray-50/50 transition-colors">
+                                            <td className="px-6 py-3 font-medium text-gray-900">{d.day}</td>
+                                            <td className="px-6 py-3 text-gray-600">{d.chats}</td>
+                                            <td className="px-6 py-3 text-green-600">{d.successes}</td>
+                                            <td className="px-6 py-3 text-amber-600">{d.fallbacks}</td>
+                                            <td className="px-6 py-3">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                                        <div 
+                                                            className="h-full bg-blue-500 rounded-full" 
+                                                            style={{ width: `${Math.round((d.avg_similarity||0)*100)}%` }}
+                                                        />
+                                                    </div>
+                                                    <span className="text-xs text-gray-500">{Math.round((d.avg_similarity||0)*100)}%</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </CardContent>
+            </Card>
+        </>
       )}
     </div>
   );
@@ -147,30 +287,28 @@ export default function UsagePage({ params }: { params: Promise<{ botId: string 
 
 function Chart({ daily }: { daily: DailyEntry[] }) {
   const max = daily.length ? Math.max(...daily.map(d=>d.chats)) : 0;
-  const w = Math.max(320, daily.length * 24);
-  const h = 160;
+  
+  if (daily.length === 0) return <div className="h-[200px] flex items-center justify-center text-gray-400">No data to display</div>;
+
   return (
-    <div className="overflow-x-auto">
-      <svg width={w} height={h} role="img" aria-label="Daily conversations chart">
-        <defs>
-          <linearGradient id="barBlue" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="#2563eb" stopOpacity="1" />
-          </linearGradient>
-        </defs>
-        {daily.map((d, i) => {
-          const barH = max > 0 ? Math.round((d.chats / max) * (h - 30)) : 0;
-          const x = 20 + i * 24;
-          const y = h - 20 - barH;
+    <div className="w-full h-[200px] flex items-stretch justify-between gap-1 pt-4">
+        {daily.map((d) => {
+          const barH = max > 0 ? Math.round((d.chats / max) * 100) : 0;
           return (
-            <g key={d.day}>
-              <rect x={x} y={y} width={16} height={barH} fill="url(#barBlue)" rx={3} />
-              <text x={x+8} y={h-6} textAnchor="middle" fontSize="10" fill="#6b7280">{d.day.slice(5)}</text>
-            </g>
+            <div key={d.day} className="flex-1 flex flex-col items-center gap-2 group min-w-[20px]">
+                <div className="w-full bg-gray-100 rounded-t-md relative flex-1 flex items-end overflow-hidden group-hover:bg-gray-200 transition-colors">
+                    <div 
+                        className="w-full bg-blue-500 hover:bg-blue-600 transition-all rounded-t-sm min-h-[1px]"
+                        style={{ height: `${barH}%` }}
+                        title={`${d.day}: ${d.chats} chats`}
+                    />
+                </div>
+                <span className="text-[10px] text-gray-400 rotate-0 truncate w-full text-center hidden sm:block">
+                    {d.day.slice(5)}
+                </span>
+            </div>
           );
         })}
-        <line x1={12} y1={h-20} x2={w-8} y2={h-20} stroke="#e5e7eb" />
-      </svg>
     </div>
   );
 }

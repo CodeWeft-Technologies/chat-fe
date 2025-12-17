@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
 import { Button } from "./components/ui/button";
-import { Card } from "./components/ui/card";
 import { useEffect, useState, useCallback } from "react";
 
 function B() {
@@ -39,75 +38,177 @@ export default function Home() {
     return () => clearTimeout(t);
   }, [loadBots]);
   return (
-    <div className="space-y-8">
-      <div className="card gradient-border p-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none opacity-40 [mask-image:radial-gradient(circle_at_center,white,transparent)] bg-[linear-gradient(130deg,var(--accent),#6366f1_50%,#8b5cf6)]" />
-        <div className="space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight">Dashboard Overview</h1>
-          <p className="text-sm text-black/60 dark:text-white/60 max-w-xl leading-relaxed">Create chatbots, ingest helpful knowledge, and embed them anywhere. Everything is designed so non‑technical users can succeed quickly.</p>
-          <div className="flex gap-2 mt-2 text-[10px] text-black/50 dark:text-white/40">
-            <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[var(--accent)] animate-pulse" />Real‑time</span>
-            <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500" />Secure</span>
-            <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-indigo-500" />Accessible</span>
+    <div className="space-y-8 pb-10">
+      {/* Hero Section */}
+      <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-neutral-900 border border-gray-200 dark:border-white/10 shadow-sm">
+        <div className="absolute top-0 right-0 -mt-16 -mr-16 w-64 h-64 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 blur-3xl" />
+        <div className="absolute bottom-0 left-0 -mb-16 -ml-16 w-64 h-64 rounded-full bg-gradient-to-tr from-emerald-500/20 to-teal-500/20 blur-3xl" />
+        
+        <div className="relative p-8 sm:p-10">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="space-y-4 max-w-2xl">
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
+                Welcome to <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">CodeWeft</span>
+              </h1>
+              <p className="text-lg text-gray-600 dark:text-gray-300 leading-relaxed">
+                Build, train, and deploy intelligent chatbots in minutes. 
+                Connect your knowledge base and let AI handle the rest.
+              </p>
+              <div className="flex flex-wrap gap-3 pt-2">
+                <Button asChild size="lg" className="shadow-lg shadow-blue-500/20">
+                  <Link href="/bots" className="flex items-center gap-2">
+                    <span>Create New Bot</span>
+                    <span className="opacity-70">→</span>
+                  </Link>
+                </Button>
+                <Button asChild size="lg" variant="outline" className="bg-white/50 backdrop-blur-sm">
+                  <Link href="/ingest">Manage Knowledge</Link>
+                </Button>
+              </div>
+            </div>
+            
+            {/* Quick Stats */}
+            <div className="flex gap-6 md:border-l md:border-gray-100 md:pl-8 dark:border-white/5">
+              <div className="space-y-1">
+                <div className="text-sm font-medium text-gray-500 uppercase tracking-wider">Active Bots</div>
+                <div className="text-3xl font-bold text-gray-900 dark:text-white">{bots.length}</div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-sm font-medium text-gray-500 uppercase tracking-wider">Platform</div>
+                <div className="flex items-center gap-2 text-3xl font-bold text-gray-900 dark:text-white">
+                  <span>v1.2</span>
+                  <span className="flex h-3 w-3 rounded-full bg-green-500 mt-1" title="Online" />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <Button asChild size="md" variant="primary"><Link href="/bots">Create Bot</Link></Button>
-          <Button asChild size="md" variant="outline"><Link href="/ingest">Add Knowledge</Link></Button>
-        </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card hover title="Create a Bot" subtitle="Define behavior, set a name, craft a helpful system prompt.">
-          <div className="text-xs text-black/60 dark:text-white/60 leading-relaxed mb-4">Support, sales, booking – tune it with a few guided fields. We handle the complex parts behind the scenes.</div>
-          <Button asChild size="sm"><Link href="/bots">Go to Bots</Link></Button>
-        </Card>
-        <Card hover title="Add Knowledge" subtitle="Upload documents or paste text for retrieval.">
-          <div className="text-xs text-black/60 dark:text-white/60 leading-relaxed mb-4">Enrich answers by adding PDFs, website URLs, or internal notes. Content is indexed securely for fast semantic lookup.</div>
-          <Button asChild size="sm" variant="outline"><Link href="/ingest">Open Knowledge</Link></Button>
-        </Card>
+
+      {/* Quick Actions Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Link href="/bots" className="group block">
+          <div className="h-full p-6 rounded-xl bg-white dark:bg-neutral-900 border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-200 group-hover:-translate-y-1">
+            <div className="w-12 h-12 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <span className="text-2xl">🤖</span>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">My Bots</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Manage your AI assistants, configure behaviors, and monitor performance.
+            </p>
+          </div>
+        </Link>
+        
+        <Link href="/ingest" className="group block">
+          <div className="h-full p-6 rounded-xl bg-white dark:bg-neutral-900 border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-md hover:border-purple-200 transition-all duration-200 group-hover:-translate-y-1">
+            <div className="w-12 h-12 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <span className="text-2xl">📚</span>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Knowledge Base</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Upload documents and teach your bots about your business.
+            </p>
+          </div>
+        </Link>
+
+        <Link href="https://docs.codeweft.com" target="_blank" className="group block">
+          <div className="h-full p-6 rounded-xl bg-white dark:bg-neutral-900 border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all duration-200 group-hover:-translate-y-1">
+            <div className="w-12 h-12 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <span className="text-2xl">💡</span>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Documentation</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Learn how to integrate widgets, use the API, and advanced configuration.
+            </p>
+          </div>
+        </Link>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-        <Card hover title="Usage" subtitle="Track performance & tune prompts.">
-          <p className="text-xs text-black/60 dark:text-white/60 leading-relaxed">Daily chats, fallback rate and similarity stats help refine quality. Open a bot &gt; Usage for charts.</p>
-        </Card>
-        <Card hover title="Embed & Widget" subtitle="Copy‑paste install snippets.">
-          <p className="text-xs text-black/60 dark:text-white/60 leading-relaxed">Bubble, inline, iframe, CDN widget – all unified styling. Open a bot &gt; Embed.</p>
-        </Card>
-        <Card hover title="Config" subtitle="Adjust core behavior & keys.">
-          <p className="text-xs text-black/60 dark:text-white/60 leading-relaxed">Set system prompt, rotate public key, tune persona. Open a bot &gt; Config.</p>
-        </Card>
-        <Card hover title="Security" subtitle="Public vs authenticated usage.">
-          <p className="text-xs text-black/60 dark:text-white/60 leading-relaxed">Dashboard uses bearer token; embeds can use rotating public keys – never hard‑code secrets.</p>
-        </Card>
-      </div>
+
+      {/* Recent Bots Section */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold tracking-tight">Your Bots</h2>
-          <Button asChild size="sm" variant="outline"><Link href="/bots">Manage</Link></Button>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <span>Recent Bots</span>
+            <span className="px-2 py-0.5 rounded-full bg-gray-100 text-xs font-medium text-gray-600">{bots.length}</span>
+          </h2>
+          <Link href="/bots" className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline">
+            View All
+          </Link>
         </div>
+
         {!bots.length ? (
-          <Card className="text-sm" hover title="No bots found" subtitle="Create one to get started.">
-            <Button asChild size="sm"><Link href="/bots">Create Bot</Link></Button>
-          </Card>
+          <div className="rounded-xl border border-dashed border-gray-300 p-12 text-center bg-gray-50/50">
+            <div className="mx-auto w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mb-4">
+              <span className="text-xl">?</span>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900">No bots created yet</h3>
+            <p className="text-gray-500 mb-6">Create your first AI assistant to get started.</p>
+            <Button asChild><Link href="/bots">Create Bot</Link></Button>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {bots.map(b => (
-              <Card key={b.bot_id} hover padding="md" className="relative overflow-hidden" title={b.behavior} subtitle={b.has_key ? 'Key active' : 'No key'}>
-                <div className="font-mono text-xs break-all mb-3 opacity-80">{b.bot_id}</div>
-                <div className="flex flex-wrap gap-2">
-                  <Button asChild size="sm" variant="outline"><Link href={`/usage/${b.bot_id}`}>Usage</Link></Button>
-                  <Button asChild size="sm" variant="outline"><Link href={`/embed/${b.bot_id}`}>Embed</Link></Button>
-                  <Button asChild size="sm" variant="outline"><Link href={`/bots/${b.bot_id}/config`}>Config</Link></Button>
+              <div key={b.bot_id} className="group relative bg-white dark:bg-neutral-900 rounded-xl border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col overflow-hidden">
+                <div className="absolute top-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Link href={`/bots/${b.bot_id}/config`} className="p-2 bg-white/90 rounded-full shadow-sm hover:bg-gray-50 text-gray-500 hover:text-gray-900">
+                    ⚙️
+                  </Link>
                 </div>
-              </Card>
+                
+                <div className="p-5 flex-1">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">
+                      {b.behavior.charAt(0).toUpperCase()}
+                    </div>
+                    {b.has_key && (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-50 text-[10px] font-medium text-green-700 border border-green-100">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                        Active
+                      </span>
+                    )}
+                  </div>
+                  
+                  <h3 className="font-semibold text-gray-900 truncate pr-8">{b.behavior}</h3>
+                  <div className="text-xs font-mono text-gray-400 mt-1 truncate">{b.bot_id}</div>
+                </div>
+
+                <div className="bg-gray-50/50 border-t border-gray-100 p-3 grid grid-cols-2 gap-2">
+                  <Link 
+                    href={`/usage/${b.bot_id}`}
+                    className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-gray-600 hover:bg-white hover:text-blue-600 hover:shadow-sm transition-all"
+                  >
+                    <span>📊</span> Usage
+                  </Link>
+                  <Link 
+                    href={`/embed/${b.bot_id}`}
+                    className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-gray-600 hover:bg-white hover:text-blue-600 hover:shadow-sm transition-all"
+                  >
+                    <span>🔌</span> Embed
+                  </Link>
+                </div>
+              </div>
             ))}
+            
+            {/* Add New Card */}
+            <Link href="/bots" className="group flex flex-col items-center justify-center gap-3 p-6 rounded-xl border border-dashed border-gray-300 bg-gray-50/50 hover:bg-white hover:border-blue-300 hover:shadow-sm transition-all text-center">
+              <div className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-400 group-hover:text-blue-600 group-hover:border-blue-200 transition-colors">
+                <span className="text-xl">+</span>
+              </div>
+              <div className="text-sm font-medium text-gray-600 group-hover:text-blue-600">Create New Bot</div>
+            </Link>
           </div>
         )}
       </div>
+
       {!org && (
-        <div className="card p-4 border border-warning/40 bg-warning/10 text-sm flex flex-col gap-2">
-          <div className="font-medium">You are not logged in</div>
-          <div className="text-black/70 dark:text-white/70">Please <Link href="/login" className="text-accent underline">login</Link> or <Link href="/register" className="text-accent underline">register</Link> to save bots.</div>
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 flex items-start gap-3">
+          <div className="text-xl">⚠️</div>
+          <div>
+            <h4 className="text-sm font-semibold text-amber-800">Authentication Required</h4>
+            <p className="text-sm text-amber-700 mt-1">
+              You are currently viewing a demo state. <Link href="/login" className="underline font-medium hover:text-amber-900">Log in</Link> or <Link href="/register" className="underline font-medium hover:text-amber-900">Register</Link> to save your bots permanently.
+            </p>
+          </div>
         </div>
       )}
     </div>

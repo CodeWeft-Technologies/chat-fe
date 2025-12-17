@@ -2,13 +2,13 @@ import React from "react";
 
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   hover?: boolean;
-  padding?: "sm" | "md" | "lg";
+  padding?: "none" | "sm" | "md" | "lg";
   title?: string;
   subtitle?: string;
   actions?: React.ReactNode;
 }
 
-const padMap = { sm: "p-3", md: "p-5", lg: "p-7" } as const;
+const padMap = { none: "", sm: "p-3", md: "p-5", lg: "p-7" } as const;
 
 export function Card({ hover, padding = "md", title, subtitle, actions, className = "", children, ...rest }: CardProps) {
   return (
@@ -28,6 +28,26 @@ export function Card({ hover, padding = "md", title, subtitle, actions, classNam
       {children}
     </div>
   );
+}
+
+export function CardHeader({ className = "", children, ...rest }: React.HTMLAttributes<HTMLDivElement>) {
+  return <div className={`flex flex-col space-y-1.5 p-6 ${className}`.trim()} {...rest}>{children}</div>;
+}
+
+export function CardTitle({ className = "", children, ...rest }: React.HTMLAttributes<HTMLHeadingElement>) {
+  return <h3 className={`font-semibold leading-none tracking-tight ${className}`.trim()} {...rest}>{children}</h3>;
+}
+
+export function CardDescription({ className = "", children, ...rest }: React.HTMLAttributes<HTMLParagraphElement>) {
+  return <p className={`text-sm text-muted-foreground ${className}`.trim()} {...rest}>{children}</p>;
+}
+
+export function CardContent({ className = "", children, ...rest }: React.HTMLAttributes<HTMLDivElement>) {
+  return <div className={`p-6 pt-0 ${className}`.trim()} {...rest}>{children}</div>;
+}
+
+export function CardFooter({ className = "", children, ...rest }: React.HTMLAttributes<HTMLDivElement>) {
+  return <div className={`flex items-center p-6 pt-0 ${className}`.trim()} {...rest}>{children}</div>;
 }
 
 export default Card;

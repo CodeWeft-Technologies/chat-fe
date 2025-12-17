@@ -1,7 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
+import { Card, CardHeader, CardTitle, CardContent } from '@/app/components/ui/card';
+import { Button } from '@/app/components/ui/button';
+import { Input } from '@/app/components/ui/input';
+import { Select } from '@/app/components/ui/select';
+import { Textarea } from '@/app/components/ui/textarea';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
 
@@ -122,11 +128,7 @@ export default function FormBuilderPage() {
     { value: 6, label: 'Saturday' }
   ];
 
-  useEffect(() => {
-    loadData();
-  }, [botId]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       // Load or create form configuration
@@ -193,7 +195,11 @@ export default function FormBuilderPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [botId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   useEffect(() => {
     const f = async () => {
@@ -205,7 +211,7 @@ export default function FormBuilderPage() {
           setResourceSchedules(d.schedules || []);
           setShowScheduleModal(true);
         }
-      } catch (e) {
+      } catch {
       }
     };
     f();
@@ -394,371 +400,414 @@ export default function FormBuilderPage() {
   };
 
   if (loading) {
-    return <div className="p-8">Loading...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">🎨 Dynamic Form Builder</h1>
-          <p className="text-gray-600">Create and customize booking forms for your industry - healthcare, salon, consulting, and more!</p>
+        <div className="flex items-center gap-4">
+          <Link href={`/bots/${botId}/config`} className="p-2 -ml-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-all">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Dynamic Form Builder</h1>
+            <p className="text-sm text-gray-500">Create and customize booking forms for your industry</p>
+          </div>
         </div>
-      
+
         {/* Form Configuration Card */}
         {formConfig && (
-          <div className="mb-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl shadow-xl p-6 text-white">
-            {!editingFormConfig ? (
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h2 className="text-2xl font-bold">{formConfig.name}</h2>
-                    {formConfig.industry && (
-                      <span className="px-3 py-1 bg-white/20 rounded-full text-sm font-medium backdrop-blur-sm">
-                        {formConfig.industry.charAt(0).toUpperCase() + formConfig.industry.slice(1)}
-                      </span>
+          <Card className="border-blue-100 bg-gradient-to-r from-blue-50 to-white">
+            <CardContent className="p-6">
+              {!editingFormConfig ? (
+                <div className="flex justify-between items-start">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3">
+                      <h2 className="text-xl font-bold text-gray-900">{formConfig.name}</h2>
+                      {formConfig.industry && (
+                        <span className="px-2.5 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium uppercase">
+                          {formConfig.industry}
+                        </span>
+                      )}
+                    </div>
+                    {formConfig.description && (
+                      <p className="text-gray-600">{formConfig.description}</p>
                     )}
+                    <div className="flex gap-4 text-sm text-gray-500 pt-2">
+                      <span>📋 {fields.length} custom fields</span>
+                      <span>👥 {resources.length} resources</span>
+                    </div>
                   </div>
-                  {formConfig.description && (
-                    <p className="text-blue-100 mb-3">{formConfig.description}</p>
-                  )}
-                  <div className="flex gap-4 text-sm text-blue-100">
-                    <span>📋 {fields.length} custom fields</span>
-                    <span>👥 {resources.length} resources</span>
+                  <Button
+                    onClick={() => setEditingFormConfig(true)}
+                    variant="outline"
+                    className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                  >
+                    Edit Info
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Input
+                      label="Form Name"
+                      value={formConfigData.name}
+                      onChange={(e) => setFormConfigData({ ...formConfigData, name: e.target.value })}
+                      placeholder="e.g., Healthcare Appointment Form"
+                    />
+                    <Select
+                      label="Industry"
+                      value={formConfigData.industry}
+                      onChange={(e) => setFormConfigData({ ...formConfigData, industry: e.target.value })}
+                      options={[
+                        { value: "", label: "Select industry..." },
+                        { value: "healthcare", label: "🏥 Healthcare" },
+                        { value: "salon", label: "💇 Salon & Spa" },
+                        { value: "consulting", label: "💼 Consulting" },
+                        { value: "education", label: "📚 Education" },
+                        { value: "legal", label: "⚖️ Legal" },
+                        { value: "fitness", label: "💪 Fitness" },
+                        { value: "other", label: "📦 Other" }
+                      ]}
+                    />
                   </div>
-                </div>
-                <button
-                  onClick={() => setEditingFormConfig(true)}
-                  className="px-5 py-2.5 bg-white text-blue-600 rounded-xl font-semibold hover:bg-blue-50 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                >
-                  ✏️ Edit Info
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-4 bg-white/10 backdrop-blur-md rounded-xl p-6">
-                <div>
-                  <label className="block text-sm font-semibold mb-2 text-white">Form Name *</label>
-                  <input
-                    type="text"
-                    value={formConfigData.name}
-                    onChange={(e) => setFormConfigData({ ...formConfigData, name: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-white/30 rounded-xl bg-white/20 backdrop-blur-sm text-white placeholder-white/60 focus:outline-none focus:border-white focus:bg-white/30"
-                    placeholder="e.g., Healthcare Appointment Form"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold mb-2 text-white">Description</label>
-                  <textarea
+                  <Textarea
+                    label="Description"
                     value={formConfigData.description}
                     onChange={(e) => setFormConfigData({ ...formConfigData, description: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-white/30 rounded-xl bg-white/20 backdrop-blur-sm text-white placeholder-white/60 focus:outline-none focus:border-white focus:bg-white/30"
-                    rows={2}
                     placeholder="Brief description of this form"
+                    rows={2}
                   />
+                  <div className="flex gap-2">
+                    <Button onClick={saveFormConfig}>Save Changes</Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setEditingFormConfig(false);
+                        setFormConfigData({
+                          name: formConfig.name || '',
+                          description: formConfig.description || '',
+                          industry: formConfig.industry || ''
+                        });
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-semibold mb-2 text-white">Industry</label>
-                  <select
-                    value={formConfigData.industry}
-                    onChange={(e) => setFormConfigData({ ...formConfigData, industry: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-white/30 rounded-xl bg-white/20 backdrop-blur-sm text-white focus:outline-none focus:border-white focus:bg-white/30"
-                  >
-                    <option value="" className="text-gray-900">Select industry...</option>
-                    <option value="healthcare" className="text-gray-900">🏥 Healthcare</option>
-                    <option value="salon" className="text-gray-900">💇 Salon & Spa</option>
-                    <option value="consulting" className="text-gray-900">💼 Consulting</option>
-                    <option value="education" className="text-gray-900">📚 Education</option>
-                    <option value="legal" className="text-gray-900">⚖️ Legal</option>
-                    <option value="fitness" className="text-gray-900">💪 Fitness</option>
-                    <option value="other" className="text-gray-900">📦 Other</option>
-                  </select>
-                </div>
-                <div className="flex gap-3 pt-2">
-                  <button
-                    onClick={saveFormConfig}
-                    className="flex-1 px-6 py-3 bg-white text-blue-600 rounded-xl font-bold hover:bg-blue-50 transition-all shadow-lg"
-                  >
-                    💾 Save Changes
-                  </button>
-                  <button
-                    onClick={() => {
-                      setEditingFormConfig(false);
-                      setFormConfigData({
-                        name: formConfig.name || '',
-                        description: formConfig.description || '',
-                        industry: formConfig.industry || ''
-                      });
-                    }}
-                    className="px-6 py-3 bg-white/20 backdrop-blur-sm text-white rounded-xl font-bold hover:bg-white/30 transition-all"
-                  >
-                    ❌ Cancel
-                  </button>
-                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Tabs */}
+        <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg w-fit">
+          <button
+            onClick={() => setActiveTab('fields')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+              activeTab === 'fields'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-900'
+            }`}
+          >
+            Form Fields ({fields.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('resources')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+              activeTab === 'resources'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-900'
+            }`}
+          >
+            Resources ({resources.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('templates')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+              activeTab === 'templates'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-900'
+            }`}
+          >
+            Templates
+          </button>
+        </div>
+
+        {/* Form Fields Tab */}
+        {activeTab === 'fields' && (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Form Fields</h2>
+                <p className="text-sm text-gray-500">Customize what information to collect</p>
+              </div>
+              <Button
+                onClick={() => {
+                  setEditingField({
+                    field_name: '',
+                    field_label: '',
+                    field_type: 'text',
+                    field_order: fields.length,
+                    is_required: false
+                  } as FormField);
+                  setShowFieldForm(true);
+                }}
+              >
+                Add Field
+              </Button>
+            </div>
+
+            {fields.length === 0 ? (
+              <Card className="border-dashed">
+                <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="text-4xl mb-4">📋</div>
+                  <h3 className="text-lg font-medium text-gray-900">No form fields yet</h3>
+                  <p className="text-sm text-gray-500 mb-6">Add your first custom field or apply a template</p>
+                  <Button variant="outline" onClick={() => setActiveTab('templates')}>
+                    Browse Templates
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4">
+                {fields.map((field, index) => (
+                  <Card key={field.id} className="group hover:border-blue-200 transition-all">
+                    <CardContent className="p-4 flex justify-between items-start">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-mono text-gray-400">#{index + 1}</span>
+                          <span className="font-medium text-gray-900">{field.field_label}</span>
+                          {field.is_required && (
+                            <span className="px-1.5 py-0.5 bg-red-100 text-red-700 text-[10px] font-bold rounded uppercase">Required</span>
+                          )}
+                          <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
+                            {field.field_type}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 font-mono">ID: {field.field_name}</p>
+                        {field.help_text && (
+                          <p className="text-xs text-gray-500 italic">{field.help_text}</p>
+                        )}
+                        {field.options && field.options.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {field.options.map((opt, i) => (
+                              <span key={i} className="px-1.5 py-0.5 bg-gray-50 text-gray-600 text-[10px] rounded border border-gray-200">
+                                {opt.label}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setEditingField(field);
+                            setShowFieldForm(true);
+                          }}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => deleteField(field.id!)}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             )}
           </div>
         )}
 
-      {/* Tabs */}
-      <div className="mb-6 bg-white rounded-2xl shadow-lg p-2 flex gap-2">
-        <button
-          onClick={() => setActiveTab('fields')}
-          className={`flex-1 px-6 py-4 rounded-xl font-semibold transition-all ${
-            activeTab === 'fields'
-              ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
-              : 'text-gray-600 hover:bg-gray-100'
-          }`}
-        >
-          <div className="text-2xl mb-1">📝</div>
-          <div>Form Fields</div>
-          <div className="text-xs opacity-80">{fields.length} fields</div>
-        </button>
-        <button
-          onClick={() => setActiveTab('resources')}
-          className={`flex-1 px-6 py-4 rounded-xl font-semibold transition-all ${
-            activeTab === 'resources'
-              ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
-              : 'text-gray-600 hover:bg-gray-100'
-          }`}
-        >
-          <div className="text-2xl mb-1">👥</div>
-          <div>Resources</div>
-          <div className="text-xs opacity-80">{resources.length} resources</div>
-        </button>
-        <button
-          onClick={() => setActiveTab('templates')}
-          className={`flex-1 px-6 py-4 rounded-xl font-semibold transition-all ${
-            activeTab === 'templates'
-              ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
-              : 'text-gray-600 hover:bg-gray-100'
-          }`}
-        >
-          <div className="text-2xl mb-1">🎯</div>
-          <div>Templates</div>
-          <div className="text-xs opacity-80">Quick start</div>
-        </button>
+        {/* Resources Tab */}
+        {activeTab === 'resources' && (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Resources & Capacity</h2>
+                <p className="text-sm text-gray-500">Manage doctors, staff, rooms, etc.</p>
+              </div>
+              <Button
+                onClick={() => {
+                  setEditingResource({
+                    resource_type: 'doctor',
+                    resource_name: '',
+                    capacity_per_slot: 1
+                  });
+                  setShowResourceForm(true);
+                }}
+              >
+                Add Resource
+              </Button>
+            </div>
+
+            {resources.length === 0 ? (
+              <Card className="border-dashed">
+                <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="text-4xl mb-4">👥</div>
+                  <h3 className="text-lg font-medium text-gray-900">No resources yet</h3>
+                  <p className="text-sm text-gray-500">Add resources that can be booked</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {resources.map((resource) => (
+                  <Card key={resource.id} className="group hover:border-blue-200 transition-all">
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xl">
+                              {resource.resource_type === 'doctor' && '👨‍⚕️'}
+                              {resource.resource_type === 'staff' && '👤'}
+                              {resource.resource_type === 'room' && '🏠'}
+                              {resource.resource_type === 'equipment' && '🔧'}
+                              {resource.resource_type === 'service' && '⚙️'}
+                            </span>
+                            <h3 className="font-bold text-gray-900">{resource.resource_name}</h3>
+                          </div>
+                          <span className="inline-block px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
+                            {resource.resource_type}
+                          </span>
+                        </div>
+                      </div>
+                      {resource.description && (
+                        <p className="text-sm text-gray-600 mb-4">{resource.description}</p>
+                      )}
+                      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                        <div className="text-xs text-gray-500">
+                          Capacity: <span className="font-medium text-gray-900">{resource.capacity_per_slot}</span>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setEditingResource(resource);
+                              setShowResourceForm(true);
+                            }}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            onClick={() => {
+                              setSelectedResource(resource.id!);
+                              setShowScheduleModal(true);
+                            }}
+                          >
+                            Schedule
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => deleteResource(resource.id!)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Templates Tab */}
+        {activeTab === 'templates' && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Industry Templates</h2>
+              <p className="text-sm text-gray-500">Quick-start with pre-built templates</p>
+            </div>
+
+            {templates.length === 0 ? (
+              <Card className="border-dashed">
+                <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="text-4xl mb-4">📦</div>
+                  <h3 className="text-lg font-medium text-gray-900">No templates available</h3>
+                  <p className="text-sm text-gray-500">Check back later for industry-specific templates</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {templates.map((template) => (
+                  <Card key={template.id} className="hover:shadow-md transition-all cursor-pointer border-t-4 border-t-blue-500">
+                    <CardContent className="p-6">
+                      <div className="text-3xl mb-3">
+                        {template.industry === 'healthcare' && '🏥'}
+                        {template.industry === 'salon' && '💇'}
+                        {template.industry === 'consulting' && '💼'}
+                        {template.industry === 'education' && '📚'}
+                        {template.industry === 'legal' && '⚖️'}
+                        {template.industry === 'fitness' && '💪'}
+                      </div>
+                      <h3 className="font-bold text-gray-900 mb-2">{template.name}</h3>
+                      <span className="inline-block px-2 py-0.5 bg-blue-50 text-blue-700 text-xs font-medium rounded-full mb-3 uppercase">
+                        {template.industry}
+                      </span>
+                      <p className="text-sm text-gray-600 mb-4 line-clamp-3">{template.description}</p>
+                      <Button onClick={() => applyTemplate(template.id)} className="w-full">
+                        Apply Template
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Form Fields Tab */}
-      {activeTab === 'fields' && (
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Form Fields</h2>
-              <p className="text-gray-600 mt-1">Customize what information to collect from customers</p>
-            </div>
-            <button
-              onClick={() => {
-                setEditingField({
-                  field_name: '',
-                  field_label: '',
-                  field_type: 'text',
-                  field_order: fields.length,
-                  is_required: false
-                } as FormField);
-                setShowFieldForm(true);
-              }}
-              className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold hover:shadow-xl transition-all transform hover:-translate-y-0.5"
-            >
-              ➕ Add Field
-            </button>
-          </div>
-
-          {fields.length === 0 ? (
-            <div className="text-center py-16 bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl border-2 border-dashed border-gray-300">
-              <div className="text-6xl mb-4">📋</div>
-              <h3 className="text-xl font-semibold text-gray-700 mb-2">No form fields yet</h3>
-              <p className="text-gray-500 mb-6">Add your first custom field or apply a template to get started</p>
-              <button
-                onClick={() => setActiveTab('templates')}
-                className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-all"
-              >
-                🎯 Browse Templates
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {fields.map((field, index) => (
-                <div key={field.id} className="group p-5 border-2 border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-lg transition-all bg-gradient-to-r from-white to-gray-50">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="text-sm font-bold text-gray-400">#{index + 1}</span>
-                        <span className="text-lg font-bold text-gray-900">{field.field_label}</span>
-                        {field.is_required && (
-                          <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-full">REQUIRED</span>
-                        )}
-                        <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
-                          {field.field_type}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600">Field name: <code className="bg-gray-100 px-2 py-1 rounded text-xs">{field.field_name}</code></p>
-                      {field.help_text && (
-                        <p className="text-xs text-gray-500 mt-2 flex items-start gap-2">
-                          <span>💡</span>
-                          <span>{field.help_text}</span>
-                        </p>
-                      )}
-                      {field.options && field.options.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {field.options.map((opt, i) => (
-                            <span key={i} className="px-2 py-1 bg-purple-50 text-purple-700 text-xs rounded-md border border-purple-200">
-                              {opt.label}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => {
-                          setEditingField(field);
-                          setShowFieldForm(true);
-                        }}
-                        className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg font-semibold transition-all"
-                      >
-                        ✏️ Edit
-                      </button>
-                      <button
-                        onClick={() => deleteField(field.id!)}
-                        className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg font-semibold transition-all"
-                      >
-                        🗑️ Delete
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Field Form Modal */}
-          {showFieldForm && editingField && (
-            <FieldFormModal
-              field={editingField}
-              fieldTypes={FIELD_TYPES}
-              onSave={saveField}
-              resources={resources}
-              onCancel={() => {
-                setShowFieldForm(false);
-                setEditingField(null);
-              }}
-            />
-          )}
-        </div>
+      {/* Field Form Modal */}
+      {showFieldForm && editingField && (
+        <FieldFormModal
+          field={editingField}
+          fieldTypes={FIELD_TYPES}
+          onSave={saveField}
+          resources={resources}
+          onCancel={() => {
+            setShowFieldForm(false);
+            setEditingField(null);
+          }}
+        />
       )}
 
-      {/* Resources Tab */}
-      {activeTab === 'resources' && (
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Resources & Capacity</h2>
-              <p className="text-gray-600 mt-1">Manage doctors, staff, rooms, and equipment with scheduling</p>
-            </div>
-            <button
-              onClick={() => {
-                setEditingResource({
-                  resource_type: 'doctor',
-                  resource_name: '',
-                  capacity_per_slot: 1
-                });
-                setShowResourceForm(true);
-              }}
-              className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold hover:shadow-xl transition-all transform hover:-translate-y-0.5"
-            >
-              ➕ Add Resource
-            </button>
-          </div>
-
-          {resources.length === 0 ? (
-            <div className="text-center py-16 bg-gradient-to-br from-gray-50 to-purple-50 rounded-xl border-2 border-dashed border-gray-300">
-              <div className="text-6xl mb-4">👥</div>
-              <h3 className="text-xl font-semibold text-gray-700 mb-2">No resources yet</h3>
-              <p className="text-gray-500 mb-6">Add doctors, staff members, rooms, or equipment that can be booked</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {resources.map((resource) => (
-                <div key={resource.id} className="group p-6 border-2 border-gray-200 rounded-xl hover:border-purple-400 hover:shadow-xl transition-all bg-gradient-to-br from-white to-purple-50">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-2xl">
-                          {resource.resource_type === 'doctor' && '👨‍⚕️'}
-                          {resource.resource_type === 'staff' && '👤'}
-                          {resource.resource_type === 'room' && '🏠'}
-                          {resource.resource_type === 'equipment' && '🔧'}
-                          {resource.resource_type === 'service' && '⚙️'}
-                        </span>
-                        <h3 className="text-lg font-bold text-gray-900">{resource.resource_name}</h3>
-                      </div>
-                      <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">
-                        {resource.resource_type}
-                      </span>
-                    </div>
-                  </div>
-                  {resource.description && (
-                    <p className="text-sm text-gray-600 mb-3 bg-white/50 p-2 rounded-lg">{resource.description}</p>
-                  )}
-                  <div className="flex items-center justify-between pt-3 border-t border-gray-200">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500">Capacity:</span>
-                      <span className="px-3 py-1 bg-blue-100 text-blue-700 text-sm font-bold rounded-full">
-                        {resource.capacity_per_slot} per slot
-                      </span>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingResource(resource);
-                          setShowResourceForm(true);
-                        }}
-                        className="px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-lg text-sm font-semibold"
-                      >
-                        ✏️ Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedResource(resource.id!);
-                          setShowScheduleModal(true);
-                        }}
-                        className="px-3 py-1.5 text-purple-600 hover:bg-purple-50 rounded-lg text-sm font-semibold"
-                      >
-                        📅 Schedule
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => deleteResource(resource.id!)}
-                        className="px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-lg text-sm font-semibold"
-                      >
-                        🗑️ Delete
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Resource Form Modal */}
-          {showResourceForm && editingResource && (
-            <ResourceFormModal
-              resource={editingResource}
-              resourceTypes={RESOURCE_TYPES}
-              onSave={saveResource}
-              onCancel={() => {
-                setShowResourceForm(false);
-                setEditingResource(null);
-              }}
-            />
-          )}
-        </div>
+      {/* Resource Form Modal */}
+      {showResourceForm && editingResource && (
+        <ResourceFormModal
+          resource={editingResource}
+          resourceTypes={RESOURCE_TYPES}
+          onSave={saveResource}
+          onCancel={() => {
+            setShowResourceForm(false);
+            setEditingResource(null);
+          }}
+        />
       )}
 
+      {/* Schedule Modal */}
       {showScheduleModal && selectedResource && (
         <ScheduleModal
           schedules={resourceSchedules}
@@ -772,64 +821,6 @@ export default function FormBuilderPage() {
           }}
         />
       )}
-
-      {/* Templates Tab */}
-      {activeTab === 'templates' && (
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">🎯 Industry Templates</h2>
-            <p className="text-gray-600 mt-1">
-              Quick-start with pre-built templates designed for specific industries. Customize after applying!
-            </p>
-          </div>
-
-          {templates.length === 0 ? (
-            <div className="text-center py-16 bg-gray-50 rounded-xl">
-              <div className="text-6xl mb-4">📦</div>
-              <h3 className="text-xl font-semibold text-gray-700 mb-2">No templates available</h3>
-              <p className="text-gray-500">Check back later for industry-specific templates</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {templates.map((template) => (
-                <div key={template.id} className="group relative overflow-hidden border-2 border-gray-200 rounded-2xl hover:border-blue-400 hover:shadow-2xl transition-all transform hover:-translate-y-1">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400 to-purple-600 opacity-10 rounded-full -mr-16 -mt-16"></div>
-                  <div className="p-6 relative">
-                    <div className="text-4xl mb-3">
-                      {template.industry === 'healthcare' && '🏥'}
-                      {template.industry === 'salon' && '💇'}
-                      {template.industry === 'consulting' && '💼'}
-                      {template.industry === 'education' && '📚'}
-                      {template.industry === 'legal' && '⚖️'}
-                      {template.industry === 'fitness' && '💪'}
-                    </div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">{template.name}</h3>
-                    <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full mb-3">
-                      {template.industry}
-                    </span>
-                    <p className="text-sm text-gray-600 mb-4 line-clamp-3">{template.description}</p>
-                    <button
-                      onClick={() => applyTemplate(template.id)}
-                      className="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-bold hover:shadow-lg transition-all transform group-hover:scale-105"
-                    >
-                      ✨ Apply Template
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          
-          <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-200">
-            <h3 className="font-bold text-gray-900 mb-2">💡 Pro Tip</h3>
-            <p className="text-sm text-gray-700">
-              After applying a template, you can customize the fields, add more resources, and adjust settings to match your exact needs. 
-              Templates are just a starting point to save you time!
-            </p>
-          </div>
-        </div>
-      )}
-    </div>
     </div>
   );
 }
@@ -867,80 +858,94 @@ function ScheduleModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold">Resource Schedules</h3>
-          <button onClick={onClose} className="px-3 py-1.5 text-gray-700 border rounded">Close</button>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div className="border rounded p-3">
-            <div className="flex items-center justify-between mb-2">
-              <div className="font-semibold">Add Weekly Slot</div>
-            </div>
-            <form onSubmit={submit} className="space-y-2">
-              <select value={dayOfWeek} onChange={e => setDayOfWeek(parseInt(e.target.value))} className="w-full px-3 py-2 border rounded">
-                {days.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
-              </select>
-              <div className="grid grid-cols-2 gap-2">
-                <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className="px-3 py-2 border rounded" />
-                <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className="px-3 py-2 border rounded" />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <input type="number" min="5" step="5" value={slotMinutes} onChange={e => setSlotMinutes(parseInt(e.target.value))} className="px-3 py-2 border rounded" />
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={isAvailable} onChange={e => setIsAvailable(e.target.checked)} />
-                  Available
-                </label>
-              </div>
-              <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded">Add</button>
-            </form>
-          </div>
-          <div className="border rounded p-3">
-            <div className="font-semibold mb-2">Add Specific Date Slot</div>
-            <div className="space-y-2">
-              <input type="date" value={specificDate || ''} onChange={e => setSpecificDate(e.target.value || undefined)} className="w-full px-3 py-2 border rounded" />
-              <div className="grid grid-cols-2 gap-2">
-                <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className="px-3 py-2 border rounded" />
-                <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className="px-3 py-2 border rounded" />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <input type="number" min="5" step="5" value={slotMinutes} onChange={e => setSlotMinutes(parseInt(e.target.value))} className="px-3 py-2 border rounded" />
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={isAvailable} onChange={e => setIsAvailable(e.target.checked)} />
-                  Available
-                </label>
-              </div>
-              <button onClick={submit} className="px-4 py-2 bg-purple-600 text-white rounded">Add</button>
-            </div>
-          </div>
-        </div>
-        <div className="border rounded p-3">
-          <div className="font-semibold mb-2">Existing Schedules</div>
-          {schedules.length === 0 ? (
-            <div className="text-sm text-gray-500">No schedules</div>
-          ) : (
-            <div className="space-y-2 max-h-64 overflow-auto">
-              {schedules.map(s => (
-                <div key={s.id} className="flex items-center justify-between border rounded p-2">
-                  <div className="text-sm">
-                    <span>{s.specific_date ? s.specific_date : days.find(d => d.value === s.day_of_week)?.label}</span>
-                    <span className="ml-2">{s.start_time} - {s.end_time}</span>
-                    <span className="ml-2">{s.slot_duration_minutes}m</span>
-                    <span className="ml-2">{s.is_available ? 'Available' : 'Unavailable'}</span>
-                  </div>
-                  <button onClick={() => onDelete(s.id!)} className="px-3 py-1.5 text-red-600 hover:bg-red-50 rounded text-sm">Delete</button>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Resource Schedules</CardTitle>
+          <Button size="sm" variant="ghost" onClick={onClose}>✕</Button>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 border rounded-lg space-y-4">
+              <h4 className="font-medium">Add Weekly Slot</h4>
+              <form onSubmit={submit} className="space-y-3">
+                <Select
+                  label="Day of Week"
+                  value={String(dayOfWeek)}
+                  onChange={e => setDayOfWeek(parseInt(e.target.value))}
+                  options={days.map(d => ({ value: String(d.value), label: d.label }))}
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <Input type="time" label="Start" value={startTime} onChange={e => setStartTime(e.target.value)} />
+                  <Input type="time" label="End" value={endTime} onChange={e => setEndTime(e.target.value)} />
                 </div>
-              ))}
+                <div className="grid grid-cols-2 gap-2">
+                  <Input type="number" label="Duration (m)" min={5} step={5} value={slotMinutes} onChange={e => setSlotMinutes(parseInt(e.target.value))} />
+                  <div className="flex items-center pt-6">
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input type="checkbox" checked={isAvailable} onChange={e => setIsAvailable(e.target.checked)} className="rounded border-gray-300" />
+                      Available
+                    </label>
+                  </div>
+                </div>
+                <Button type="submit" className="w-full">Add Weekly</Button>
+              </form>
             </div>
-          )}
-        </div>
-      </div>
+
+            <div className="p-4 border rounded-lg space-y-4">
+              <h4 className="font-medium">Add Specific Date Slot</h4>
+              <div className="space-y-3">
+                <Input type="date" label="Date" value={specificDate || ''} onChange={e => setSpecificDate(e.target.value || undefined)} />
+                <div className="grid grid-cols-2 gap-2">
+                  <Input type="time" label="Start" value={startTime} onChange={e => setStartTime(e.target.value)} />
+                  <Input type="time" label="End" value={endTime} onChange={e => setEndTime(e.target.value)} />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input type="number" label="Duration (m)" min={5} step={5} value={slotMinutes} onChange={e => setSlotMinutes(parseInt(e.target.value))} />
+                  <div className="flex items-center pt-6">
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input type="checkbox" checked={isAvailable} onChange={e => setIsAvailable(e.target.checked)} className="rounded border-gray-300" />
+                      Available
+                    </label>
+                  </div>
+                </div>
+                <Button onClick={submit} variant="secondary" className="w-full">Add Date</Button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="font-medium mb-3">Existing Schedules</h4>
+            {schedules.length === 0 ? (
+              <p className="text-sm text-gray-500">No schedules configured</p>
+            ) : (
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {schedules.map(s => (
+                  <div key={s.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg text-sm">
+                    <div className="space-x-2">
+                      <span className="font-medium text-gray-900">
+                        {s.specific_date ? s.specific_date : days.find(d => d.value === s.day_of_week)?.label}
+                      </span>
+                      <span className="text-gray-500">{s.start_time} - {s.end_time}</span>
+                      <span className="px-1.5 py-0.5 bg-gray-200 rounded text-xs">{s.slot_duration_minutes}m</span>
+                      <span className={`px-1.5 py-0.5 rounded text-xs ${s.is_available ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                        {s.is_available ? 'Available' : 'Unavailable'}
+                      </span>
+                    </div>
+                    <button onClick={() => onDelete(s.id!)} className="text-red-600 hover:text-red-800 text-xs font-medium">
+                      Delete
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
 
-// Field Form Modal Component
 function FieldFormModal({
   field,
   fieldTypes,
@@ -959,7 +964,6 @@ function FieldFormModal({
     field.options || []
   );
 
-  // Update state when field prop changes (when editing different fields)
   useEffect(() => {
     setFormData(field);
     setOptions(field.options || []);
@@ -986,10 +990,8 @@ function FieldFormModal({
   const importResourcesAsOptions = () => {
     try {
       const mapped = (resources || []).map(r => {
-        // Create clean value: use resource_code if available, otherwise create slug from name
         let cleanValue = r.resource_code;
         if (!cleanValue) {
-          // Create slug from resource_name: "Dr Sanket Patil" -> "dr_sanket_patil"
           cleanValue = (r.resource_name || '')
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, '_')
@@ -1008,397 +1010,198 @@ function FieldFormModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Create updated field data
     const updatedField = { ...formData };
-    
-    // Add options to formData if it's a select/radio field
     if (['select', 'radio'].includes(formData.field_type)) {
       updatedField.options = options.filter(opt => opt.value && opt.label);
     } else {
-      // Remove options for non-select fields
       delete updatedField.options;
     }
-    
     onSave(updatedField);
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6 rounded-t-2xl">
-          <h3 className="text-2xl font-bold">{field.id ? '✏️ Edit Field' : '➕ Add New Field'}</h3>
-          <p className="text-blue-100 text-sm mt-1">Configure your custom form field</p>
-        </div>
-        
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold mb-2 text-gray-700">
-                Field Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <Card className="w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+        <CardHeader>
+          <CardTitle>{field.id ? 'Edit Field' : 'Add New Field'}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Field Name *"
                 value={formData.field_name}
                 onChange={(e) => setFormData({ ...formData, field_name: e.target.value })}
-                className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
                 placeholder="e.g., doctor_name"
+                description="Internal identifier (no spaces)"
                 required
               />
-              <p className="text-xs text-gray-500 mt-1">Internal identifier (no spaces)</p>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-semibold mb-2 text-gray-700">
-                Field Label <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
+              <Input
+                label="Field Label *"
                 value={formData.field_label}
                 onChange={(e) => setFormData({ ...formData, field_label: e.target.value })}
-                className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
                 placeholder="e.g., Select Doctor"
+                description="What users will see"
                 required
               />
-              <p className="text-xs text-gray-500 mt-1">What users will see</p>
             </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold mb-2 text-gray-700">Field Type</label>
-              <select
+            <div className="grid grid-cols-2 gap-4">
+              <Select
+                label="Field Type"
                 value={formData.field_type}
                 onChange={(e) => setFormData({ ...formData, field_type: e.target.value })}
-                className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
-              >
-                {fieldTypes.map(type => (
-                  <option key={type.value} value={type.value}>{type.label}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-semibold mb-2 text-gray-700">Field Order</label>
-              <input
+                options={fieldTypes}
+              />
+              <Input
+                label="Field Order"
                 type="number"
                 value={formData.field_order}
                 onChange={(e) => setFormData({ ...formData, field_order: parseInt(e.target.value) })}
-                className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                description="Display order (1, 2, 3...)"
               />
-              <p className="text-xs text-gray-500 mt-1">Display order (1, 2, 3...)</p>
             </div>
-          </div>
 
-          <div className="bg-blue-50 p-4 rounded-xl">
-            <label className="flex items-center gap-3 cursor-pointer">
+            <div className="flex items-center gap-2">
               <input
                 type="checkbox"
+                id="is_required"
                 checked={formData.is_required}
                 onChange={(e) => setFormData({ ...formData, is_required: e.target.checked })}
-                className="w-5 h-5 text-blue-600 rounded"
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
-              <span className="text-sm font-semibold text-gray-700">Make this field required</span>
-            </label>
-          </div>
+              <label htmlFor="is_required" className="text-sm font-medium text-gray-700">Make this field required</label>
+            </div>
 
-          <div>
-            <label className="block text-sm font-semibold mb-2 text-gray-700">Placeholder Text</label>
-            <input
-              type="text"
+            <Input
+              label="Placeholder Text"
               value={formData.placeholder || ''}
               onChange={(e) => setFormData({ ...formData, placeholder: e.target.value })}
-              className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
               placeholder="e.g., Choose your doctor..."
             />
-            <p className="text-xs text-gray-500 mt-1">Hint text shown inside the field</p>
-          </div>
 
-          <div>
-            <label className="block text-sm font-semibold mb-2 text-gray-700">Help Text</label>
-            <input
-              type="text"
+            <Input
+              label="Help Text"
               value={formData.help_text || ''}
               onChange={(e) => setFormData({ ...formData, help_text: e.target.value })}
-              className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
               placeholder="e.g., Select your preferred doctor from the list"
             />
-            <p className="text-xs text-gray-500 mt-1">Additional guidance shown below the field</p>
-          </div>
 
-          {formData.field_type === 'email' && (
-            <div className="border-2 border-blue-200 bg-blue-50 p-6 rounded-xl">
-              <div className="mb-4">
-                <label className="block text-sm font-bold text-gray-800 mb-2">
-                  📧 Email Validation Settings
-                </label>
-                <p className="text-xs text-gray-600">Control which email addresses are allowed</p>
+            {formData.field_type === 'email' && (
+              <div className="p-4 bg-blue-50 rounded-lg space-y-3">
+                <h4 className="font-medium text-blue-900">Email Validation</h4>
+                <Input
+                  label="Allowed Domains (optional)"
+                  value={formData.pattern || ''}
+                  onChange={(e) => setFormData({ ...formData, pattern: e.target.value })}
+                  placeholder="e.g., company.com, gmail.com"
+                  description="Leave empty to allow all emails"
+                />
               </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold mb-2 text-gray-700">
-                    Email Domain Restriction <span className="text-gray-400">(optional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.pattern || ''}
-                    onChange={(e) => setFormData({ ...formData, pattern: e.target.value })}
-                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
-                    placeholder="e.g., company.com or gmail.com, yahoo.com"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Leave empty to allow all email addresses, or enter allowed domain(s) separated by commas
-                  </p>
-                </div>
-                <div className="p-4 bg-white rounded-lg border border-blue-200">
-                  <p className="text-sm font-semibold text-gray-700 mb-2">How it works:</p>
-                  <div className="space-y-2 text-xs text-gray-600">
-                    <div className="flex items-start gap-2">
-                      <span className="text-green-600 font-bold">✓</span>
-                      <span><strong>Leave empty:</strong> Accept any email (user@gmail.com, user@company.com, etc.)</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="text-blue-600 font-bold">→</span>
-                      <span><strong>Single domain:</strong> Enter &quot;company.com&quot; to only allow @company.com emails</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="text-purple-600 font-bold">→</span>
-                      <span><strong>Multiple domains:</strong> Enter &quot;company.com, partner.org&quot; to allow both domains</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 p-3 bg-blue-100 rounded-lg">
-                  <span className="text-2xl">💡</span>
-                  <p className="text-xs text-blue-900">
-                    <strong>Tip:</strong> Use this to restrict emails to your company domain or specific partner organizations
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+            )}
 
-          {formData.field_type === 'phone' && (
-            <div className="border-2 border-green-200 bg-green-50 p-6 rounded-xl">
-              <div className="mb-4">
-                <label className="block text-sm font-bold text-gray-800 mb-2">
-                  📞 Phone Validation Settings
-                </label>
-                <p className="text-xs text-gray-600">Configure phone number format validation</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold mb-2 text-gray-700">
-                    Country Code <span className="text-gray-400">(optional)</span>
-                  </label>
-                  <input
-                    type="text"
+            {formData.field_type === 'phone' && (
+              <div className="p-4 bg-green-50 rounded-lg space-y-3">
+                <h4 className="font-medium text-green-900">Phone Validation</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <Input
+                    label="Country Code"
                     value={formData.country_code || ''}
                     onChange={(e) => setFormData({ ...formData, country_code: e.target.value })}
-                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all"
-                    placeholder="e.g., +1, +91, +44"
+                    placeholder="e.g., +1"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Default country code prefix</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold mb-2 text-gray-700">
-                    Number of Digits <span className="text-gray-400">(optional)</span>
-                  </label>
-                  <input
+                  <Input
+                    label="Digits"
                     type="number"
                     value={formData.phone_digits || ''}
                     onChange={(e) => setFormData({ ...formData, phone_digits: e.target.value ? parseInt(e.target.value) : undefined })}
-                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all"
                     placeholder="e.g., 10"
-                    min="1"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Expected number of digits</p>
                 </div>
               </div>
-              <div className="mt-3 p-3 bg-white rounded-lg border border-green-200">
-                <p className="text-xs text-green-900">
-                  <strong>💡 Example:</strong> For US numbers, use country code <code className="bg-green-100 px-1 rounded">+1</code> and <code className="bg-green-100 px-1 rounded">10</code> digits.
-                  For India, use <code className="bg-green-100 px-1 rounded">+91</code> and <code className="bg-green-100 px-1 rounded">10</code> digits.
-                </p>
-              </div>
-            </div>
-          )}
+            )}
 
-          {formData.field_type === 'number' && (
-            <div className="border-2 border-orange-200 bg-orange-50 p-6 rounded-xl">
-              <div className="mb-4">
-                <label className="block text-sm font-bold text-gray-800 mb-2">
-                  🔢 Number Validation Settings
-                </label>
-                <p className="text-xs text-gray-600">Configure numeric value constraints</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold mb-2 text-gray-700">
-                    Minimum Value <span className="text-gray-400">(optional)</span>
-                  </label>
-                  <input
+            {formData.field_type === 'number' && (
+              <div className="p-4 bg-orange-50 rounded-lg space-y-3">
+                <h4 className="font-medium text-orange-900">Number Constraints</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <Input
+                    label="Min Value"
                     type="number"
                     value={formData.min_value || ''}
                     onChange={(e) => setFormData({ ...formData, min_value: e.target.value ? parseFloat(e.target.value) : undefined })}
-                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-xl focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all"
-                    placeholder="e.g., 0"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Minimum allowed value</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold mb-2 text-gray-700">
-                    Maximum Value <span className="text-gray-400">(optional)</span>
-                  </label>
-                  <input
+                  <Input
+                    label="Max Value"
                     type="number"
                     value={formData.max_value || ''}
                     onChange={(e) => setFormData({ ...formData, max_value: e.target.value ? parseFloat(e.target.value) : undefined })}
-                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-xl focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all"
-                    placeholder="e.g., 100"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Maximum allowed value</p>
                 </div>
               </div>
-              <div className="mt-3 p-3 bg-white rounded-lg border border-orange-200">
-                <p className="text-xs text-orange-900">
-                  <strong>💡 Example:</strong> For age input, set min to <code className="bg-orange-100 px-1 rounded">0</code> and max to <code className="bg-orange-100 px-1 rounded">120</code>.
-                  For percentage, use <code className="bg-orange-100 px-1 rounded">0</code> to <code className="bg-orange-100 px-1 rounded">100</code>.
-                </p>
-              </div>
-            </div>
-          )}
+            )}
 
-          {['select', 'radio'].includes(formData.field_type) && (
-            <div className="border-2 border-purple-200 bg-purple-50 p-6 rounded-xl">
-              <div className="flex justify-between items-center mb-4">
-                <div>
-                  <label className="block text-sm font-bold text-gray-800">
-                    🎯 Dropdown Options
-                  </label>
-                  <p className="text-xs text-gray-600 mt-1">Add choices for users to select from</p>
+            {['select', 'radio'].includes(formData.field_type) && (
+              <div className="space-y-4 border rounded-lg p-4">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-medium">Options</h4>
+                  <div className="flex gap-2">
+                    <Button type="button" size="sm" variant="outline" onClick={addOption}>+ Add Option</Button>
+                    <Button type="button" size="sm" variant="outline" onClick={importResourcesAsOptions}>Load Resources</Button>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={addOption}
-                  className="px-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all shadow-md"
-                >
-                  ➕ Add Option
-                </button>
-                <button
-                  type="button"
-                  onClick={importResourcesAsOptions}
-                  className="ml-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all shadow-md"
-                >
-                  📥 Load from Resources
-                </button>
-              </div>
-              
-              {options.length === 0 ? (
-                <div className="text-center py-8 bg-white rounded-lg border-2 border-dashed border-gray-300">
-                  <p className="text-gray-500 text-sm mb-3">No options yet</p>
-                  <button
-                    type="button"
-                    onClick={addOption}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-semibold hover:bg-blue-600"
-                  >
-                    Add First Option
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-3 max-h-64 overflow-y-auto">
+                
+                <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
                   {options.map((option, index) => (
-                    <div key={index} className="bg-white p-4 rounded-lg border-2 border-gray-200 hover:border-purple-300 transition-all">
-                      <div className="flex items-start gap-3">
-                        <span className="text-sm font-bold text-gray-400 mt-2">#{index + 1}</span>
-                        <div className="flex-1 grid grid-cols-3 gap-3">
-                          <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">
-                              Value <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                              type="text"
-                              value={option.value}
-                              onChange={(e) => updateOption(index, 'value', e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
-                              placeholder="dr_smith"
-                              required
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">
-                              Label <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                              type="text"
-                              value={option.label}
-                              onChange={(e) => updateOption(index, 'label', e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
-                              placeholder="Dr. John Smith"
-                              required
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">
-                              Capacity <span className="text-gray-400">(optional)</span>
-                            </label>
-                            <input
-                              type="number"
-                              value={option.capacity || ''}
-                              onChange={(e) => updateOption(index, 'capacity', e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
-                              placeholder="5"
-                              min="1"
-                            />
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => removeOption(index)}
-                          className="mt-6 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                          title="Remove option"
-                        >
-                          🗑️
-                        </button>
-                      </div>
+                    <div key={index} className="flex gap-2 items-start">
+                      <Input
+                        wrapperClassName="flex-1"
+                        placeholder="Value (e.g. dr_smith)"
+                        value={option.value}
+                        onChange={(e) => updateOption(index, 'value', e.target.value)}
+                        required
+                      />
+                      <Input
+                        wrapperClassName="flex-1"
+                        placeholder="Label (e.g. Dr. Smith)"
+                        value={option.label}
+                        onChange={(e) => updateOption(index, 'label', e.target.value)}
+                        required
+                      />
+                      <Input
+                        wrapperClassName="w-24"
+                        placeholder="Cap."
+                        type="number"
+                        value={option.capacity || ''}
+                        onChange={(e) => updateOption(index, 'capacity', e.target.value)}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-500 mt-1"
+                        onClick={() => removeOption(index)}
+                      >
+                        ✕
+                      </Button>
                     </div>
                   ))}
+                  {options.length === 0 && <p className="text-sm text-gray-500 text-center py-2">No options added</p>}
                 </div>
-              )}
-              
-              <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <p className="text-xs text-blue-900">
-                  <strong>💡 Tips:</strong> <br/>
-                  • <strong>Value</strong>: Internal identifier (e.g., &quot;dr_smith&quot;)<br/>
-                  • <strong>Label</strong>: What users see (e.g., &quot;Dr. John Smith&quot;)<br/>
-                  • <strong>Capacity</strong>: Maximum bookings per slot (optional, auto-filled when loading from resources)<br/>
-                  • If you load from resources, the booking form uses these options to show time slots
-                </p>
               </div>
-            </div>
-          )}
+            )}
 
-          <div className="flex justify-end gap-3 pt-6 border-t">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="px-6 py-3 text-gray-700 bg-gray-100 rounded-xl font-semibold hover:bg-gray-200 transition-all"
-            >
-              ❌ Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-bold hover:shadow-xl transition-all transform hover:-translate-y-0.5"
-            >
-              💾 Save Field
-            </button>
-          </div>
-        </form>
-      </div>
+            <div className="flex justify-end gap-3 pt-4 border-t">
+              <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
+              <Button type="submit">Save Field</Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }
 
-// Resource Form Modal Component
 function ResourceFormModal({
   resource,
   resourceTypes,
@@ -1418,88 +1221,58 @@ function ResourceFormModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-lg w-full">
-        <h3 className="text-xl font-bold mb-4">{resource.id ? 'Edit' : 'Add'} Resource</h3>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Resource Type</label>
-            <select
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <Card className="w-full max-w-lg">
+        <CardHeader>
+          <CardTitle>{resource.id ? 'Edit Resource' : 'Add Resource'}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Select
+              label="Resource Type"
               value={formData.resource_type}
               onChange={(e) => setFormData({ ...formData, resource_type: e.target.value })}
-              className="w-full px-3 py-2 border rounded"
-            >
-              {resourceTypes.map(type => (
-                <option key={type.value} value={type.value}>{type.label}</option>
-              ))}
-            </select>
-          </div>
+              options={resourceTypes}
+            />
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Resource Name</label>
-            <input
-              type="text"
+            <Input
+              label="Resource Name"
               value={formData.resource_name}
               onChange={(e) => setFormData({ ...formData, resource_name: e.target.value })}
-              className="w-full px-3 py-2 border rounded"
               placeholder="e.g., Dr. John Smith"
               required
             />
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Resource Code (optional)</label>
-            <input
-              type="text"
+            <Input
+              label="Resource Code (optional)"
               value={formData.resource_code || ''}
               onChange={(e) => setFormData({ ...formData, resource_code: e.target.value })}
-              className="w-full px-3 py-2 border rounded"
               placeholder="e.g., DOC001"
             />
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Description</label>
-            <textarea
+            <Textarea
+              label="Description"
               value={formData.description || ''}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-3 py-2 border rounded"
               rows={3}
             />
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Capacity per Time Slot</label>
-            <input
+            <Input
+              label="Capacity per Time Slot"
               type="number"
-              min="1"
+              min={1}
               value={formData.capacity_per_slot}
               onChange={(e) => setFormData({ ...formData, capacity_per_slot: parseInt(e.target.value) })}
-              className="w-full px-3 py-2 border rounded"
+              description="How many appointments can this resource handle simultaneously?"
             />
-            <p className="text-xs text-gray-500 mt-1">
-              How many appointments can this resource handle simultaneously?
-            </p>
-          </div>
 
-          <div className="flex justify-end gap-2 pt-4">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="px-4 py-2 text-gray-700 border rounded hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              Save Resource
-            </button>
-          </div>
-        </form>
-      </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
+              <Button type="submit">Save Resource</Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }
