@@ -93,8 +93,8 @@ export default function UsagePage({ params }: { params: Promise<{ botId: string 
           >
             ← Back to Configuration
           </Link>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">Analytics & Playground</h1>
-          <p className="text-gray-500">Monitor performance and test your bot&apos;s responses</p>
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900">Analytics</h1>
+          <p className="text-gray-500">Monitor performance and usage statistics</p>
         </div>
         <div className="flex items-center gap-3">
             <Select
@@ -133,50 +133,6 @@ export default function UsagePage({ params }: { params: Promise<{ botId: string 
             </Button>
         </div>
       </div>
-
-      {/* Playground Section */}
-      <Card className="border-blue-100 shadow-sm overflow-hidden">
-        <CardHeader className="bg-blue-50/50 border-b border-blue-100">
-            <CardTitle className="flex items-center gap-2 text-blue-900">
-                <span>💬</span> Test Playground
-            </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6 space-y-4">
-          <div className="flex flex-col md:flex-row gap-3">
-            <div className="flex-1">
-                <Input 
-                    value={question} 
-                    onChange={e=>setQuestion(e.target.value)} 
-                    placeholder="Type a message to test your bot..." 
-                    onKeyDown={e => e.key === 'Enter' && ask()}
-                />
-            </div>
-            <Button onClick={ask} disabled={asking || !question.trim()} className="w-full md:w-auto">
-                {asking ? 'Sending...' : 'Send Message'}
-            </Button>
-          </div>
-          
-          {!!answer && (
-            <div className="mt-4 bg-gray-50 rounded-xl p-4 border border-gray-100 animate-in fade-in slide-in-from-top-2">
-              <div className="flex justify-between items-start mb-2">
-                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Bot Response</span>
-                {similarity !== null && (
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        similarity > 0.8 ? 'bg-green-100 text-green-700' : 
-                        similarity > 0.5 ? 'bg-amber-100 text-amber-700' : 
-                        'bg-red-100 text-red-700'
-                    }`}>
-                        Confidence: {Math.round((similarity||0)*100)}%
-                    </span>
-                )}
-              </div>
-              <div className="prose prose-sm max-w-none text-gray-800 whitespace-pre-wrap">
-                {answer}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {loading ? (
         <div className="py-20 text-center">

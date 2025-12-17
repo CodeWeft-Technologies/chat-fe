@@ -498,11 +498,7 @@ export default function BotCalendarPage({ params }: { params: Promise<{ botId: s
         </div>
 
         <div className="space-y-6">
-            <Card title="Test Booking" subtitle="Verify availability and create appointments">
-                <div className="p-4">
-                    <TestBooking botId={botId} org={org} onDone={load} />
-                </div>
-            </Card>
+
 
             <Card title="Upcoming" subtitle="Next 7 days">
                 <div className="p-0">
@@ -606,69 +602,4 @@ export default function BotCalendarPage({ params }: { params: Promise<{ botId: s
   );
 }
 
-function TestBooking({ botId, org, onDone }: { botId: string; org: string; onDone: () => void }) {
-  const [start, setStart] = useState<string>(new Date().toISOString().slice(0,16));
-  const [duration, setDuration] = useState<number>(30);
-  const [summary, setSummary] = useState<string>("Test appointment");
-  const [loading, setLoading] = useState(false);
 
-  async function check() {
-    setLoading(true);
-    try {
-        const headers: Record<string,string> = {};
-        if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
-        const s = new Date(start);
-        const e = new Date(s.getTime() + duration*60000);
-        const r = await fetch(`${B()}/api/bots/${encodeURIComponent(botId)}/booking/availability?org_id=${encodeURIComponent(org)}&time_min_iso=${encodeURIComponent(s.toISOString())}&time_max_iso=${encodeURIComponent(e.toISOString())}`, { headers });
-        const t = await r.text();
-        if (!r.ok) { alert(t); return; }
-        const j = JSON.parse(t);
-        alert((j.available?.length || 0) > 0 ? "Available" : "Not available");
-    } finally {
-        setLoading(false);
-    }
-  }
-
-  async function book() {
-    setLoading(true);
-    try {
-        const headers: Record<string,string> = { "Content-Type": "application/json" };
-        if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
-        const s = new Date(start);
-        const e = new Date(s.getTime() + duration*60000);
-        const r = await fetch(`${B()}/api/bots/${encodeURIComponent(botId)}/booking/book`, { method: "POST", headers, body: JSON.stringify({ org_id: org, summary, start_iso: s.toISOString(), end_iso: e.toISOString() }) });
-        const t = await r.text();
-        if (!r.ok) { alert(t); return; }
-        const j = JSON.parse(t);
-        alert(`Booked! #${j.appointment_id}`);
-        onDone();
-    } finally {
-        setLoading(false);
-    }
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-3">
-        <div className="space-y-1">
-            <label className="text-xs font-medium text-gray-500">Start Time</label>
-            <Input type="datetime-local" value={start} onChange={e=>setStart(e.target.value)} />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-500">Duration (min)</label>
-                <Input type="number" value={duration} onChange={e=>setDuration(Number(e.target.value||30))} />
-            </div>
-            <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-500">Title</label>
-                <Input value={summary} onChange={e=>setSummary(e.target.value)} placeholder="Meeting title" />
-            </div>
-        </div>
-      </div>
-      <div className="flex items-center gap-2 pt-2">
-        <Button variant="outline" size="sm" onClick={check} disabled={loading} className="w-full">Check</Button>
-        <Button size="sm" onClick={book} disabled={loading} className="w-full">Book</Button>
-      </div>
-    </div>
-  );
-}
