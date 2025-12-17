@@ -8,7 +8,7 @@ export default function AuthGate() {
   useEffect(() => {
     try {
       const t = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-      const open = pathname === "/login" || pathname === "/register" || pathname?.startsWith("/embed") || pathname === "/";
+      const open = pathname === "/login" || pathname === "/register" || pathname?.startsWith("/embed");
       if (!t && !open) {
         router.push("/login");
       }
