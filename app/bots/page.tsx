@@ -309,10 +309,16 @@ export default function BotsPage() {
                   <span>🚀</span> Embed
                 </Link>
                 <Link 
-                  href={`/usage/${b.bot_id}`} 
-                  className="col-span-2 flex items-center justify-center gap-1.5 px-3 py-1.5 text-[10px] font-medium text-gray-500 hover:text-gray-900 transition-colors"
+                  href={`/bots/${b.bot_id}/leads`} 
+                  className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm"
                 >
-                  View Usage & Analytics →
+                  <span>📋</span> Leads
+                </Link>
+                <Link 
+                  href={`/usage/${b.bot_id}`} 
+                  className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm"
+                >
+                  <span>📊</span> Analytics
                 </Link>
               </div>
             </div>

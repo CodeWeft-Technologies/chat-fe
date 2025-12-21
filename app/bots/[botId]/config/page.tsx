@@ -26,6 +26,10 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
   const [behavior, setBehavior] = useState("");
   const [system, setSystem] = useState("");
   const [welcome, setWelcome] = useState("");
+  const [services, setServices] = useState<string[]>([]);
+  const [newService, setNewService] = useState("");
+  const [formConfig, setFormConfig] = useState<{ email_domains?: string[]; phone_restriction?: string; phone_country_code?: string }>({});
+  const [emailDomainsInput, setEmailDomainsInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [pubKey, setPubKey] = useState<string | null>(null);
@@ -39,6 +43,22 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
   const [maxFuture, setMaxFuture] = useState<number>(60);
   const [windowsVal, setWindowsVal] = useState<Win[]>([]);
   const [helper, setHelper] = useState<string>("");
+
+  const addService = useCallback(() => {
+    if (!newService.trim()) return;
+    if (services.includes(newService.trim())) return;
+    setServices([...services, newService.trim()]);
+    setNewService("");
+  }, [services, newService]);
+
+  const removeService = useCallback((index: number) => {
+    setServices(services.filter((_, i) => i !== index));
+  }, [services]);
+
+  const handleWindowsChange = useCallback((val: Win[]) => {
+    setWindowsVal(val);
+  }, []);
+
   const load = useCallback(async () => {
     if (!org) return;
     setLoading(true);
@@ -52,6 +72,14 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
     setBehavior(d.behavior || "");
     setSystem(d.system_prompt || "");
     setWelcome(d.welcome_message || "");
+    setServices(d.services || []);
+    const fc = d.form_config || {};
+    setFormConfig(fc);
+    if (fc.email_domains && Array.isArray(fc.email_domains)) {
+        setEmailDomainsInput(fc.email_domains.join(', '));
+    } else {
+        setEmailDomainsInput("");
+    }
     setLoading(false);
     const rk = await fetch(`${B()}/api/bots/${encodeURIComponent(botId)}/key?org_id=${encodeURIComponent(org)}`, { headers });
     const kt = await rk.text();
@@ -89,15 +117,38 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
       const allowed = ["support","sales","appointment","qna"];
       const vb = (behavior || "").trim().toLowerCase();
       if (!allowed.includes(vb)) { throw new Error(`Bot type must be one of ${allowed.join(", ")}`); }
+
+      const emailDomains = emailDomainsInput
+        .split(',')
+        .map(d => d.trim())
+        .filter(d => d.length > 0);
+      
+      const finalFormConfig = {
+        ...formConfig,
+        email_domains: emailDomains.length > 0 ? emailDomains : undefined,
+      };
+
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
-      const r = await fetch(`${B()}/api/bots/${encodeURIComponent(botId)}/config`, { method: "POST", headers, body: JSON.stringify({ org_id: org, behavior: vb, system_prompt: system, welcome_message: welcome }) });
+      const r = await fetch(`${B()}/api/bots/${encodeURIComponent(botId)}/config`, { method: "POST", headers, body: JSON.stringify({ org_id: org, behavior: vb, system_prompt: system, welcome_message: welcome, services: services, form_config: finalFormConfig }) });
       const t = await r.text();
       if (!r.ok) { try { const j = JSON.parse(t); throw new Error(j.detail || t); } catch { throw new Error(t); } }
       const d = JSON.parse(t);
       setBehavior(d.behavior || vb);
       setSystem(d.system_prompt || system);
       setWelcome(d.welcome_message || welcome);
+      setServices(d.services || services);
+      
+      // Update local form config state if returned
+      if (d.form_config) {
+          // If the backend returns it as string (legacy), parse it, but here it should be dict
+          const fc = typeof d.form_config === 'string' ? JSON.parse(d.form_config) : d.form_config;
+          setFormConfig(fc);
+          if (fc.email_domains && Array.isArray(fc.email_domains)) {
+              setEmailDomainsInput(fc.email_domains.join(', '));
+          }
+      }
+
       setSaved(true);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -105,7 +156,7 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
     } finally {
       setLoading(false);
     }
-  }, [org, behavior, botId, system, welcome]);
+  }, [org, behavior, botId, system, welcome, services, emailDomainsInput, formConfig]);
 
   const clearData = useCallback(async () => {
     if (!org) { alert("Missing org"); return; }
@@ -260,7 +311,83 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                 </div>
             </Card>
 
+            {/* Services Configuration */}
+            {(behavior || '').toLowerCase() === 'sales' && (
+            <Card title="Enquiry Form Services" subtitle="Services available for selection in lead forms" actions={
+                <div className="flex items-center gap-3">
+                    {saved && <span className="text-xs font-medium text-green-600 animate-in fade-in">Saved!</span>}
+                    <Button onClick={save} disabled={loading}>{loading ? 'Saving...' : 'Save Services'}</Button>
+                </div>
+            }>
+                <div className="space-y-4">
+                    <div className="flex gap-2">
+                        <Input 
+                            value={newService} 
+                            onChange={e=>setNewService(e.target.value)} 
+                            placeholder="Add a new service..." 
+                            onKeyDown={e=>{if(e.key==='Enter'){addService()}}}
+                        />
+                        <Button onClick={addService} variant="secondary">Add</Button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {services.map((s, i) => (
+                            <div key={i} className="flex items-center gap-2 bg-gray-100 px-3 py-1 rounded-full text-sm">
+                                <span>{s}</span>
+                                <button onClick={()=>removeService(i)} className="text-gray-500 hover:text-red-500 font-bold">&times;</button>
+                            </div>
+                        ))}
+                        {services.length === 0 && <p className="text-sm text-gray-400 italic">No services added yet.</p>}
+                    </div>
+                    
+                    <div className="pt-4 border-t border-gray-100 space-y-4">
+                        <h4 className="text-sm font-medium text-gray-900">Input Restrictions</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <Input
+                                    label="Allowed Email Domains"
+                                    value={emailDomainsInput}
+                                    onChange={e => setEmailDomainsInput(e.target.value)}
+                                    placeholder="e.g. gmail.com, company.com"
+                                />
+                                <p className="text-[10px] text-gray-400">Comma-separated list. Leave empty to allow all.</p>
+                            </div>
+                            <Select
+                                label="Phone Number Restriction"
+                                value={formConfig.phone_restriction || ""}
+                                onChange={e => setFormConfig({...formConfig, phone_restriction: e.target.value})}
+                                options={[
+                                    { value: "", label: "No Restriction" },
+                                    { value: "digits_only", label: "Digits Only" },
+                                    { value: "10_digits", label: "Exactly 10 Digits" },
+                                    { value: "10_plus_digits", label: "10 or more Digits" }
+                                ]}
+                            />
+                            <Select
+                                label="Country Code"
+                                value={formConfig.phone_country_code || ""}
+                                onChange={e => setFormConfig({...formConfig, phone_country_code: e.target.value})}
+                                options={[
+                                    { value: "", label: "No Country Code" },
+                                    { value: "+1", label: "US/Canada (+1)" },
+                                    { value: "+44", label: "UK (+44)" },
+                                    { value: "+91", label: "India (+91)" },
+                                    { value: "+61", label: "Australia (+61)" },
+                                    { value: "+49", label: "Germany (+49)" },
+                                    { value: "+33", label: "France (+33)" },
+                                    { value: "+81", label: "Japan (+81)" },
+                                    { value: "+86", label: "China (+86)" },
+                                    { value: "+55", label: "Brazil (+55)" },
+                                    { value: "+971", label: "UAE (+971)" }
+                                ]}
+                            />
+                        </div>
+                    </div>
+                </div>
+            </Card>
+            )}
+
             {/* Booking Settings */}
+            {(behavior || '').toLowerCase() === 'appointment' && (
             <Card title="Booking Configuration" subtitle="Availability and constraints" actions={<Button onClick={saveBooking} variant="outline">Update Settings</Button>}>
                 <div className="space-y-6">
                     {helper && <div className="p-2 bg-green-50 text-green-700 text-xs rounded border border-green-100">{helper}</div>}
@@ -344,10 +471,11 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                                 {windowsVal.length > 0 ? "Active" : "Inactive"}
                             </span>
                         </div>
-                        <Builder value={windowsVal} onChange={useCallback((val: Win[])=>setWindowsVal(val), [])} />
+                        <Builder value={windowsVal} onChange={handleWindowsChange} />
                     </div>
                 </div>
             </Card>
+            )}
 
             {/* Danger Zone */}
             <Card title="Danger Zone" className="border-red-100 bg-red-50/20" padding="md">
@@ -384,6 +512,8 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                         <span className="text-2xl group-hover:scale-110 transition-transform">🔌</span>
                         <span className="text-xs font-medium">Embed</span>
                     </Link>
+                    {(behavior || '').toLowerCase() === 'appointment' && (
+                    <>
                     <Link href={`/bots/${botId}/calendar`} className="flex flex-col items-center justify-center gap-2 p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-blue-200 hover:text-blue-700 transition-all group">
                         <span className="text-2xl group-hover:scale-110 transition-transform">📅</span>
                         <span className="text-xs font-medium">Calendar</span>
@@ -392,12 +522,16 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                         <span className="text-2xl group-hover:scale-110 transition-transform">📝</span>
                         <span className="text-xs font-medium">Forms</span>
                     </Link>
+                    </>
+                    )}
                 </div>
             </Card>
 
             {/* Integrations */}
             <Card title="Integrations" subtitle="Connect external services">
                 <div className="space-y-4">
+                    {(behavior || '').toLowerCase() === 'appointment' && (
+                    <>
                     <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
                         <div className="flex items-start justify-between mb-2">
                             <div className="flex items-center gap-2">
@@ -449,6 +583,11 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                             Open Form Builder
                         </Link>
                     </div>
+                    </>
+                    )}
+                    {(behavior || '').toLowerCase() !== 'appointment' && (
+                        <p className="text-sm text-gray-400 italic text-center py-4">No integrations available for this bot type.</p>
+                    )}
                 </div>
             </Card>
 
