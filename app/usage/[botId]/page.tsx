@@ -3,7 +3,6 @@ import { useEffect, useState, use as usePromise } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
 import { Select } from "../../components/ui/select";
 
 function B() {
@@ -24,10 +23,6 @@ export default function UsagePage({ params }: { params: Promise<{ botId: string 
   const [daily, setDaily] = useState<DailyEntry[]>([]);
   const [days, setDays] = useState<number>(30);
   const [botKey, setBotKey] = useState<string | null>(null);
-  const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState<string>("");
-  const [similarity, setSimilarity] = useState<number | null>(null);
-  const [asking, setAsking] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -60,27 +55,6 @@ export default function UsagePage({ params }: { params: Promise<{ botId: string 
       }
     })();
   }, [org, botId, days]);
-
-  async function ask() {
-    if (!org) { alert("Missing org"); return; }
-    const q = question.trim();
-    if (!q) return;
-    setAsking(true); setAnswer(""); setSimilarity(null);
-    try {
-      const headers: Record<string,string> = { 'Content-Type':'application/json' };
-      if (typeof window !== 'undefined') { const t = localStorage.getItem('token'); if (t) headers['Authorization'] = `Bearer ${t}`; }
-      if (botKey) headers['X-Bot-Key'] = botKey;
-      const r = await fetch(`${B()}/api/chat/${encodeURIComponent(botId)}`, { method:'POST', headers, body: JSON.stringify({ message: q, org_id: org }) });
-      const t = await r.text();
-      if (!r.ok) { try { const j = JSON.parse(t); throw new Error(j.detail || t); } catch { throw new Error(t); } }
-      const j = JSON.parse(t);
-      setAnswer(j.answer || "");
-      setSimilarity(typeof j.similarity === 'number' ? j.similarity : null);
-    } catch(e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setAnswer(`Error: ${msg}`);
-    } finally { setAsking(false); }
-  }
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-12">

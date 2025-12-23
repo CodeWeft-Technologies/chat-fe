@@ -114,6 +114,7 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
             "monday": "Monday", "tuesday": "Tuesday", "wednesday": "Wednesday", "thursday": "Thursday", "friday": "Friday", "saturday": "Saturday", "sunday": "Sunday"
         };
         
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         wins = wins.map((w: any) => {
             if (!w || typeof w !== 'object') return null;
             let d = String(w.day || "").trim().toLowerCase();
@@ -125,6 +126,7 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                 d = d.charAt(0).toUpperCase() + d.slice(1).toLowerCase();
             }
             return { ...w, day: d };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         }).filter((w: any) => w && w.day);
 
         setWindowsVal(wins as Win[]);
