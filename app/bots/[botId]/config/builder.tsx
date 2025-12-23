@@ -6,23 +6,23 @@ export default function Builder({ value, onChange }: { value: Win[]; onChange: (
   
   const handleDayChange = (day: string, checked: boolean) => {
     if (checked) {
-      onChange([...value, { day, start: "09:00", end: "17:00" }]);
+      // Remove any existing entry for this day (case-insensitive) to avoid duplicates
+      const others = value.filter(v => (v.day || "").trim().toLowerCase() !== day.toLowerCase());
+      onChange([...others, { day, start: "09:00", end: "17:00" }]);
     } else {
-      onChange(value.filter(v => v.day !== day));
+      onChange(value.filter(v => (v.day || "").trim().toLowerCase() !== day.toLowerCase()));
     }
   };
 
   const handleChange = (day: string, field: 'start' | 'end', val: string) => {
-    onChange(value.map(v => v.day === day ? { ...v, [field]: val } : v));
+    onChange(value.map(v => (v.day || "").trim().toLowerCase() === day.toLowerCase() ? { ...v, [field]: val } : v));
   };
 
   const setWeekdays = () => {
     const newDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].map(d => ({ day: d, start: "09:00", end: "17:00" }));
-    // Keep existing weekends if any? No, usually replace.
-    // But let's merge: overwrite weekdays, keep weekends? Or just replace all?
-    // "Set Weekdays 9-5" usually implies a reset of weekdays.
-    const weekends = value.filter(v => ["Saturday", "Sunday"].includes(v.day));
-    onChange([...weekends, ...newDays]);
+    // Filter out any existing weekdays from the value to avoid duplicates if we are "resetting" weekdays
+    const nonWeekdays = value.filter(v => !["monday", "tuesday", "wednesday", "thursday", "friday"].includes((v.day || "").trim().toLowerCase()));
+    onChange([...nonWeekdays, ...newDays]);
   };
 
   const clearAll = () => onChange([]);
@@ -39,7 +39,8 @@ export default function Builder({ value, onChange }: { value: Win[]; onChange: (
       </div>
       <div className="space-y-2 border border-gray-100 rounded-lg p-3 bg-gray-50/50">
         {days.map(day => {
-          const win = value.find(v => v.day === day);
+          // Case-insensitive match to be safe, also handle whitespace
+          const win = value.find(v => (v.day || "").trim().toLowerCase() === day.toLowerCase());
           const isActive = !!win;
           return (
             <div key={day} className={`flex items-center gap-4 text-sm p-2 rounded transition-all ${isActive ? 'bg-white shadow-sm border border-gray-200' : 'opacity-60 hover:opacity-100'}`}>

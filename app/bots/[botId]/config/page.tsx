@@ -90,6 +90,7 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
       if (rcal.ok) { const j = JSON.parse(tcal); setCalendarId(j.calendar_id || null); } else { setCalendarId(null); }
     } catch { setCalendarId(null); }
     try {
+      if (!org) { console.warn("No org_id found, skipping booking settings load"); return; }
       const rbs = await fetch(`${B()}/api/bots/${encodeURIComponent(botId)}/booking/settings?org_id=${encodeURIComponent(org)}`, { headers });
       const tbs = await rbs.text();
       if (rbs.ok) {
@@ -99,9 +100,40 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
         setCap(j.capacity_per_slot||1);
         setMinNotice(j.min_notice_minutes||60);
         setMaxFuture(j.max_future_days||60);
-        setWindowsVal((j.available_windows||[]) as Win[]);
+        
+        // Handle potentially stringified JSON or null
+        let wins = j.available_windows || [];
+        if (typeof wins === 'string') {
+            try { wins = JSON.parse(wins); } catch {}
+        }
+        if (!Array.isArray(wins)) wins = [];
+        
+        // Normalize windows data to ensure clean matching
+        const dayMap: Record<string, string> = {
+            "mon": "Monday", "tue": "Tuesday", "wed": "Wednesday", "thu": "Thursday", "fri": "Friday", "sat": "Saturday", "sun": "Sunday",
+            "monday": "Monday", "tuesday": "Tuesday", "wednesday": "Wednesday", "thursday": "Thursday", "friday": "Friday", "saturday": "Saturday", "sunday": "Sunday"
+        };
+        
+        wins = wins.map((w: any) => {
+            if (!w || typeof w !== 'object') return null;
+            let d = String(w.day || "").trim().toLowerCase();
+            // Map abbreviations to full names
+            if (dayMap[d]) {
+                d = dayMap[d];
+            } else if (d && d.length > 0) {
+                 // Fallback: Ensure proper capitalization
+                d = d.charAt(0).toUpperCase() + d.slice(1).toLowerCase();
+            }
+            return { ...w, day: d };
+        }).filter((w: any) => w && w.day);
+
+        setWindowsVal(wins as Win[]);
+      } else {
+        console.error("Failed to load booking settings:", tbs);
       }
-    } catch {}
+    } catch (e) {
+        console.error("Load error:", e);
+    }
     try {
       const userTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
       setTz(prev => { if (!prev && userTZ) return userTZ; return prev; });
