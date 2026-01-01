@@ -241,7 +241,7 @@ export default function FormBuilderPage() {
       body: JSON.stringify(body)
     });
     if (r.ok) {
-      const rr = await fetch(`${API_BASE}/resources/${selectedResource}/schedules`);
+      const rr = await fetch(`${API_BASE()}/resources/${selectedResource}/schedules`);
       if (rr.ok) {
         const d = await rr.json();
         setResourceSchedules(d.schedules || []);
@@ -252,7 +252,7 @@ export default function FormBuilderPage() {
   const removeSchedule = async (scheduleId: string) => {
     const r = await fetch(`${API_BASE()}/schedules/${scheduleId}`, { method: 'DELETE' });
     if (r.ok && selectedResource) {
-      const rr = await fetch(`${API_BASE}/resources/${selectedResource}/schedules`);
+      const rr = await fetch(`${API_BASE()}/resources/${selectedResource}/schedules`);
       if (rr.ok) {
         const d = await rr.json();
         setResourceSchedules(d.schedules || []);
