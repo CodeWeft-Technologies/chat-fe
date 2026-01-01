@@ -9,7 +9,14 @@ import { Input } from '@/app/components/ui/input';
 import { Select } from '@/app/components/ui/select';
 import { Textarea } from '@/app/components/ui/textarea';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
+function B() {
+  const env = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+  if (env) return env.replace(/\/$/, "");
+  if (typeof window !== "undefined") return window.location.origin.replace(/\/$/, "");
+  return "";
+}
+
+const API_BASE = () => `${B()}/api`;
 
 interface FormField {
   id?: string;
@@ -132,14 +139,14 @@ export default function FormBuilderPage() {
     setLoading(true);
     try {
       // Load or create form configuration
-      const configRes = await fetch(`${API_BASE}/form-configs/${botId}`);
+      const configRes = await fetch(`${API_BASE()}/form-configs/${botId}`);
       let config;
       
       if (configRes.ok) {
         config = await configRes.json();
       } else if (configRes.status === 404) {
         // Create default form config if it doesn't exist
-        const createRes = await fetch(`${API_BASE}/form-configs`, {
+        const createRes = await fetch(`${API_BASE()}/form-configs`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -169,7 +176,7 @@ export default function FormBuilderPage() {
         });
         
         // Load fields
-        const fieldsRes = await fetch(`${API_BASE}/form-configs/${config.id}/fields`);
+        const fieldsRes = await fetch(`${API_BASE()}/form-configs/${config.id}/fields`);
         if (fieldsRes.ok) {
           const fieldsData = await fieldsRes.json();
           const allFields = fieldsData.fields || [];
@@ -178,14 +185,14 @@ export default function FormBuilderPage() {
       }
       
       // Load resources
-      const resourcesRes = await fetch(`${API_BASE}/resources/${botId}`);
+      const resourcesRes = await fetch(`${API_BASE()}/resources/${botId}`);
       if (resourcesRes.ok) {
         const resourcesData = await resourcesRes.json();
         setResources(resourcesData.resources || []);
       }
       
       // Load templates
-      const templatesRes = await fetch(`${API_BASE}/form-templates`);
+      const templatesRes = await fetch(`${API_BASE()}/form-templates`);
       if (templatesRes.ok) {
         const templatesData = await templatesRes.json();
         setTemplates(templatesData.templates || []);
@@ -205,7 +212,7 @@ export default function FormBuilderPage() {
     const f = async () => {
       if (!selectedResource) return;
       try {
-        const r = await fetch(`${API_BASE}/resources/${selectedResource}/schedules`);
+        const r = await fetch(`${API_BASE()}/resources/${selectedResource}/schedules`);
         if (r.ok) {
           const d = await r.json();
           setResourceSchedules(d.schedules || []);
@@ -228,7 +235,7 @@ export default function FormBuilderPage() {
       slot_duration_minutes: payload.slot_duration_minutes,
       is_available: payload.is_available
     };
-    const r = await fetch(`${API_BASE}/resources/${selectedResource}/schedules`, {
+    const r = await fetch(`${API_BASE()}/resources/${selectedResource}/schedules`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
@@ -243,7 +250,7 @@ export default function FormBuilderPage() {
   };
 
   const removeSchedule = async (scheduleId: string) => {
-    const r = await fetch(`${API_BASE}/schedules/${scheduleId}`, { method: 'DELETE' });
+    const r = await fetch(`${API_BASE()}/schedules/${scheduleId}`, { method: 'DELETE' });
     if (r.ok && selectedResource) {
       const rr = await fetch(`${API_BASE}/resources/${selectedResource}/schedules`);
       if (rr.ok) {
@@ -263,14 +270,14 @@ export default function FormBuilderPage() {
       let response;
       if (field.id) {
         // Update existing field
-        response = await fetch(`${API_BASE}/form-fields/${field.id}`, {
+        response = await fetch(`${API_BASE()}/form-fields/${field.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(field)
         });
       } else {
         // Create new field
-        response = await fetch(`${API_BASE}/form-configs/${formConfig.id}/fields`, {
+        response = await fetch(`${API_BASE()}/form-configs/${formConfig.id}/fields`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(field)
@@ -295,7 +302,7 @@ export default function FormBuilderPage() {
     if (!confirm('Are you sure you want to delete this field?')) return;
     
     try {
-      await fetch(`${API_BASE}/form-fields/${fieldId}`, { method: 'DELETE' });
+      await fetch(`${API_BASE()}/form-fields/${fieldId}`, { method: 'DELETE' });
       loadData();
     } catch (error) {
       console.error('Error deleting field:', error);
@@ -306,7 +313,7 @@ export default function FormBuilderPage() {
   const deleteResource = async (resourceId: string) => {
     if (!confirm('Are you sure you want to delete this resource?')) return;
     try {
-      await fetch(`${API_BASE}/resources/${resourceId}`, { method: 'DELETE' });
+      await fetch(`${API_BASE()}/resources/${resourceId}`, { method: 'DELETE' });
       loadData();
     } catch (error) {
       console.error('Error deleting resource:', error);
@@ -320,14 +327,14 @@ export default function FormBuilderPage() {
       
       if (resource.id) {
         // Update existing resource
-        await fetch(`${API_BASE}/resources/${resource.id}`, {
+        await fetch(`${API_BASE()}/resources/${resource.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(resource)
         });
       } else {
         // Create new resource
-        await fetch(`${API_BASE}/resources`, {
+        await fetch(`${API_BASE()}/resources`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ...resource, org_id: orgId, bot_id: botId })
@@ -355,7 +362,7 @@ export default function FormBuilderPage() {
     }
 
     try {
-      const response = await fetch(`${API_BASE}/form-configs/${formConfig.id}`, {
+      const response = await fetch(`${API_BASE()}/form-configs/${formConfig.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formConfigData)
@@ -383,7 +390,7 @@ export default function FormBuilderPage() {
     if (!confirm('This will add fields from the template to your form. Continue?')) return;
     
     try {
-      const response = await fetch(`${API_BASE}/form-configs/${formConfig.id}/apply-template/${templateId}`, {
+      const response = await fetch(`${API_BASE()}/form-configs/${formConfig.id}/apply-template/${templateId}`, {
         method: 'POST'
       });
       
