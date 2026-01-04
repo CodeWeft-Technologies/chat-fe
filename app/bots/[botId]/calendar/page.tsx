@@ -27,6 +27,12 @@ type Appointment = {
   calendar_event_id?: string | null;
 };
 
+type Resource = {
+  id: number;
+  name: string;
+  type?: string;
+};
+
 function B() {
   const env = process.env.NEXT_PUBLIC_BACKEND_URL || "";
   if (env) return env.replace(/\/$/, "");
@@ -48,6 +54,9 @@ export default function BotCalendarPage({ params }: { params: Promise<{ botId: s
   const [busy, setBusy] = useState<boolean>(false);
   const [showGrid, setShowGrid] = useState<boolean>(true);
   const [view, setView] = useState<"month"|"week"|"day">("week");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [resources, setResources] = useState<Resource[]>([]);
   const [now, setNow] = useState<Date>(() => new Date());
   const [calendarId, setCalendarId] = useState<string|null>(null);
   const [tz, setTz] = useState<string|undefined>(undefined);
@@ -133,12 +142,26 @@ export default function BotCalendarPage({ params }: { params: Promise<{ botId: s
         if (!org) return;
         const headers: Record<string,string> = {};
         if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
+        
+        // Fetch calendar config
         const r = await fetch(`${B()}/api/bots/${encodeURIComponent(botId)}/calendar/config?org_id=${encodeURIComponent(org)}`, { headers });
         const t = await r.text();
         if (!r.ok) return;
         const j = JSON.parse(t);
         setCalendarId(j.calendar_id || null);
         setTz(j.timezone || undefined);
+        
+        // Fetch bot resources
+        try {
+          const resResponse = await fetch(`${B()}/api/bots/${encodeURIComponent(botId)}/booking/resources?org_id=${encodeURIComponent(org)}`, { headers });
+          if (resResponse.ok) {
+            const resText = await resResponse.text();
+            const resData = JSON.parse(resText);
+            setResources(resData.resources || []);
+          }
+        } catch (e) {
+          console.error('Failed to fetch resources:', e);
+        }
       } catch {}
     }
     cfg();
@@ -217,7 +240,7 @@ export default function BotCalendarPage({ params }: { params: Promise<{ botId: s
     return { dkey, top, h, title: ev.title };
   }
 
-  const blocksByDay: Record<string, Array<{ top: number; h: number; title: string; kind: "event" | "appt"; start: string; end: string; id?: number }>> = {};
+  const blocksByDay: Record<string, Array<{ top: number; h: number; title: string; kind: "event" | "appt"; start: string; end: string; id?: number; status?: string; resourceName?: string }>> = {};
   for (const d of days) blocksByDay[d.key] = [];
   for (const ev of events) {
     const s = ev.start?.dateTime || ev.start?.date || "";
@@ -232,10 +255,53 @@ export default function BotCalendarPage({ params }: { params: Promise<{ botId: s
     const b = evToBlock({ start: s, end: e, title: ev.summary || "(no title)" });
     if (blocksByDay[b.dkey]) blocksByDay[b.dkey].push({ top: b.top, h: b.h, title: b.title, kind: "event", start: s, end: e });
   }
-  for (const a of appts) {
-    if ((a.status || "").toLowerCase() === "cancelled") continue;
+  
+  // Filter appointments based on status and search query
+  const filteredAppts = appts.filter(a => {
+    // Status filter
+    if (statusFilter !== "all") {
+      const status = (a.status || "").toLowerCase();
+      if (statusFilter === "upcoming" && (status === "cancelled" || status === "completed")) return false;
+      if (statusFilter === "confirmed" && status !== "confirmed") return false;
+      if (statusFilter === "completed" && status !== "completed") return false;
+      if (statusFilter === "cancelled" && status !== "cancelled") return false;
+    }
+    
+    // Search filter - search across appointment ID, name, email, phone, and service/doctor
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      const appointmentId = a.id.toString();
+      const name = (a.name || "").toLowerCase();
+      const email = (a.email || "").toLowerCase();
+      const phone = (a.phone || "").toLowerCase();
+      const service = (a.summary || "").toLowerCase();
+      
+      const matches = 
+        appointmentId.includes(query) ||
+        name.includes(query) ||
+        email.includes(query) ||
+        phone.includes(query) ||
+        service.includes(query);
+      
+      if (!matches) return false;
+    }
+    
+    return true;
+  });
+  
+  for (const a of filteredAppts) {
     const b = evToBlock({ start: a.start_iso, end: a.end_iso, title: a.summary || `Appointment #${a.id}` });
-    if (blocksByDay[b.dkey]) blocksByDay[b.dkey].push({ top: b.top, h: b.h, title: b.title, kind: "appt", start: a.start_iso, end: a.end_iso, id: a.id });
+    if (blocksByDay[b.dkey]) blocksByDay[b.dkey].push({ 
+      top: b.top, 
+      h: b.h, 
+      title: b.title, 
+      kind: "appt", 
+      start: a.start_iso, 
+      end: a.end_iso, 
+      id: a.id,
+      status: a.status,
+      resourceName: a.summary
+    });
   }
 
   const [selected, setSelected] = useState<null | { type: "event" | "appt"; id?: number; title: string; start: string; end: string }>(null);
@@ -306,7 +372,7 @@ export default function BotCalendarPage({ params }: { params: Promise<{ botId: s
   }
 
   return (
-    <div className="space-y-6 max-w-[1600px] mx-auto pb-20 animate-in fade-in duration-500">
+    <div className="space-y-6 max-w-[1800px] mx-auto pb-20 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-6">
         <div className="flex items-center gap-3">
           <Link href={`/bots/${botId}/config`} className="p-2 -ml-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-all">
@@ -332,9 +398,120 @@ export default function BotCalendarPage({ params }: { params: Promise<{ botId: s
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-        <div className="xl:col-span-3 space-y-4">
-            <Card className="p-4 border-gray-200 shadow-sm">
+      {/* Filters Section */}
+      <Card className="p-4 border-gray-200 shadow-sm bg-gradient-to-r from-blue-50 to-indigo-50">
+        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
+          <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+            <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+            </svg>
+            <span>Filters:</span>
+          </div>
+          
+          {/* Status Filter */}
+          <div className="flex flex-wrap gap-2">
+            <button 
+              onClick={() => setStatusFilter("all")} 
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                statusFilter === "all" 
+                  ? "bg-blue-600 text-white shadow-md" 
+                  : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
+              }`}>
+              All Status
+            </button>
+            <button 
+              onClick={() => setStatusFilter("upcoming")} 
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                statusFilter === "upcoming" 
+                  ? "bg-indigo-600 text-white shadow-md" 
+                  : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
+              }`}>
+              Upcoming
+            </button>
+            <button 
+              onClick={() => setStatusFilter("confirmed")} 
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                statusFilter === "confirmed" 
+                  ? "bg-green-600 text-white shadow-md" 
+                  : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
+              }`}>
+              Confirmed
+            </button>
+            <button 
+              onClick={() => setStatusFilter("completed")} 
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                statusFilter === "completed" 
+                  ? "bg-teal-600 text-white shadow-md" 
+                  : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
+              }`}>
+              Completed
+            </button>
+            <button 
+              onClick={() => setStatusFilter("cancelled")} 
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                statusFilter === "cancelled" 
+                  ? "bg-red-600 text-white shadow-md" 
+                  : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
+              }`}>
+              Cancelled
+            </button>
+          </div>
+
+          {/* Search Filter */}
+          <div className="flex items-center gap-2 ml-auto w-full lg:w-auto">
+            <div className="relative w-full lg:w-80">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Search by ID, name, email, phone, or doctor/service..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        {/* Active Filter Summary */}
+        {(statusFilter !== "all" || searchQuery.trim()) && (
+          <div className="mt-3 pt-3 border-t border-blue-200 flex items-center gap-2 text-sm">
+            <span className="text-gray-600">Active filters:</span>
+            {statusFilter !== "all" && (
+              <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md font-medium flex items-center gap-1">
+                Status: {statusFilter}
+                <button onClick={() => setStatusFilter("all")} className="ml-1 hover:bg-blue-200 rounded-full p-0.5">✕</button>
+              </span>
+            )}
+            {searchQuery.trim() && (
+              <span className="px-2 py-1 bg-indigo-100 text-indigo-800 rounded-md font-medium flex items-center gap-1">
+                Search: "{searchQuery}"
+                <button onClick={() => setSearchQuery("")} className="ml-1 hover:bg-indigo-200 rounded-full p-0.5">✕</button>
+              </span>
+            )}
+            <button 
+              onClick={() => { setStatusFilter("all"); setSearchQuery(""); }} 
+              className="ml-auto text-red-600 hover:text-red-800 font-medium"
+            >
+              Clear all filters
+            </button>
+          </div>
+        )}
+      </Card>
+
+      {/* Calendar Section */}
+      <Card className="p-4 border-gray-200 shadow-sm">
                 <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
                     <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm" onClick={today}>Today</Button>
@@ -349,7 +526,7 @@ export default function BotCalendarPage({ params }: { params: Promise<{ botId: s
                     <div className="flex items-center gap-4">
                         <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
                             <input type="checkbox" checked={showGrid} onChange={e=>setShowGrid(e.target.checked)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" /> 
-                            Week preview
+                            Calendar view
                         </label>
                         <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
                             <input type="checkbox" checked={autoRefresh} onChange={e=>setAutoRefresh(e.target.checked)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" /> 
@@ -494,93 +671,330 @@ export default function BotCalendarPage({ params }: { params: Promise<{ botId: s
                     </div>
                 )}
             </Card>
+
+      {/* Appointments List */}
+      <div className="mt-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+          <h2 className="text-xl font-bold text-gray-900">
+            {statusFilter === "all" ? "All Appointments" : `${statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)} Appointments`}
+            <span className="ml-2 text-sm font-normal text-gray-500">({filteredAppts.length} total)</span>
+          </h2>
+          
+          {filteredAppts.length > 0 && (
+            <Button
+              onClick={() => {
+                // Export to CSV
+                const headers = ['ID', 'Doctor/Service', 'Name', 'Email', 'Phone', 'Date', 'Time', 'Status'];
+                const rows = filteredAppts.map(a => [
+                  a.id,
+                  a.summary || '',
+                  a.name || '',
+                  a.email || '',
+                  a.phone || '',
+                  new Date(a.start_iso).toLocaleDateString(),
+                  `${new Date(a.start_iso).toLocaleTimeString()} - ${new Date(a.end_iso).toLocaleTimeString()}`,
+                  a.status
+                ]);
+                
+                const csvContent = [
+                  headers.join(','),
+                  ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+                ].join('\n');
+                
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', `appointments_${new Date().toISOString().split('T')[0]}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              }}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Export to CSV
+            </Button>
+          )}
         </div>
 
-        <div className="space-y-6">
+        {filteredAppts.length === 0 ? (
+          <Card className="p-8 text-center">
+            <div className="flex flex-col items-center gap-3">
+              <svg className="w-16 h-16 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <p className="text-lg font-medium text-gray-500">No appointments found</p>
+              <p className="text-sm text-gray-400">
+                {statusFilter !== "all" || searchQuery.trim() 
+                  ? "Try adjusting your filters or search" 
+                  : "No appointments scheduled yet"}
+              </p>
+            </div>
+          </Card>
+        ) : (
+          <Card className="overflow-hidden border-gray-200 shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-16">ID</th>
+                    <th className="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Name</th>
+                    <th className="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden sm:table-cell">Email</th>
+                    <th className="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden md:table-cell">Phone</th>
+                    <th className="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Status</th>
+                    <th className="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-24">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-100">
+                  {filteredAppts.map((a) => {
+                    const statusBadge = 
+                      a.status === 'cancelled' ? 'bg-red-100 text-red-800 border-red-200' :
+                      a.status === 'completed' ? 'bg-teal-100 text-teal-800 border-teal-200' :
+                      a.status === 'confirmed' ? 'bg-green-100 text-green-800 border-green-200' :
+                      'bg-blue-100 text-blue-800 border-blue-200';
 
-
-            <Card title="Upcoming" subtitle="Next 7 days">
-                <div className="p-0">
-                    {appts.length === 0 && <div className="p-4 text-sm text-gray-500 text-center italic">No upcoming appointments</div>}
-                    <div className="max-h-[400px] overflow-y-auto divide-y divide-gray-100">
-                        {Array.isArray(appts) && appts.map((a) => (
-                            <div key={a.id} className="p-4 hover:bg-gray-50 transition-colors">
-                                <div className="flex items-start justify-between gap-2 mb-1">
-                                    <div className="font-medium text-sm text-gray-900 line-clamp-1">{a.summary || "Appointment"}</div>
-                                    <span className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${a.status==='cancelled'?'bg-red-50 text-red-700':'bg-green-50 text-green-700'}`}>{a.status}</span>
-                                </div>
-                                <div className="text-xs text-gray-500 mb-2">
-                                    {new Date(a.start_iso).toLocaleString(undefined, {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'})}
-                                </div>
-                                <div className="flex gap-2">
-                                    <Button variant="outline" size="sm" className="h-7 text-xs w-full" onClick={()=>setSelected({ type: 'appt', id: a.id, title: a.summary||'Appt', start: a.start_iso, end: a.end_iso })}>View</Button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </Card>
-        </div>
+                    return (
+                      <tr key={a.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-3 py-3 text-sm font-medium text-gray-900">#{a.id}</td>
+                        <td className="px-3 py-3 text-sm text-gray-900">
+                          <div className="font-medium truncate max-w-[200px]">{a.name || '—'}</div>
+                        </td>
+                        <td className="px-3 py-3 text-sm text-gray-600 hidden sm:table-cell">
+                          <div className="truncate max-w-[200px]">{a.email || '—'}</div>
+                        </td>
+                        <td className="px-3 py-3 text-sm text-gray-600 hidden md:table-cell">
+                          <div className="truncate">{a.phone || '—'}</div>
+                        </td>
+                        <td className="px-3 py-3 text-sm">
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider border ${statusBadge}`}>
+                            {a.status}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 text-sm">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelected({ type: 'appt', id: a.id, title: a.summary || 'Appt', start: a.start_iso, end: a.end_iso })}
+                            className="whitespace-nowrap text-xs"
+                          >
+                            View
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
       </div>
 
       {/* Modal */}
       {selected && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <Card className="w-full max-w-lg shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
-            <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-              <div className="text-lg font-semibold text-gray-900">{selected.type === 'appt' ? 'Appointment Details' : 'Event Details'}</div>
-              <button onClick={()=>setSelected(null)} className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
+          <Card className="w-full max-w-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col bg-white rounded-xl">
+            {/* Header with gradient background */}
+            <div className="relative p-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+              <button 
+                onClick={()=>setSelected(null)} 
+                className="absolute top-4 right-4 p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-full transition-all"
+              >
                 <span className="sr-only">Close</span>
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
+              
+              <div className="pr-10">
+                <div className="flex items-center gap-2 mb-2">
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span className="text-sm font-medium opacity-90">
+                    {selected.type === 'appt' ? 'Appointment Details' : 'Event Details'}
+                  </span>
+                </div>
+                <h3 className="text-2xl font-bold mb-3">{selected.title}</h3>
+                <div className="flex items-center gap-3 text-white/90">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span className="text-sm">{new Date(selected.start).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                  </div>
+                  <span className="text-white/60">•</span>
+                  <div className="flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="text-sm">
+                      {new Date(selected.start).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })} - {new Date(selected.end).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="p-6 overflow-y-auto">
-                <div className="space-y-4">
-                    <div>
-                        <h3 className="text-lg font-medium text-gray-900">{selected.title}</h3>
-                        <div className="text-sm text-gray-500 flex items-center gap-2 mt-1">
-                            <span>{fmt(selected.start)}</span>
-                            <span>→</span>
-                            <span>{fmt(selected.end)}</span>
-                        </div>
+
+            {/* Body */}
+            <div className="p-6 overflow-y-auto flex-1 bg-gray-50">
+                {selectedAppt && (
+                  <div className="space-y-6">
+                    {/* Status Badge */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700">Appointment Status</span>
+                      <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold uppercase tracking-wider ${
+                        selectedAppt.status === 'cancelled' ? 'bg-red-100 text-red-800 border-2 border-red-200' :
+                        selectedAppt.status === 'completed' ? 'bg-teal-100 text-teal-800 border-2 border-teal-200' :
+                        selectedAppt.status === 'confirmed' ? 'bg-green-100 text-green-800 border-2 border-green-200' :
+                        'bg-blue-100 text-blue-800 border-2 border-blue-200'
+                      }`}>
+                        {selectedAppt.status}
+                      </span>
                     </div>
 
-                    {selectedAppt && (
-                        <div className="bg-gray-50 rounded-lg p-4 space-y-3 border border-gray-100">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div><div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Name</div><div className="text-sm">{selectedAppt.name || '—'}</div></div>
-                                <div><div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Status</div><div className="text-sm capitalize">{selectedAppt.status || '—'}</div></div>
-                                <div><div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Email</div><div className="text-sm break-all">{selectedAppt.email || '—'}</div></div>
-                                <div><div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</div><div className="text-sm">{selectedAppt.phone || '—'}</div></div>
-                            </div>
-                            
-                            {selectedAppt.notes && (
-                                <div>
-                                    <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Notes</div>
-                                    <div className="text-sm bg-white p-2 rounded border border-gray-200">{selectedAppt.notes}</div>
-                                </div>
-                            )}
-
-                            {selectedAppt.form_data && Object.keys(selectedAppt.form_data).length > 0 && (
-                                <div className="pt-2 border-t border-gray-200 mt-2">
-                                    <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Form Data</div>
-                                    <div className="space-y-2">
-                                        {Object.entries(selectedAppt.form_data).map(([key, value]) => (
-                                        <div key={key} className="text-sm grid grid-cols-3 gap-2">
-                                            <span className="font-medium text-gray-700 col-span-1">{key.replace(/_/g, ' ')}:</span>
-                                            <span className="text-gray-600 col-span-2">{Array.isArray(value) ? value.join(', ') : String(value)}</span>
-                                        </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+                    {/* Doctor/Service Information Card */}
+                    {selectedAppt.summary && (
+                      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                        <div className="bg-gradient-to-r from-orange-50 to-amber-50 px-4 py-3 border-b border-orange-200">
+                          <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                            <svg className="w-5 h-5 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                            </svg>
+                            Doctor/Service
+                          </h4>
                         </div>
+                        <div className="p-4">
+                          <div className="text-sm font-semibold text-gray-900">{selectedAppt.summary}</div>
+                        </div>
+                      </div>
                     )}
-                </div>
+
+                    {/* Customer Information Card */}
+                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                      <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-4 py-3 border-b border-gray-200">
+                        <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                          <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                          Customer Information
+                        </h4>
+                      </div>
+                      <div className="p-4 space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="flex items-start gap-3">
+                            <div className="p-2 bg-blue-50 rounded-lg">
+                              <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                              </svg>
+                            </div>
+                            <div className="flex-1">
+                              <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Full Name</div>
+                              <div className="text-sm font-semibold text-gray-900">{selectedAppt.name || '—'}</div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-start gap-3">
+                            <div className="p-2 bg-green-50 rounded-lg">
+                              <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                              </svg>
+                            </div>
+                            <div className="flex-1">
+                              <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Phone</div>
+                              <div className="text-sm font-semibold text-gray-900">{selectedAppt.phone || '—'}</div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-start gap-3">
+                          <div className="p-2 bg-purple-50 rounded-lg">
+                            <svg className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                          <div className="flex-1">
+                            <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Email Address</div>
+                            <div className="text-sm font-semibold text-gray-900 break-all">{selectedAppt.email || '—'}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Notes */}
+                    {selectedAppt.notes && (
+                      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                        <div className="bg-gradient-to-r from-amber-50 to-yellow-50 px-4 py-3 border-b border-amber-200">
+                          <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                            <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                            </svg>
+                            Notes
+                          </h4>
+                        </div>
+                        <div className="p-4">
+                          <p className="text-sm text-gray-700 leading-relaxed">{selectedAppt.notes}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Form Data */}
+                    {selectedAppt.form_data && Object.keys(selectedAppt.form_data).length > 0 && (
+                      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                        <div className="bg-gradient-to-r from-indigo-50 to-blue-50 px-4 py-3 border-b border-indigo-200">
+                          <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                            <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            Additional Information
+                          </h4>
+                        </div>
+                        <div className="p-4">
+                          <div className="space-y-3">
+                            {Object.entries(selectedAppt.form_data)
+                              .filter(([key]) => {
+                                // Exclude fields that are displayed elsewhere
+                                const excludeFields = ['doctor_id', 'doctor_name', 'resource_id', 'name', 'email', 'phone', 'notes'];
+                                return !excludeFields.some(exclude => key.toLowerCase().includes(exclude));
+                              })
+                              .map(([key, value]) => {
+                                // Skip empty values
+                                if (!value || (Array.isArray(value) && value.length === 0) || String(value).trim() === '') {
+                                  return null;
+                                }
+                                
+                                return (
+                                  <div key={key} className="flex items-start gap-3 pb-3 border-b border-gray-100 last:border-0 last:pb-0">
+                                    <div className="flex-1">
+                                      <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">
+                                        {key.replace(/_/g, ' ')}
+                                      </div>
+                                      <div className="text-sm font-medium text-gray-900">
+                                        {Array.isArray(value) ? value.join(', ') : String(value)}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
             </div>
+
+            {/* Footer Actions */}
             {selected.type === 'appt' && typeof selected.id === 'number' && selectedAppt?.status !== 'cancelled' && (
-                <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-end">
-                  <Button variant="destructive" onClick={async()=>{
+              <div className="p-4 bg-white border-t border-gray-200 flex items-center justify-between">
+                <span className="text-sm text-gray-500">Appointment ID: <span className="font-semibold text-gray-900">#{selected.id}</span></span>
+                <Button 
+                  variant="destructive" 
+                  onClick={async()=>{
                     if(!confirm("Are you sure you want to cancel this appointment?")) return;
                     try {
                       const headers: Record<string,string> = { 'Content-Type': 'application/json' };
@@ -591,8 +1005,15 @@ export default function BotCalendarPage({ params }: { params: Promise<{ botId: s
                       setSelected(null);
                       await load();
                     } catch (e) { alert(String(e||'Failed')); }
-                  }}>Cancel Appointment</Button>
-                </div>
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Cancel Appointment
+                </Button>
+              </div>
             )}
           </Card>
         </div>
