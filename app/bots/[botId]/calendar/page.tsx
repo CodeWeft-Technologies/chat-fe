@@ -27,12 +27,6 @@ type Appointment = {
   calendar_event_id?: string | null;
 };
 
-type Resource = {
-  id: number;
-  name: string;
-  type?: string;
-};
-
 function B() {
   const env = process.env.NEXT_PUBLIC_BACKEND_URL || "";
   if (env) return env.replace(/\/$/, "");
@@ -56,7 +50,6 @@ export default function BotCalendarPage({ params }: { params: Promise<{ botId: s
   const [view, setView] = useState<"month"|"week"|"day">("week");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [resources, setResources] = useState<Resource[]>([]);
   const [now, setNow] = useState<Date>(() => new Date());
   const [calendarId, setCalendarId] = useState<string|null>(null);
   const [tz, setTz] = useState<string|undefined>(undefined);
@@ -150,18 +143,6 @@ export default function BotCalendarPage({ params }: { params: Promise<{ botId: s
         const j = JSON.parse(t);
         setCalendarId(j.calendar_id || null);
         setTz(j.timezone || undefined);
-        
-        // Fetch bot resources
-        try {
-          const resResponse = await fetch(`${B()}/api/bots/${encodeURIComponent(botId)}/booking/resources?org_id=${encodeURIComponent(org)}`, { headers });
-          if (resResponse.ok) {
-            const resText = await resResponse.text();
-            const resData = JSON.parse(resText);
-            setResources(resData.resources || []);
-          }
-        } catch (e) {
-          console.error('Failed to fetch resources:', e);
-        }
       } catch {}
     }
     cfg();
@@ -309,9 +290,6 @@ export default function BotCalendarPage({ params }: { params: Promise<{ botId: s
     ? appts.find(a => a.id === selected.id)
     : null;
 
-  function fmt(dt: string) {
-    try { return new Date(dt).toLocaleString(); } catch { return dt; }
-  }
   function isTodayKey(k: string) {
     return k === getLocalDayKey(new Date());
   }
@@ -496,7 +474,7 @@ export default function BotCalendarPage({ params }: { params: Promise<{ botId: s
             )}
             {searchQuery.trim() && (
               <span className="px-2 py-1 bg-indigo-100 text-indigo-800 rounded-md font-medium flex items-center gap-1">
-                Search: "{searchQuery}"
+                Search: &quot;{searchQuery}&quot;
                 <button onClick={() => setSearchQuery("")} className="ml-1 hover:bg-indigo-200 rounded-full p-0.5">✕</button>
               </span>
             )}
