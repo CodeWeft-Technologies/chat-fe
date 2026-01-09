@@ -5,6 +5,7 @@ import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
+import { apiCall } from "../lib/api";
 
 const TEMPLATE_PROMPTS: Record<string, { behavior: string; system: string }> = {
   support: {
@@ -24,13 +25,6 @@ const TEMPLATE_PROMPTS: Record<string, { behavior: string; system: string }> = {
     system: 'Answer strictly from the provided Q&A knowledge. If not found, say: "I don\'t have that information."'
   }
 };
-
-function B() {
-  const env = process.env.NEXT_PUBLIC_BACKEND_URL || "";
-  if (env) return env.replace(/\/$/, "");
-  if (typeof window !== "undefined") return window.location.origin.replace(/\/$/, "");
-  return "";
-}
 
 type BotItem = { bot_id: string; behavior: string; has_key: boolean; name?: string };
 
@@ -52,29 +46,10 @@ export default function BotsPage() {
   const [template, setTemplate] = useState("");
   
   const [search, setSearch] = useState("");
-  
-  async function api<T = unknown>(path: string, opts?: RequestInit): Promise<T> {
-    const headers: Record<string, string> = {};
-    if (opts?.headers) {
-      const h = new Headers(opts.headers);
-      h.forEach((v, k) => { headers[k] = v; });
-    }
-    if (typeof window !== "undefined") {
-      const t = localStorage.getItem("token");
-      if (t) headers["Authorization"] = `Bearer ${t}`;
-    }
-    const r = await fetch(B()+path, { ...opts, headers });
-    const t = await r.text();
-    if (!r.ok) {
-      try { const j = JSON.parse(t); throw new Error((j.detail && JSON.stringify(j.detail)) || t || ("http"+r.status)); }
-      catch { throw new Error(t || ("http"+r.status)); }
-    }
-    try { return JSON.parse(t) as T; } catch { return t as unknown as T; }
-  }
 
   const load = useCallback(async () => {
     if (!org) return;
-    const d = await api<{ bots: BotItem[] }>(`/api/bots?org_id=${encodeURIComponent(org)}`);
+    const d = await apiCall<{ bots: BotItem[] }>(`/api/bots?org_id=${encodeURIComponent(org)}`);
     setBots(d.bots || []);
   }, [org]);
 
@@ -86,7 +61,7 @@ export default function BotsPage() {
     if (!org) { alert("Set Org ID"); return; }
     if (!behavior) { alert("Select a behavior"); return; }
     try {
-      await api(`/api/bots`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ org_id: org, behavior, system_prompt: system || null, name: name || null, website_url: website || null, tone: tone || null }) });
+      await apiCall(`/api/bots`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ org_id: org, behavior, system_prompt: system || null, name: name || null, website_url: website || null, tone: tone || null }) });
       setName(""); setBehavior(""); setSystem(""); setWebsite(""); setTone(""); setTemplate("");
       setIsCreating(false);
       await load();

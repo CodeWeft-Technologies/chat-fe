@@ -2,13 +2,7 @@
 import Link from "next/link";
 import { Button } from "./components/ui/button";
 import { useEffect, useState, useCallback } from "react";
-
-function B() {
-  const env = process.env.NEXT_PUBLIC_BACKEND_URL || "";
-  if (env) return env.replace(/\/$/, "");
-  if (typeof window !== "undefined") return window.location.origin.replace(/\/$/, "");
-  return "";
-}
+import { apiCall } from "./lib/api";
 
 export default function Home() {
   const [org, setOrg] = useState("");
@@ -21,13 +15,8 @@ export default function Home() {
   const [bots, setBots] = useState<{ bot_id: string; behavior: string; has_key: boolean }[]>([]);
   const loadBots = useCallback(async () => {
     if (!org) return;
-    const headers: Record<string, string> = {};
-    if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
     try {
-      const r = await fetch(`${B()}/api/bots?org_id=${encodeURIComponent(org)}`, { headers });
-      const t = await r.text();
-      if (!r.ok) { setBots([]); return; }
-      const d = JSON.parse(t);
+      const d = await apiCall<{ bots: { bot_id: string; behavior: string; has_key: boolean }[] }>(`/api/bots?org_id=${encodeURIComponent(org)}`);
       setBots(d.bots || []);
     } catch {
       setBots([]);

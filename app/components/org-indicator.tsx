@@ -1,23 +1,31 @@
 "use client";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { apiCall } from "../lib/api";
 
 export default function OrgIndicator() {
   const [email, setEmail] = useState("");
   const [org, setOrg] = useState("");
   
   useEffect(() => {
-    try {
-      const t = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-      const o = typeof window !== "undefined" ? localStorage.getItem("orgId") : null;
-      
-      if (o) setOrg(o);
-      
-      if (t) {
-        fetch(`${(process.env.NEXT_PUBLIC_BACKEND_URL||"").replace(/\/$/,'')}/api/auth/me`, { headers: { Authorization: `Bearer ${t}` } })
-          .then(r=>r.json()).then(d=>{ if (d?.email) setEmail(d.email); }).catch(()=>{});
-      }
-    } catch {}
+    const loadUserInfo = async () => {
+      try {
+        const o = typeof window !== "undefined" ? localStorage.getItem("orgId") : null;
+        if (o) setOrg(o);
+        
+        const t = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+        if (t) {
+          try {
+            const data = await apiCall<{ email: string; org_id: string }>("/api/auth/me");
+            if (data?.email) setEmail(data.email);
+          } catch {
+            // Token expired or invalid, apiCall will handle redirect
+          }
+        }
+      } catch {}
+    };
+    
+    loadUserInfo();
   }, []);
 
   if (!org) {
