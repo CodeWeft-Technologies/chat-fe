@@ -10,19 +10,89 @@ import { apiCall } from "../lib/api";
 const TEMPLATE_PROMPTS: Record<string, { behavior: string; system: string }> = {
   support: {
     behavior: 'support',
-    system: 'Answer customer support questions using provided context. Be concise and helpful.'
+    system: 'You are a Support Assistant. Answer customer support questions in 1-2 short sentences using the knowledge base. Be helpful and accurate. Do not collect user information—never ask for email, name, or contact details. If users need to escalate, guide them to contact the support team directly.'
   },
   sales: {
     behavior: 'sales',
-    system: 'Assist with product questions and sales. Use provided context and be persuasive but honest.'
+    system: 'You are a Sales Assistant. Answer product questions briefly (1-2 sentences) and highlight benefits. Do NOT collect user information or ask for details. When users show sales intent (request demo, pricing inquiry, consultation request, "contact us"), the backend detects the intent and automatically triggers an inquiry form—you will see it open. Your job is to answer questions; the inquiry form handles all lead capture. Never collect emails, names, or contact details in chat.'
   },
   appointment: {
     behavior: 'appointment',
-    system: 'Help users schedule appointments. Collect required details and respect constraints from provided context.'
+    system: 'You are an Appointment Scheduler. Handle 4 types of requests:\n1. NEW BOOKING: When users want to book, the backend triggers a booking form (no form fields in chat)\n2. RESCHEDULE: When users want to reschedule, the backend triggers a reschedule form (no form fields in chat)\n3. CANCEL: When users want to cancel, ask for the appointment ID (e.g., "Cancel appointment ID 1"), then the backend triggers cancellation\n4. STATUS: When users check appointment status, ask for the appointment ID (e.g., "Status of appointment ID 1"), then provide status\n\nAlways answer timing/availability questions in 1-2 sentences. Do NOT collect details (name, email, date, time) in chat—let backend-triggered forms handle all bookings and rescheduling.'
   },
   qna: {
     behavior: 'qna',
-    system: 'Answer strictly from the provided Q&A knowledge. If not found, say: "I don\'t have that information."'
+    system: 'You are a Q&A Assistant. Answer questions in 1-2 short sentences using ONLY the knowledge base. Never invent information. Do not collect user details. If the answer is not in the knowledge base, say: "I don\'t have that information." Keep responses concise and accurate.'
+  }
+};
+
+const TEMPLATE_INSTRUCTIONS: Record<string, { title: string; description: string; features: string[]; workflow: string[] }> = {
+  support: {
+    title: '🎧 Customer Support Assistant',
+    description: 'Answer support questions from your knowledge base and help users troubleshoot issues.',
+    features: [
+      'Knowledge base powered answers',
+      'Quick, concise responses (1-2 sentences)',
+      'Automatic escalation guidance',
+      'No form collection in chat'
+    ],
+    workflow: [
+      '1. User asks a support question',
+      '2. Bot searches knowledge base for relevant answers',
+      '3. Bot provides helpful, accurate solution',
+      '4. If escalation needed, bot guides to support team'
+    ]
+  },
+  sales: {
+    title: '💼 Sales Representative',
+    description: 'Answer product questions, highlight benefits, and automatically capture leads through backend-triggered forms.',
+    features: [
+      'Product Q&A focused responses',
+      'Automatic lead capture form (backend-triggered)',
+      'Intent detection (demo, pricing, consultation)',
+      'No manual form filling in chat'
+    ],
+    workflow: [
+      '1. User asks about products or pricing',
+      '2. Bot answers with benefits & features',
+      '3. User shows sales intent (demo/pricing request)',
+      '4. Backend detects intent & opens inquiry form automatically',
+      '5. Form captures lead details automatically'
+    ]
+  },
+  appointment: {
+    title: '📅 Appointment Scheduler',
+    description: 'Handle booking, rescheduling, cancellation, and status checks with automatic backend-triggered forms.',
+    features: [
+      '4 workflow types (book, reschedule, cancel, status)',
+      'Automatic form triggering (no chat form fields)',
+      'Appointment ID verification for cancellations & status',
+      'Availability & timing answers'
+    ],
+    workflow: [
+      '1. NEW BOOKING: User wants to book → Backend triggers booking form',
+      '2. RESCHEDULE: User wants to reschedule → Backend triggers reschedule form',
+      '3. CANCEL: User provides appointment ID → Backend processes cancellation',
+      '4. STATUS: User provides appointment ID → Bot returns appointment status',
+      'All date/time collection happens in forms, not in chat'
+    ]
+  },
+  qna: {
+    title: '❓ Knowledge Base Q&A',
+    description: 'Answer questions using only information from your knowledge base. Perfect for FAQ and documentation.',
+    features: [
+      'Knowledge base only answers',
+      'No invented or external information',
+      'Concise responses (1-2 sentences)',
+      'Clear "not found" responses'
+    ],
+    workflow: [
+      '1. User asks any question',
+      '2. Bot searches knowledge base',
+      '3. If found: Bot provides accurate answer',
+      '4. If not found: Bot says "I don\'t have that information"',
+      '5. No forms or data collection'
+    ]
   }
 };
 
@@ -148,6 +218,40 @@ export default function BotsPage() {
                   ]}
                   className="bg-blue-50/50"
                 />
+                
+                {/* Template Instructions */}
+                {template && TEMPLATE_INSTRUCTIONS[template] && (
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-4">
+                    <div>
+                      <h3 className="text-sm font-semibold text-blue-900">{TEMPLATE_INSTRUCTIONS[template].title}</h3>
+                      <p className="text-xs text-blue-800 mt-1">{TEMPLATE_INSTRUCTIONS[template].description}</p>
+                    </div>
+                    
+                    <div>
+                      <p className="text-xs font-medium text-blue-900 mb-2">Key Features:</p>
+                      <ul className="space-y-1">
+                        {TEMPLATE_INSTRUCTIONS[template].features.map((feature, i) => (
+                          <li key={i} className="text-xs text-blue-800 flex items-start gap-2">
+                            <span className="text-blue-600 font-bold mt-0.5">•</span>
+                            <span>{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    
+                    <div>
+                      <p className="text-xs font-medium text-blue-900 mb-2">How It Works:</p>
+                      <ul className="space-y-1">
+                        {TEMPLATE_INSTRUCTIONS[template].workflow.map((step, i) => (
+                          <li key={i} className="text-xs text-blue-800 flex items-start gap-2">
+                            <span className="text-blue-600 min-w-fit">{i+1}.</span>
+                            <span>{step}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
                 
                 <Input 
                   label="Bot Name" 
