@@ -195,64 +195,67 @@ export default function BotsPage() {
               <button onClick={() => setIsCreating(false)} className="text-gray-400 hover:text-gray-600">✕</button>
             </div>
             
+            {/* Template Selector */}
+            <Select
+              label="Quick Template"
+              value={template}
+              onChange={e=>{
+                const v = e.target.value;
+                setTemplate(v);
+                const t = TEMPLATE_PROMPTS[v];
+                if (t) {
+                  setBehavior(t.behavior);
+                  setSystem(t.system);
+                }
+              }}
+              options={[
+                { value: '', label: 'Start from scratch...' },
+                { value: 'support', label: 'Customer Support' },
+                { value: 'sales', label: 'Sales Representative' },
+                { value: 'appointment', label: 'Appointment Scheduler' },
+                { value: 'qna', label: 'Knowledge Base Q&A' }
+              ]}
+              className="bg-blue-50/50"
+            />
+            
+            {/* Template Instructions - Full Width */}
+            {template && TEMPLATE_INSTRUCTIONS[template] && (
+              <div className="p-5 bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl space-y-4 shadow-sm">
+                <div>
+                  <h3 className="text-base font-bold text-blue-900">{TEMPLATE_INSTRUCTIONS[template].title}</h3>
+                  <p className="text-sm text-blue-700 mt-1">{TEMPLATE_INSTRUCTIONS[template].description}</p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs font-semibold text-blue-900 mb-2 uppercase tracking-wide">✨ Key Features</p>
+                    <ul className="space-y-1.5">
+                      {TEMPLATE_INSTRUCTIONS[template].features.map((feature, i) => (
+                        <li key={i} className="text-xs text-blue-800 flex items-start gap-2">
+                          <span className="text-blue-600 font-bold">✓</span>
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  
+                  <div>
+                    <p className="text-xs font-semibold text-blue-900 mb-2 uppercase tracking-wide">🔄 How It Works</p>
+                    <ul className="space-y-1.5">
+                      {TEMPLATE_INSTRUCTIONS[template].workflow.map((step, i) => (
+                        <li key={i} className="text-xs text-blue-800 flex items-start gap-2">
+                          <span className="text-blue-600 font-medium min-w-[16px]">{step.startsWith(String(i+1)) ? '' : `${i+1}.`}</span>
+                          <span>{step}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
-                <Select
-                  label="Quick Template"
-                  value={template}
-                  onChange={e=>{
-                    const v = e.target.value;
-                    setTemplate(v);
-                    const t = TEMPLATE_PROMPTS[v];
-                    if (t) {
-                      setBehavior(t.behavior);
-                      setSystem(t.system);
-                    }
-                  }}
-                  options={[
-                    { value: '', label: 'Start from scratch...' },
-                    { value: 'support', label: 'Customer Support' },
-                    { value: 'sales', label: 'Sales Representative' },
-                    { value: 'appointment', label: 'Appointment Scheduler' },
-                    { value: 'qna', label: 'Knowledge Base Q&A' }
-                  ]}
-                  className="bg-blue-50/50"
-                />
-                
-                {/* Template Instructions */}
-                {template && TEMPLATE_INSTRUCTIONS[template] && (
-                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-4">
-                    <div>
-                      <h3 className="text-sm font-semibold text-blue-900">{TEMPLATE_INSTRUCTIONS[template].title}</h3>
-                      <p className="text-xs text-blue-800 mt-1">{TEMPLATE_INSTRUCTIONS[template].description}</p>
-                    </div>
-                    
-                    <div>
-                      <p className="text-xs font-medium text-blue-900 mb-2">Key Features:</p>
-                      <ul className="space-y-1">
-                        {TEMPLATE_INSTRUCTIONS[template].features.map((feature, i) => (
-                          <li key={i} className="text-xs text-blue-800 flex items-start gap-2">
-                            <span className="text-blue-600 font-bold mt-0.5">•</span>
-                            <span>{feature}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    
-                    <div>
-                      <p className="text-xs font-medium text-blue-900 mb-2">How It Works:</p>
-                      <ul className="space-y-1">
-                        {TEMPLATE_INSTRUCTIONS[template].workflow.map((step, i) => (
-                          <li key={i} className="text-xs text-blue-800 flex items-start gap-2">
-                            <span className="text-blue-600 min-w-fit">{i+1}.</span>
-                            <span>{step}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                )}
-                
                 <Input 
                   label="Bot Name" 
                   value={name} 

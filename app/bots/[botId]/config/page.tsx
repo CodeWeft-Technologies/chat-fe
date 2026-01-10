@@ -7,6 +7,76 @@ import { Input } from "../../../components/ui/input";
 import { Select } from "../../../components/ui/select";
 import Builder, { type Win } from "./builder";
 
+const TEMPLATE_INSTRUCTIONS: Record<string, { title: string; description: string; features: string[]; workflow: string[] }> = {
+  support: {
+    title: '🎧 Customer Support Assistant',
+    description: 'Answer support questions from your knowledge base and help users troubleshoot issues.',
+    features: [
+      'Knowledge base powered answers',
+      'Quick, concise responses (1-2 sentences)',
+      'Automatic escalation guidance',
+      'No form collection in chat'
+    ],
+    workflow: [
+      'User asks a support question',
+      'Bot searches knowledge base for relevant answers',
+      'Bot provides helpful, accurate solution',
+      'If escalation needed, bot guides to support team'
+    ]
+  },
+  sales: {
+    title: '💼 Sales Representative',
+    description: 'Answer product questions, highlight benefits, and automatically capture leads through backend-triggered forms.',
+    features: [
+      'Product Q&A focused responses',
+      'Automatic lead capture form (backend-triggered)',
+      'Intent detection (demo, pricing, consultation)',
+      'No manual form filling in chat'
+    ],
+    workflow: [
+      'User asks about products or pricing',
+      'Bot answers with benefits & features',
+      'User shows sales intent (demo/pricing request)',
+      'Backend detects intent & opens inquiry form automatically',
+      'Form captures lead details automatically'
+    ]
+  },
+  appointment: {
+    title: '📅 Appointment Scheduler',
+    description: 'Handle booking, rescheduling, cancellation, and status checks with automatic backend-triggered forms.',
+    features: [
+      '4 workflow types (book, reschedule, cancel, status)',
+      'Automatic form triggering (no chat form fields)',
+      'Appointment ID verification for cancellations & status',
+      'Availability & timing answers'
+    ],
+    workflow: [
+      'NEW BOOKING: User wants to book → Backend triggers booking form',
+      'RESCHEDULE: User wants to reschedule → Backend triggers reschedule form',
+      'CANCEL: User provides appointment ID → Backend processes cancellation',
+      'STATUS: User provides appointment ID → Bot returns appointment status',
+      'All date/time collection happens in forms, not in chat'
+    ]
+  },
+  qna: {
+    title: '❓ Knowledge Base Q&A',
+    description: 'Answer questions using only information from your knowledge base. Perfect for FAQ and documentation.',
+    features: [
+      'Knowledge base only answers',
+      'No invented or external information',
+      'Concise responses (1-2 sentences)',
+      'Clear "not found" responses'
+    ],
+    workflow: [
+      'User asks any question',
+      'Bot searches knowledge base',
+      'If found: Bot provides accurate answer',
+      'If not found: Bot says "I don\'t have that information"',
+      'No forms or data collection'
+    ]
+  }
+};
+
 function B() {
   const env = process.env.NEXT_PUBLIC_BACKEND_URL || "";
   if (env) return env.replace(/\/$/, "");
@@ -324,6 +394,42 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                             placeholder="support / sales / appointment" 
                         />
                     </div>
+
+                    {/* Template Instructions - Show when template is selected */}
+                    {behavior && TEMPLATE_INSTRUCTIONS[behavior.toLowerCase()] && (
+                      <div className="p-5 bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl space-y-4 shadow-sm">
+                        <div>
+                          <h3 className="text-base font-bold text-blue-900">{TEMPLATE_INSTRUCTIONS[behavior.toLowerCase()].title}</h3>
+                          <p className="text-sm text-blue-700 mt-1">{TEMPLATE_INSTRUCTIONS[behavior.toLowerCase()].description}</p>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-xs font-semibold text-blue-900 mb-2 uppercase tracking-wide">✨ Key Features</p>
+                            <ul className="space-y-1.5">
+                              {TEMPLATE_INSTRUCTIONS[behavior.toLowerCase()].features.map((feature, i) => (
+                                <li key={i} className="text-xs text-blue-800 flex items-start gap-2">
+                                  <span className="text-blue-600 font-bold">✓</span>
+                                  <span>{feature}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                          
+                          <div>
+                            <p className="text-xs font-semibold text-blue-900 mb-2 uppercase tracking-wide">🔄 How It Works</p>
+                            <ul className="space-y-1.5">
+                              {TEMPLATE_INSTRUCTIONS[behavior.toLowerCase()].workflow.map((step, i) => (
+                                <li key={i} className="text-xs text-blue-800 flex items-start gap-2">
+                                  <span className="text-blue-600 font-medium min-w-[16px]">{i+1}.</span>
+                                  <span>{step}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="space-y-1">
                         <label className="block text-xs font-medium text-[var(--text-soft)]">System Instructions</label>
