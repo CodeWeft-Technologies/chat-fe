@@ -6,6 +6,41 @@ import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { Textarea } from "../components/ui/textarea";
 
+// Loading Modal Component
+function IngestLoadingModal({ isOpen, message }: { isOpen: boolean; message: string }) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4 animate-in zoom-in-50 duration-200">
+        <div className="flex flex-col items-center gap-6">
+          {/* Animated Spinner */}
+          <div className="relative w-16 h-16">
+            <div className="absolute inset-0 rounded-full border-4 border-gray-200"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-500 border-r-blue-500 animate-spin"></div>
+          </div>
+          
+          {/* Text */}
+          <div className="text-center space-y-2">
+            <h3 className="text-lg font-semibold text-gray-900">Training Model</h3>
+            <p className="text-sm text-gray-600">{message}</p>
+          </div>
+
+          {/* Pulsing Dots */}
+          <div className="flex gap-1.5 justify-center">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"
+                style={{ animationDelay: `${i * 150}ms` }}
+              ></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function B() {
   const env = process.env.NEXT_PUBLIC_BACKEND_URL || "";
   if (env) return env.replace(/\/$/, "");
@@ -16,6 +51,8 @@ function B() {
 export default function IngestPage() {
   const [mounted, setMounted] = useState(false);
   const [org, setOrg] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState("Processing your data...");
   useEffect(() => { setMounted(true); const d = typeof window !== "undefined" ? (localStorage.getItem("orgId") || "") : ""; setOrg(d); }, []);
   useEffect(() => { if (org) localStorage.setItem("orgId", org); }, [org]);
   const [bot, setBot] = useState("");
@@ -26,8 +63,6 @@ export default function IngestPage() {
   const [pdf, setPdf] = useState<File | null>(null);
   const [tab, setTab] = useState<'text'|'qna'|'website'|'pdf'>('pdf');
   const [qna, setQna] = useState<{ q: string; a: string }[]>([]);
-  // const [qnaCsv, setQnaCsv] = useState<File | null>(null);
-  const [addingQna, setAddingQna] = useState(false);
 
   const loadBots = useCallback(async () => {
     if (!org) return;
@@ -57,14 +92,24 @@ export default function IngestPage() {
 
   async function ingestText() {
     if (!org || !bot || !text) return;
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
-    if (botKey) headers["X-Bot-Key"] = botKey;
-    const r = await fetch(`${B()}/api/ingest/${encodeURIComponent(bot)}`, { method: "POST", headers, body: JSON.stringify({ org_id: org, content: text }) });
-    const t = await r.text();
-    if (!r.ok) { try { const j = JSON.parse(t); throw new Error(j.detail || t); } catch { throw new Error(t); } }
-    const d = JSON.parse(t);
-    alert(`Inserted ${d.inserted} chunks`);
+    setIsLoading(true);
+    setLoadingMessage("Processing your text content...");
+    try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
+      if (botKey) headers["X-Bot-Key"] = botKey;
+      const r = await fetch(`${B()}/api/ingest/${encodeURIComponent(bot)}`, { method: "POST", headers, body: JSON.stringify({ org_id: org, content: text }) });
+      const t = await r.text();
+      if (!r.ok) { try { const j = JSON.parse(t); throw new Error(j.detail || t); } catch { throw new Error(t); } }
+      const d = JSON.parse(t);
+      setIsLoading(false);
+      alert(`✓ Successfully inserted ${d.inserted} chunks`);
+      setText("");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setIsLoading(false);
+      alert("✗ " + (msg || "Failed to ingest text"));
+    }
   }
   async function ingestQna() {
     if (!org || !bot) { alert("Select org and bot"); return; }
@@ -72,21 +117,23 @@ export default function IngestPage() {
     const parts = qna.filter(p=>p.q.trim()&&p.a.trim()).map(p=>`Q: ${p.q.trim()}\nA: ${p.a.trim()}`);
     if (!parts.length) { alert("No valid QnA rows. Please fill both Question and Answer."); return; }
     const content = parts.join("\n\n");
+    setIsLoading(true);
+    setLoadingMessage("Training model with Q&A pairs...");
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
     if (botKey) headers["X-Bot-Key"] = botKey;
-    setAddingQna(true);
     try {
       const r = await fetch(`${B()}/api/ingest/${encodeURIComponent(bot)}`, { method: "POST", headers, body: JSON.stringify({ org_id: org, content }) });
       const t = await r.text();
       if (!r.ok) { try { const j = JSON.parse(t); throw new Error(j.detail || t); } catch { throw new Error(t); } }
       const d = JSON.parse(t);
-      alert(`Inserted ${d.inserted} chunks`);
+      setIsLoading(false);
+      alert(`✓ Successfully inserted ${d.inserted} chunks`);
+      setQna([]);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      alert(msg || "Failed to ingest QnA");
-    } finally {
-      setAddingQna(false);
+      setIsLoading(false);
+      alert("✗ " + (msg || "Failed to ingest Q&A"));
     }
   }
   function addPair() {
@@ -154,35 +201,52 @@ export default function IngestPage() {
     if (!org || !bot || !url) return;
     let u = url.trim();
     if (!/^https?:\/\//i.test(u)) u = `https://${u}`;
+    setIsLoading(true);
+    setLoadingMessage("Fetching and processing website content...");
     try {
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
-    if (botKey) headers["X-Bot-Key"] = botKey;
-    const r = await fetch(`${B()}/api/ingest/url/${encodeURIComponent(bot)}`, { method: "POST", headers, body: JSON.stringify({ org_id: org, url: u }) });
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
+      if (botKey) headers["X-Bot-Key"] = botKey;
+      const r = await fetch(`${B()}/api/ingest/url/${encodeURIComponent(bot)}`, { method: "POST", headers, body: JSON.stringify({ org_id: org, url: u }) });
       const t = await r.text();
       if (!r.ok) { try { const j = JSON.parse(t); throw new Error(j.detail || t); } catch { throw new Error(t); } }
       const d = JSON.parse(t);
-      alert(`Inserted ${d.inserted} chunks`);
+      setIsLoading(false);
+      alert(`✓ Successfully inserted ${d.inserted} chunks`);
+      setUrl("");
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      alert(msg || "Failed to ingest URL");
+      setIsLoading(false);
+      alert("✗ " + (msg || "Failed to ingest URL"));
     }
   }
   async function ingestPdf() {
     if (!org || !bot || !pdf) return;
-    const fd = new FormData();
-    fd.append("org_id", org);
-    fd.append("file", pdf);
-    const headers: Record<string, string> = {};
-    if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
-    if (botKey) headers["X-Bot-Key"] = botKey;
-    const r = await fetch(`${B()}/api/ingest/pdf/${encodeURIComponent(bot)}`, { method: "POST", headers, body: fd });
-    const d = await r.json();
-    alert(`Inserted ${d.inserted} chunks`);
+    setIsLoading(true);
+    setLoadingMessage("Extracting and processing PDF content...");
+    try {
+      const fd = new FormData();
+      fd.append("org_id", org);
+      fd.append("file", pdf);
+      const headers: Record<string, string> = {};
+      if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
+      if (botKey) headers["X-Bot-Key"] = botKey;
+      const r = await fetch(`${B()}/api/ingest/pdf/${encodeURIComponent(bot)}`, { method: "POST", headers, body: fd });
+      const d = await r.json();
+      setIsLoading(false);
+      alert(`✓ Successfully inserted ${d.inserted} chunks`);
+      setPdf(null);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setIsLoading(false);
+      alert("✗ " + (msg || "Failed to ingest PDF"));
+    }
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-12">
+    <>
+      <IngestLoadingModal isOpen={isLoading} message={loadingMessage} />
+      <div className="max-w-5xl mx-auto space-y-8 pb-12">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Knowledge Base</h1>
@@ -372,10 +436,10 @@ export default function IngestPage() {
                             <div className="flex justify-end pt-4 border-t border-gray-100">
                                 <Button 
                                     onClick={ingestQna} 
-                                    disabled={addingQna || qna.length === 0 || !bot}
+                                    disabled={isLoading || qna.length === 0 || !bot}
                                     className="min-w-[120px]"
                                 >
-                                    {addingQna ? 'Processing...' : 'Save Q&A Pairs'}
+                                    {isLoading ? 'Processing...' : 'Save Q&A Pairs'}
                                 </Button>
                             </div>
                         </div>
@@ -447,6 +511,7 @@ export default function IngestPage() {
             </Card>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
