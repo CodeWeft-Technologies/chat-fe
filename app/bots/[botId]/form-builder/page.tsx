@@ -866,81 +866,133 @@ function ScheduleModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Resource Schedules</CardTitle>
-          <Button size="sm" variant="ghost" onClick={onClose}>✕</Button>
+      <Card className="w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl">
+        <CardHeader className="flex flex-row items-center justify-between border-b bg-gradient-to-r from-blue-50 to-indigo-50">
+          <div>
+            <CardTitle className="text-xl">📅 Resource Schedules</CardTitle>
+            <p className="text-xs text-gray-500 mt-1">Configure weekly and specific date availability slots</p>
+          </div>
+          <Button size="sm" variant="ghost" onClick={onClose} className="text-gray-500 hover:text-gray-700">✕</Button>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 border rounded-lg space-y-4">
-              <h4 className="font-medium">Add Weekly Slot</h4>
-              <form onSubmit={submit} className="space-y-3">
+        <CardContent className="space-y-6 pt-6">
+          {/* Add Slots Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Weekly Slot Card */}
+            <div className="p-5 bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-200 rounded-xl space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">📆</span>
+                <h4 className="font-semibold text-gray-900">Weekly Recurring Slot</h4>
+              </div>
+              <p className="text-xs text-gray-600 leading-relaxed">Add a slot that repeats every week on a specific day and time.</p>
+              <form onSubmit={submit} className="space-y-3.5">
                 <Select
                   label="Day of Week"
                   value={String(dayOfWeek)}
                   onChange={e => setDayOfWeek(parseInt(e.target.value))}
                   options={days.map(d => ({ value: String(d.value), label: d.label }))}
                 />
-                <div className="grid grid-cols-2 gap-2">
-                  <Input type="time" label="Start" value={startTime} onChange={e => setStartTime(e.target.value)} />
-                  <Input type="time" label="End" value={endTime} onChange={e => setEndTime(e.target.value)} />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Input type="time" label="Start Time" value={startTime} onChange={e => setStartTime(e.target.value)} />
+                  </div>
+                  <div>
+                    <Input type="time" label="End Time" value={endTime} onChange={e => setEndTime(e.target.value)} />
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <Input type="number" label="Duration (m)" min={5} step={5} value={slotMinutes} onChange={e => setSlotMinutes(parseInt(e.target.value))} />
-                  <div className="flex items-center pt-6">
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input type="checkbox" checked={isAvailable} onChange={e => setIsAvailable(e.target.checked)} className="rounded border-gray-300" />
-                      Available
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Input type="number" label="Duration (minutes)" min={5} step={5} value={slotMinutes} onChange={e => setSlotMinutes(parseInt(e.target.value))} />
+                  </div>
+                  <div className="flex items-end h-full pb-1">
+                    <label className="flex items-center gap-2.5 text-sm cursor-pointer hover:opacity-80">
+                      <input type="checkbox" checked={isAvailable} onChange={e => setIsAvailable(e.target.checked)} className="rounded border-gray-300 cursor-pointer" />
+                      <span className="font-medium text-gray-700">Available</span>
                     </label>
                   </div>
                 </div>
-                <Button type="submit" className="w-full">Add Weekly</Button>
+                <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition">
+                  ➕ Add Weekly Slot
+                </Button>
               </form>
             </div>
 
-            <div className="p-4 border rounded-lg space-y-4">
-              <h4 className="font-medium">Add Specific Date Slot</h4>
-              <div className="space-y-3">
+            {/* Specific Date Card */}
+            <div className="p-5 bg-gradient-to-br from-purple-50 to-purple-100/50 border border-purple-200 rounded-xl space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">📍</span>
+                <h4 className="font-semibold text-gray-900">One-Time Slot</h4>
+              </div>
+              <p className="text-xs text-gray-600 leading-relaxed">Add a single slot for a specific date (e.g., special hours on a holiday).</p>
+              <div className="space-y-3.5">
                 <Input type="date" label="Date" value={specificDate || ''} onChange={e => setSpecificDate(e.target.value || undefined)} />
-                <div className="grid grid-cols-2 gap-2">
-                  <Input type="time" label="Start" value={startTime} onChange={e => setStartTime(e.target.value)} />
-                  <Input type="time" label="End" value={endTime} onChange={e => setEndTime(e.target.value)} />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Input type="time" label="Start Time" value={startTime} onChange={e => setStartTime(e.target.value)} />
+                  </div>
+                  <div>
+                    <Input type="time" label="End Time" value={endTime} onChange={e => setEndTime(e.target.value)} />
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <Input type="number" label="Duration (m)" min={5} step={5} value={slotMinutes} onChange={e => setSlotMinutes(parseInt(e.target.value))} />
-                  <div className="flex items-center pt-6">
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input type="checkbox" checked={isAvailable} onChange={e => setIsAvailable(e.target.checked)} className="rounded border-gray-300" />
-                      Available
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Input type="number" label="Duration (minutes)" min={5} step={5} value={slotMinutes} onChange={e => setSlotMinutes(parseInt(e.target.value))} />
+                  </div>
+                  <div className="flex items-end h-full pb-1">
+                    <label className="flex items-center gap-2.5 text-sm cursor-pointer hover:opacity-80">
+                      <input type="checkbox" checked={isAvailable} onChange={e => setIsAvailable(e.target.checked)} className="rounded border-gray-300 cursor-pointer" />
+                      <span className="font-medium text-gray-700">Available</span>
                     </label>
                   </div>
                 </div>
-                <Button onClick={submit} variant="secondary" className="w-full">Add Date</Button>
+                <Button onClick={submit} className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 rounded-lg transition">
+                  ➕ Add Date Slot
+                </Button>
               </div>
             </div>
           </div>
 
-          <div>
-            <h4 className="font-medium mb-3">Existing Schedules</h4>
+          {/* Existing Schedules Section */}
+          <div className="border-t pt-6">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-lg">📋</span>
+              <h4 className="font-semibold text-gray-900">Your Schedules ({schedules.length})</h4>
+            </div>
             {schedules.length === 0 ? (
-              <p className="text-sm text-gray-500">No schedules configured</p>
+              <div className="p-6 bg-gray-50 rounded-lg border border-dashed border-gray-300 text-center">
+                <p className="text-sm text-gray-500">No schedules configured yet. Add your first weekly or date slot above.</p>
+              </div>
             ) : (
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {schedules.map(s => (
-                  <div key={s.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg text-sm">
-                    <div className="space-x-2">
-                      <span className="font-medium text-gray-900">
-                        {s.specific_date ? s.specific_date : days.find(d => d.value === s.day_of_week)?.label}
-                      </span>
-                      <span className="text-gray-500">{s.start_time} - {s.end_time}</span>
-                      <span className="px-1.5 py-0.5 bg-gray-200 rounded text-xs">{s.slot_duration_minutes}m</span>
-                      <span className={`px-1.5 py-0.5 rounded text-xs ${s.is_available ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                        {s.is_available ? 'Available' : 'Unavailable'}
-                      </span>
+              <div className="space-y-2 max-h-56 overflow-y-auto pr-2">
+                {schedules.map((s, idx) => (
+                  <div key={s.id} className="flex items-center justify-between p-3.5 bg-white border border-gray-200 rounded-lg hover:border-gray-300 hover:shadow-sm transition">
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className="flex-shrink-0 w-2 h-2 rounded-full bg-blue-400"></div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-gray-900 text-sm">
+                            {s.specific_date ? s.specific_date : days.find(d => d.value === s.day_of_week)?.label}
+                          </span>
+                          <span className="text-gray-600 text-sm font-medium">
+                            {s.start_time} – {s.end_time}
+                          </span>
+                          <span className="px-2 py-1 bg-gray-100 rounded text-xs font-medium text-gray-700">
+                            {s.slot_duration_minutes}m slots
+                          </span>
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                            s.is_available 
+                              ? 'bg-green-100 text-green-700 border border-green-200' 
+                              : 'bg-red-100 text-red-700 border border-red-200'
+                          }`}>
+                            {s.is_available ? '✓ Available' : '✗ Unavailable'}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <button onClick={() => onDelete(s.id!)} className="text-red-600 hover:text-red-800 text-xs font-medium">
-                      Delete
+                    <button 
+                      onClick={() => onDelete(s.id!)} 
+                      className="ml-3 px-3 py-1.5 text-red-600 hover:bg-red-50 hover:text-red-700 rounded-md text-xs font-semibold transition border border-transparent hover:border-red-200"
+                    >
+                      🗑️ Delete
                     </button>
                   </div>
                 ))}
