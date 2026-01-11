@@ -17,7 +17,11 @@ export const metadata: Metadata = {
   title: "Codeweft Chatbot",
   description: "powerful chatbot for your website",
   icons: {
-    icon: "/cw.png",
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/cw.png", type: "image/png" }
+    ],
+    apple: "/cw.png",
   },
 };
 
