@@ -16,13 +16,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Codeweft Chatbot",
   description: "powerful chatbot for your website",
-  icons: {
-    icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/cw.png", type: "image/png" }
-    ],
-    apple: "/cw.png",
-  },
 };
 
 export default function RootLayout({
