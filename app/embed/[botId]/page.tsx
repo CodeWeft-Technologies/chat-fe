@@ -106,6 +106,7 @@ export default function EmbedPage(props: { params: Promise<{ botId: string }> })
   const [iconScale, setIconScale] = useState<number>(60);
   const [bubbleMe, setBubbleMe] = useState<string>("linear-gradient(135deg, #2563eb, #1e40af)");
   const [bubbleBot, setBubbleBot] = useState<string>("#ffffff");
+  const [showIconHelp, setShowIconHelp] = useState<boolean>(false);
 
   // --- Color utilities & contrast scoring ---
   function hexToRgb(h: string){
@@ -1116,6 +1117,92 @@ export default function EmbedPage(props: { params: Promise<{ botId: string }> })
           {/* Configuration Panel */}
           <div className="lg:col-span-7 space-y-6">
             
+            {/* Quick Guide Card */}
+            <Card className="border-purple-200 bg-purple-50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-purple-900">
+                  <span className="text-lg">💬</span>
+                  Message Format Guide & Examples
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-4">
+                  {/* Plain Text Section */}
+                  <div className="p-3 bg-white rounded-lg border border-purple-200 space-y-2">
+                    <div className="font-semibold text-sm text-gray-900">📝 Plain Text Messages</div>
+                    <div className="text-xs text-gray-600">Simple text responses work automatically:</div>
+                    <code className="block bg-gray-100 p-2 rounded text-[11px] font-mono mt-1">
+                      Hello! How can I help you today?
+                    </code>
+                  </div>
+
+                  {/* Formatted Text Section */}
+                  <div className="p-3 bg-white rounded-lg border border-purple-200 space-y-2">
+                    <div className="font-semibold text-sm text-gray-900">✨ Formatted Text (Markdown)</div>
+                    <div className="text-xs text-gray-600 space-y-2">
+                      <div><strong>Bold:</strong> <code className="bg-gray-100 px-1 rounded text-[11px]">**Your text**</code></div>
+                      <div><strong>Links:</strong> <code className="bg-gray-100 px-1 rounded text-[11px]">[Click here](https://example.com)</code></div>
+                      <div><strong>Lists:</strong> <code className="bg-gray-100 px-1 rounded text-[11px]">• Item 1</code></div>
+                    </div>
+                    <code className="block bg-gray-100 p-2 rounded text-[11px] font-mono mt-2">
+                      We offer **three plans**: [Basic](link) • [Pro](link) • [Enterprise](link)
+                    </code>
+                  </div>
+
+                  {/* Images Section */}
+                  <div className="p-3 bg-white rounded-lg border border-purple-200 space-y-2">
+                    <div className="font-semibold text-sm text-gray-900">🖼️ Including Images</div>
+                    <div className="text-xs text-gray-600">Use markdown image syntax:</div>
+                    <code className="block bg-gray-100 p-2 rounded text-[11px] font-mono mt-1">
+                      ![Description](https://example.com/image.jpg)
+                    </code>
+                    <div className="text-xs text-gray-500 mt-2">Supports: PNG, JPG, GIF, SVG, WebP</div>
+                  </div>
+
+                  {/* Line Breaks Section */}
+                  <div className="p-3 bg-white rounded-lg border border-purple-200 space-y-2">
+                    <div className="font-semibold text-sm text-gray-900">📏 Line Breaks & Spacing</div>
+                    <div className="text-xs text-gray-600">Press Enter twice for paragraph breaks or use <code className="bg-gray-100 px-1 rounded text-[11px]">===</code></div>
+                    <code className="block bg-gray-100 p-2 rounded text-[11px] font-mono mt-1">
+                      First paragraph<br/>
+                      ===<br/>
+                      Second paragraph
+                    </code>
+                  </div>
+
+                  {/* Code Blocks Section */}
+                  <div className="p-3 bg-white rounded-lg border border-purple-200 space-y-2">
+                    <div className="font-semibold text-sm text-gray-900">💻 Code Blocks</div>
+                    <div className="text-xs text-gray-600">Wrap code in triple backticks:</div>
+                    <code className="block bg-gray-100 p-2 rounded text-[11px] font-mono mt-1">
+                      ```<br/>
+                      const greeting = &quot;Hello&quot;;<br/>
+                      ```
+                    </code>
+                  </div>
+
+                  {/* Combined Example */}
+                  <div className="p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200 space-y-2">
+                    <div className="font-semibold text-sm text-gray-900">🎯 Complete Example</div>
+                    <code className="block bg-gray-900 text-gray-100 p-2 rounded text-[11px] font-mono mt-2 whitespace-pre-wrap">
+{`Hello! Welcome to our support team. 
+
+**What we can help with:**
+• Product questions
+• Technical issues
+• Account support
+
+Check out our [Help Center](https://help.example.com)
+
+===
+
+Got a complex issue? [Open a ticket](https://support.example.com/ticket)`}
+                    </code>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
             {/* Step 1: Layout */}
             <Card>
               <CardHeader>
@@ -1164,6 +1251,23 @@ export default function EmbedPage(props: { params: Promise<{ botId: string }> })
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-8">
+                {/* Bot Quality Guide */}
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-2">
+                  <p className="text-xs font-semibold text-amber-900 flex items-center gap-2">
+                    <span>🧠</span>
+                    <span>Improve Bot Answers Quality</span>
+                  </p>
+                  <p className="text-xs text-amber-800">
+                    The appearance settings below customize the widget look. To improve the <strong>quality of bot answers</strong>, go to the <strong>Configuration page</strong> and modify the <strong>System Instructions</strong>.
+                  </p>
+                  <div className="text-xs text-amber-700 space-y-1 mt-2 ml-4 list-disc">
+                    <div>• Better instructions = Better answers from the bot</div>
+                    <div>• Define the bot's role, tone, and knowledge domain</div>
+                    <div>• Add constraints and specific rules the bot should follow</div>
+                    <div>• Provide context about your business or services</div>
+                  </div>
+                </div>
+
                 {/* Identity */}
                 <div className="space-y-4">
                   <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Identity</h4>
@@ -1191,6 +1295,28 @@ export default function EmbedPage(props: { params: Promise<{ botId: string }> })
                            placeholder="Emoji or Image URL" 
                          />
                       </div>
+                      {/* Collapsible Icon Help */}
+                      <button
+                        type="button"
+                        onClick={() => setShowIconHelp(!showIconHelp)}
+                        className="mt-2 text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+                      >
+                        {showIconHelp ? '▼' : '▶'} How to add an icon?
+                      </button>
+                      {showIconHelp && (
+                        <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
+                          <ul className="text-xs text-blue-800 space-y-1 ml-4 list-disc">
+                            <li><strong>Emoji:</strong> Paste any emoji directly (e.g., 💬, 🤖, ✨)</li>
+                            <li><strong>Image URL:</strong> Use a direct image link (e.g., https://example.com/icon.png)</li>
+                            <li><strong>Local Image:</strong> Use /public/path (e.g., /public/chat.png)</li>
+                            <li><strong>SVG or PNG:</strong> Supports .png, .jpg, .svg, .gif, .webp formats</li>
+                            <li><strong>Transparent Images:</strong> PNG with transparent background works best</li>
+                          </ul>
+                          <p className="text-xs text-blue-700 mt-2">
+                            <strong>Note:</strong> Images will be automatically scaled to fit the launcher button.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1470,18 +1596,32 @@ export default function EmbedPage(props: { params: Promise<{ botId: string }> })
                   
                   {/* Sizing & Toggles */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                     <div className="flex items-start gap-3 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
-                        <input
-                          type="checkbox"
-                          id="transparent-bubble"
-                          checked={transparentBubble}
-                          onChange={(e) => setTransparentBubble(e.target.checked)}
-                          className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                        />
-                        <label htmlFor="transparent-bubble" className="text-sm text-gray-700 cursor-pointer">
-                          <span className="font-medium block text-gray-900">Transparent Button</span>
-                          <span className="text-xs text-gray-500">Remove background color from launcher button</span>
-                        </label>
+                     <div className="space-y-3">
+                        <div className="flex items-start gap-3 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
+                           <input
+                             type="checkbox"
+                             id="transparent-bubble"
+                             checked={transparentBubble}
+                             onChange={(e) => setTransparentBubble(e.target.checked)}
+                             className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                           />
+                           <label htmlFor="transparent-bubble" className="text-sm text-gray-700 cursor-pointer">
+                             <span className="font-medium block text-gray-900">Transparent Button</span>
+                             <span className="text-xs text-gray-500">Remove background color from launcher button</span>
+                           </label>
+                        </div>
+                        {/* Transparent Mode Guide */}
+                        {transparentBubble && (
+                          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg space-y-2">
+                            <p className="text-xs font-semibold text-amber-900">📌 Transparent Mode Tips:</p>
+                            <ul className="text-xs text-amber-800 space-y-1 ml-4 list-disc">
+                              <li>Best for image-based icons (PNG with transparent background)</li>
+                              <li>No background color will be shown on the button</li>
+                              <li>The image will be displayed directly on your website background</li>
+                              <li>Use high contrast images for visibility</li>
+                            </ul>
+                          </div>
+                        )}
                      </div>
 
                      <div className="space-y-4">
@@ -1498,6 +1638,7 @@ export default function EmbedPage(props: { params: Promise<{ botId: string }> })
                              onChange={(e) => setLauncherSize(Number(e.target.value))}
                              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                            />
+                           <p className="text-xs text-gray-500 mt-1">Size of the floating chat button (40px - 100px). Default is 56px.</p>
                         </div>
                         <div>
                            <div className="flex justify-between items-center mb-1">
@@ -1512,6 +1653,7 @@ export default function EmbedPage(props: { params: Promise<{ botId: string }> })
                              onChange={(e) => setIconScale(Number(e.target.value))}
                              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                            />
+                           <p className="text-xs text-gray-500 mt-1">Scale of the icon inside the button (20% - 100%). Default is 60%.</p>
                         </div>
                      </div>
                   </div>

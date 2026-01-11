@@ -431,7 +431,7 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                       </div>
                     )}
 
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                         <label className="block text-xs font-medium text-[var(--text-soft)]">System Instructions</label>
                         <textarea 
                             value={system} 
@@ -440,6 +440,22 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                             className="input-base w-full min-h-[160px] resize-y text-sm leading-relaxed font-mono text-gray-800" 
                         />
                         <p className="text-[10px] text-gray-400">These instructions define the bot&apos;s personality and rules.</p>
+                        
+                        {/* System Instructions Guide */}
+                        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
+                          <p className="text-xs font-semibold text-blue-900">💡 How to write better instructions:</p>
+                          <ul className="text-xs text-blue-800 space-y-1.5 ml-4 list-disc">
+                            <li><strong>Define the role:</strong> &quot;You are a customer support specialist for XYZ company&quot;</li>
+                            <li><strong>Set tone:</strong> &quot;Be friendly, professional, and concise in your responses&quot;</li>
+                            <li><strong>Add constraints:</strong> &quot;Only answer questions about our products. For billing issues, ask for email.&quot;</li>
+                            <li><strong>Provide context:</strong> &quot;Our business hours are 9AM-6PM EST. Recommend support tickets after hours.&quot;</li>
+                            <li><strong>Give examples:</strong> &quot;Good response: 'That&apos;s a great question! Here&apos;s how...' Bad: 'I don&apos;t know'&quot;</li>
+                          </ul>
+                          <div className="mt-2 pt-2 border-t border-blue-200">
+                            <p className="text-xs text-blue-700"><strong>Example:</strong></p>
+                            <code className="text-[11px] text-blue-600 block mt-1">You are a helpful support agent for TechCorp. Answer questions about our products using the knowledge base. If you don&apos;t find an answer, be honest and offer to escalate to a human agent. Be friendly but professional.</code>
+                          </div>
+                        </div>
                     </div>
 
                     <Input 
