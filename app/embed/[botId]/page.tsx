@@ -1262,7 +1262,7 @@ Got a complex issue? [Open a ticket](https://support.example.com/ticket)`}
                   </p>
                   <div className="text-xs text-amber-700 space-y-1 mt-2 ml-4 list-disc">
                     <div>• Better instructions = Better answers from the bot</div>
-                    <div>• Define the bot's role, tone, and knowledge domain</div>
+                    <div>• Define the bot&apos;s role, tone, and knowledge domain</div>
                     <div>• Add constraints and specific rules the bot should follow</div>
                     <div>• Provide context about your business or services</div>
                   </div>

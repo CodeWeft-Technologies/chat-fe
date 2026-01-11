@@ -449,7 +449,7 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                             <li><strong>Set tone:</strong> &quot;Be friendly, professional, and concise in your responses&quot;</li>
                             <li><strong>Add constraints:</strong> &quot;Only answer questions about our products. For billing issues, ask for email.&quot;</li>
                             <li><strong>Provide context:</strong> &quot;Our business hours are 9AM-6PM EST. Recommend support tickets after hours.&quot;</li>
-                            <li><strong>Give examples:</strong> &quot;Good response: 'That&apos;s a great question! Here&apos;s how...' Bad: 'I don&apos;t know'&quot;</li>
+                            <li><strong>Give examples:</strong> &quot;Good response: &#39;That&apos;s a great question! Here&apos;s how...&#39; Bad: &#39;I don&apos;t know&#39;&quot;</li>
                           </ul>
                           <div className="mt-2 pt-2 border-t border-blue-200">
                             <p className="text-xs text-blue-700"><strong>Example:</strong></p>
