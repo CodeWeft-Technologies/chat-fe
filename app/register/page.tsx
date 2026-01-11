@@ -78,6 +78,18 @@ export default function RegisterPage() {
           </aside>
 
           <section className="relative bg-white/92 backdrop-blur p-6 sm:p-8 lg:p-10 border-black/5 lg:border-l">
+            <div className="mb-4">
+              <a 
+                href="https://www.codeweft.in/" 
+                className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Back
+              </a>
+            </div>
+
             <div className="lg:hidden mb-6 space-y-2">
               <p className="text-sm font-semibold text-emerald-700">Create workspace</p>
               <h1 className="text-2xl font-semibold leading-tight text-slate-900">Set up your chatbot org</h1>

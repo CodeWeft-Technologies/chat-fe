@@ -58,6 +58,15 @@ export default function Sidebar({ onLinkClick }: { onLinkClick?: () => void }) {
     if (typeof window !== 'undefined') localStorage.setItem('sidebar:collapsed', collapsed ? 'true' : 'false');
   }, [collapsed]);
 
+  const logout = () => {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('token');
+      }
+    } catch {}
+    window.location.href = '/login';
+  };
+
   const primary = [
     { href: '/', label: 'Overview', icon: '🏠' },
     { href: '/bots', label: 'My Bots', icon: '🤖' },
@@ -67,8 +76,7 @@ export default function Sidebar({ onLinkClick }: { onLinkClick?: () => void }) {
   return (
     <aside
       aria-label="Sidebar navigation"
-      className={`flex flex-col h-full bg-white dark:bg-neutral-900 border-r border-gray-200 dark:border-white/10 transition-[width] duration-200 ${collapsed ? 'w-16' : 'w-64'} md:block`}
-      style={{ width: collapsed ? 64 : 256 }}
+      className={`flex flex-col h-full bg-white dark:bg-neutral-900 border-r border-gray-200 dark:border-white/10 transition-[width] duration-200 ${collapsed ? 'w-16' : 'w-64'}`}
     >
       <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between px-4'} h-16 border-b border-gray-100`}>
         {!collapsed && (
@@ -100,6 +108,22 @@ export default function Sidebar({ onLinkClick }: { onLinkClick?: () => void }) {
 
       <div className="flex-1 py-6 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 hover:scrollbar-thumb-gray-300">
         <NavGroup title="Platform" items={primary} collapsed={collapsed} p={p} onItemClick={onLinkClick} />
+      </div>
+
+      {/* Logout Button - visible on mobile */}
+      <div className="md:hidden px-4 pb-4">
+        <button
+          onClick={() => {
+            logout();
+            if (onLinkClick) onLinkClick();
+          }}
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-all"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          <span>Logout</span>
+        </button>
       </div>
 
       <div className={`p-4 border-t border-gray-100 bg-gray-50/30 ${collapsed ? 'items-center justify-center flex' : ''}`}>

@@ -100,19 +100,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </div>
 
         <main className="flex-1 overflow-y-auto bg-gray-50/50 scroll-smooth">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+          <div className="mx-auto max-w-7xl px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
             <AuthGate />
             {children}
           </div>
           
-          <footer className="mt-auto border-t border-gray-200 bg-white/50 py-6">
-            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between text-xs text-gray-500">
-              <div className="flex items-center gap-4">
+          <footer className="mt-auto border-t border-gray-200 bg-white/50 py-4 sm:py-6">
+            <div className="mx-auto max-w-7xl px-3 sm:px-4 lg:px-8 flex flex-col md:flex-row items-center justify-between text-xs text-gray-500 gap-2">
+              <div className="flex items-center gap-3 sm:gap-4">
                 <span>&copy; {new Date().getFullYear()} CodeWeft Inc.</span>
                 <Link href="#" className="hover:text-blue-600 transition-colors">Privacy</Link>
                 <Link href="#" className="hover:text-blue-600 transition-colors">Terms</Link>
               </div>
-              <div className="mt-2 md:mt-0 flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-green-500"></span>
                 <span>All systems operational</span>
               </div>

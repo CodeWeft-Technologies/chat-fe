@@ -29,44 +29,44 @@ export default function Home() {
   return (
     <div className="space-y-8 pb-10">
       {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-neutral-900 border border-gray-200 dark:border-white/10 shadow-sm">
+      <div className="relative overflow-hidden rounded-xl sm:rounded-2xl bg-white dark:bg-neutral-900 border border-gray-200 dark:border-white/10 shadow-sm">
         <div className="absolute top-0 right-0 -mt-16 -mr-16 w-64 h-64 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 blur-3xl" />
         <div className="absolute bottom-0 left-0 -mb-16 -ml-16 w-64 h-64 rounded-full bg-gradient-to-tr from-emerald-500/20 to-teal-500/20 blur-3xl" />
         
-        <div className="relative p-8 sm:p-10">
+        <div className="relative p-5 sm:p-8 lg:p-10">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-4 max-w-2xl">
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
+            <div className="space-y-3 sm:space-y-4 max-w-2xl">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
                 Welcome to <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">CodeWeft</span>
               </h1>
-              <p className="text-lg text-gray-600 dark:text-gray-300 leading-relaxed">
+              <p className="text-base sm:text-lg text-gray-600 dark:text-gray-300 leading-relaxed">
                 Build, train, and deploy intelligent chatbots in minutes. 
                 Connect your knowledge base and let AI handle the rest.
               </p>
-              <div className="flex flex-wrap gap-3 pt-2">
-                <Button asChild size="lg" className="shadow-lg shadow-blue-500/20">
-                  <Link href="/bots" className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 pt-2">
+                <Button asChild size="lg" className="shadow-lg shadow-blue-500/20 w-full sm:w-auto">
+                  <Link href="/bots" className="flex items-center justify-center gap-2">
                     <span>Create New Bot</span>
                     <span className="opacity-70">→</span>
                   </Link>
                 </Button>
-                <Button asChild size="lg" variant="outline" className="bg-white/50 backdrop-blur-sm">
+                <Button asChild size="lg" variant="outline" className="bg-white/50 backdrop-blur-sm w-full sm:w-auto">
                   <Link href="/ingest">Manage Knowledge</Link>
                 </Button>
               </div>
             </div>
             
             {/* Quick Stats */}
-            <div className="flex gap-6 md:border-l md:border-gray-100 md:pl-8 dark:border-white/5">
+            <div className="flex gap-4 sm:gap-6 md:border-l md:border-gray-100 md:pl-8 dark:border-white/5">
               <div className="space-y-1">
-                <div className="text-sm font-medium text-gray-500 uppercase tracking-wider">Active Bots</div>
-                <div className="text-3xl font-bold text-gray-900 dark:text-white">{bots.length}</div>
+                <div className="text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider">Active Bots</div>
+                <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{bots.length}</div>
               </div>
               <div className="space-y-1">
-                <div className="text-sm font-medium text-gray-500 uppercase tracking-wider">Platform</div>
-                <div className="flex items-center gap-2 text-3xl font-bold text-gray-900 dark:text-white">
+                <div className="text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider">Platform</div>
+                <div className="flex items-center gap-2 text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
                   <span>v1.2</span>
-                  <span className="flex h-3 w-3 rounded-full bg-green-500 mt-1" title="Online" />
+                  <span className="flex h-2 w-2 sm:h-3 sm:w-3 rounded-full bg-green-500 mt-1" title="Online" />
                 </div>
               </div>
             </div>
@@ -75,7 +75,7 @@ export default function Home() {
       </div>
 
       {/* Quick Actions Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         <Link href="/bots" className="group block">
           <div className="h-full p-6 rounded-xl bg-white dark:bg-neutral-900 border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-200 group-hover:-translate-y-1">
             <div className="w-12 h-12 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
@@ -135,7 +135,7 @@ export default function Home() {
             <Button asChild><Link href="/bots">Create Bot</Link></Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {bots.map(b => (
               <div key={b.bot_id} className="group relative bg-white dark:bg-neutral-900 rounded-xl border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col overflow-hidden">
                 <div className="absolute top-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity">

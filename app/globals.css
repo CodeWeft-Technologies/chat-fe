@@ -103,3 +103,34 @@ body {
 
 /* Dark mode cards subtle outline */
 @media (prefers-color-scheme: dark){ .card { box-shadow: var(--shadow-sm); } }
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  /* Better touch targets on mobile */
+  .btn-base {
+    min-height: 44px;
+    padding: 12px 16px;
+  }
+  
+  /* Prevent text from being too small */
+  body {
+    -webkit-text-size-adjust: 100%;
+  }
+  
+  /* Smoother scrolling on mobile */
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Better input sizing on mobile */
+  .input-base {
+    font-size: 16px; /* Prevents iOS zoom on focus */
+  }
+}
+
+/* Tablet optimizations */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .btn-base {
+    padding: 10px 14px;
+  }
+}

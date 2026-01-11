@@ -162,16 +162,16 @@ export default function BotsPage() {
   };
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-12">
+    <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto pb-12">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-gray-200 pb-6">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-gray-200 pb-4 sm:pb-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">My Assistants</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage your AI chatbots and their configurations</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">My Assistants</h1>
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">Manage your AI chatbots and their configurations</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
           {mounted && (
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-full border border-gray-200 text-xs text-gray-600">
+            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-full border border-gray-200 text-xs text-gray-600">
               <span className="font-medium">Org:</span>
               <input 
                 value={org} 
@@ -180,7 +180,7 @@ export default function BotsPage() {
               />
             </div>
           )}
-          <Button onClick={() => setIsCreating(!isCreating)} variant={isCreating ? "outline" : "primary"}>
+          <Button onClick={() => setIsCreating(!isCreating)} variant={isCreating ? "outline" : "primary"} className="w-full sm:w-auto">
             {isCreating ? "Cancel" : "Create New Bot"}
           </Button>
         </div>
@@ -338,18 +338,18 @@ export default function BotsPage() {
 
       {/* Bot Grid */}
       {!filtered.length ? (
-        <div className="text-center py-20 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
-          <div className="text-4xl mb-4">🤖</div>
-          <h3 className="text-lg font-medium text-gray-900">No bots found</h3>
-          <p className="text-sm text-gray-500 max-w-sm mx-auto mt-2 mb-6">
+        <div className="text-center py-12 sm:py-20 bg-gray-50 rounded-xl sm:rounded-2xl border-2 border-dashed border-gray-200 px-4">
+          <div className="text-3xl sm:text-4xl mb-3 sm:mb-4">🤖</div>
+          <h3 className="text-base sm:text-lg font-medium text-gray-900">No bots found</h3>
+          <p className="text-xs sm:text-sm text-gray-500 max-w-sm mx-auto mt-2 mb-4 sm:mb-6">
             {search ? "Try adjusting your search terms." : "Get started by creating your first AI assistant to help your customers."}
           </p>
           {!search && (
-            <Button onClick={() => setIsCreating(true)} variant="primary">Create Your First Bot</Button>
+            <Button onClick={() => setIsCreating(true)} variant="primary" className="w-full sm:w-auto">Create Your First Bot</Button>
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
           {filtered.map(b => (
             <div key={b.bot_id} className="group bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-200 flex flex-col overflow-hidden">
               {/* Card Header */}
