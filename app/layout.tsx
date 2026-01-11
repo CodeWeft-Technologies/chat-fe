@@ -14,8 +14,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Chatbot Dashboard",
-  description: "Manage bots, ingestion, and embeds",
+  title: "Codeweft Chatbot",
+  description: "powerful chatbot for your website",
+  icons: {
+    icon: "/cw.png",
+  },
 };
 
 export default function RootLayout({
