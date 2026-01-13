@@ -109,8 +109,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <div className="mx-auto max-w-7xl px-3 sm:px-4 lg:px-8 flex flex-col md:flex-row items-center justify-between text-xs text-gray-500 gap-2">
               <div className="flex items-center gap-3 sm:gap-4">
                 <span>&copy; {new Date().getFullYear()} CodeWeft Inc.</span>
-                <Link href="#" className="hover:text-blue-600 transition-colors">Privacy</Link>
-                <Link href="#" className="hover:text-blue-600 transition-colors">Terms</Link>
+                <Link href="/privacy" className="hover:text-blue-600 transition-colors">Privacy</Link>
+                <Link href="/terms" className="hover:text-blue-600 transition-colors">Terms</Link>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-green-500"></span>

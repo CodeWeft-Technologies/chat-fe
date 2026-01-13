@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -180,6 +181,21 @@ export default function LoginPage() {
             </form>
 
             <p className="text-xs text-center text-slate-600 mt-6" />
+            
+            <div className="mt-8 pt-6 border-t border-slate-200">
+              <p className="text-xs text-center text-slate-500 mb-3">
+                By signing in, you agree to our
+              </p>
+              <div className="flex items-center justify-center gap-2 text-xs">
+                <Link href="/privacy" className="text-blue-600 hover:text-blue-700 underline">
+                  Privacy Policy
+                </Link>
+                <span className="text-slate-400">•</span>
+                <Link href="/terms" className="text-blue-600 hover:text-blue-700 underline">
+                  Terms of Service
+                </Link>
+              </div>
+            </div>
           </section>
         </div>
       </div>
