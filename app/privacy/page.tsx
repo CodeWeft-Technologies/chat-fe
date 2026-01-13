@@ -9,7 +9,7 @@ export default function PrivacyPage() {
         <div className="prose prose-invert max-w-none dark:text-gray-300 text-gray-800">
           <h2 className="text-2xl font-semibold mt-8 mb-4">1. Introduction</h2>
           <p>
-            CodeWeft ("we", "us", "our", or "Company") operates the chatbot platform and services available at chatbot.codeweft.in (the "Service"). 
+            CodeWeft (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;, or &quot;Company&quot;) operates the chatbot platform and services available at chatbot.codeweft.in (the &quot;Service&quot;). 
             This page informs you of our policies regarding the collection, use, and disclosure of personal data when you use our Service. 
             For more information about CodeWeft, visit our main website at <a href="https://www.codeweft.in" className="text-blue-600 hover:text-blue-700 underline">www.codeweft.in</a>.
           </p>
@@ -73,16 +73,16 @@ export default function PrivacyPage() {
             and we are not responsible for their privacy practices. We encourage you to review the privacy policies of any third-party service before providing your information.
           </p>
 
-          <h2 className="text-2xl font-semibold mt-8 mb-4">7. Children's Privacy</h2>
+          <h2 className="text-2xl font-semibold mt-8 mb-4">7. Children&apos;s Privacy</h2>
           <p>
-            Our Service does not address anyone under the age of 18 ("Children"). We do not knowingly collect personally identifiable information from anyone under 18. 
+            Our Service does not address anyone under the age of 18 (&quot;Children&quot;). We do not knowingly collect personally identifiable information from anyone under 18. 
             If you are a parent or guardian and you are aware that your child has provided us with Personal Data, please contact us immediately.
           </p>
 
           <h2 className="text-2xl font-semibold mt-8 mb-4">8. Changes to This Privacy Policy</h2>
           <p>
             We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page 
-            and updating the "effective date" at the bottom of this Privacy Policy.
+            and updating the &quot;effective date&quot; at the bottom of this Privacy Policy.
           </p>
 
           <h2 className="text-2xl font-semibold mt-8 mb-4">9. Contact Us</h2>
