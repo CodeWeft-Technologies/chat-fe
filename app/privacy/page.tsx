@@ -1,9 +1,23 @@
 "use client";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function PrivacyPage() {
+  const router = useRouter();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 py-12 px-4">
-      <div className="max-w-4xl mx-auto bg-white dark:bg-slate-900 rounded-lg shadow-lg p-8">
+      <div className="max-w-4xl mx-auto">
+        <button
+          onClick={() => router.back()}
+          className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Back
+        </button>
+      <div className="bg-white dark:bg-slate-900 rounded-lg shadow-lg p-8">
         <h1 className="text-4xl font-bold mb-8 text-gray-900 dark:text-white">Privacy Policy</h1>
         
         <div className="prose prose-invert max-w-none dark:text-gray-300 text-gray-800">
@@ -99,6 +113,7 @@ export default function PrivacyPage() {
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-8">
             Last updated: January 14, 2026
           </p>
+        </div>
         </div>
       </div>
     </div>
