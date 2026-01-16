@@ -963,7 +963,7 @@ function ScheduleModal({
               </div>
             ) : (
               <div className="space-y-2 max-h-56 overflow-y-auto pr-2">
-                {schedules.map((s, idx) => (
+                {schedules.map((s) => (
                   <div key={s.id} className="flex items-center justify-between p-3.5 bg-white border border-gray-200 rounded-lg hover:border-gray-300 hover:shadow-sm transition">
                     <div className="flex items-center gap-3 flex-1">
                       <div className="flex-shrink-0 w-2 h-2 rounded-full bg-blue-400"></div>

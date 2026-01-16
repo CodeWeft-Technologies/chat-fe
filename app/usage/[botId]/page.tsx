@@ -14,6 +14,7 @@ function B() {
 
 type UsageSummary = { chats: number; successes: number; fallbacks: number; avg_similarity: number };
 type DailyEntry = { day: string; chats: number; successes: number; fallbacks: number; avg_similarity: number };
+type BillingData = { messages: number; costPerMessage: number; totalCost: number };
 
 export default function UsagePage({ params }: { params: Promise<{ botId: string }> }) {
   const [org, setOrg] = useState("");
@@ -21,8 +22,8 @@ export default function UsagePage({ params }: { params: Promise<{ botId: string 
   const { botId } = usePromise(params as Promise<{ botId: string }>);
   const [data, setData] = useState<UsageSummary | null>(null);
   const [daily, setDaily] = useState<DailyEntry[]>([]);
+  const [billing, setBilling] = useState<BillingData | null>(null);
   const [days, setDays] = useState<number>(30);
-  const [botKey, setBotKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -34,6 +35,7 @@ export default function UsagePage({ params }: { params: Promise<{ botId: string 
         if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
         const s = await fetch(`${B()}/api/usage/summary/${encodeURIComponent(org)}/${encodeURIComponent(botId)}?days=${days}`, { headers });
         const d = await fetch(`${B()}/api/usage/${encodeURIComponent(org)}/${encodeURIComponent(botId)}?days=${days}`, { headers });
+        const m = await fetch(`${B()}/api/message-usage/${encodeURIComponent(org)}/${encodeURIComponent(botId)}?days=${days}`, { headers });
         
         if (s.ok) setData(await s.json());
         if (d.ok) {
@@ -41,13 +43,20 @@ export default function UsagePage({ params }: { params: Promise<{ botId: string 
             setDaily(dj.daily || []);
         }
         
-        try {
-          const k = await fetch(`${B()}/api/bots/${encodeURIComponent(botId)}/key?org_id=${encodeURIComponent(org)}`, { headers });
-          if (k.ok) {
-              const kj = await k.json();
-              setBotKey(kj.public_api_key || null);
-          }
-        } catch { setBotKey(null); }
+        // Fetch message usage for billing
+        if (m.ok) {
+            const mj = await m.json();
+            
+            // Calculate billing (₹12 per 100 messages)
+            const totalMessages = mj.total_messages || 0;
+            const costPerMessage = 0.12; // ₹0.12 per message
+            const totalCost = (totalMessages / 100) * 12; // ₹12 per 100 messages
+            setBilling({
+                messages: totalMessages,
+                costPerMessage: costPerMessage,
+                totalCost: totalCost
+            });
+        }
       } catch (e) {
         console.error("Failed to load usage data", e);
       } finally {
@@ -81,30 +90,6 @@ export default function UsagePage({ params }: { params: Promise<{ botId: string 
                 ]}
                 className="w-40"
             />
-            <Button 
-                variant="destructive"
-                onClick={async()=>{
-                if(!org){ alert('Missing org'); return; }
-                if(!confirm('Remove all saved content for this bot? This cannot be undone.')) return;
-                try {
-                    const headers: Record<string,string> = { 'Content-Type':'application/json' };
-                    if (typeof window !== 'undefined') { const t = localStorage.getItem('token'); if (t) headers['Authorization'] = `Bearer ${t}`; }
-                    if (botKey) headers['X-Bot-Key'] = botKey;
-                    const r = await fetch(`${B()}/api/ingest/clear/${encodeURIComponent(botId)}`, { method:'POST', headers, body: JSON.stringify({ org_id: org, confirm: true }) });
-                    const t = await r.text();
-                    if(!r.ok){ try { const j = JSON.parse(t); throw new Error(j.detail || t); } catch { throw new Error(t); } }
-                    const j = JSON.parse(t);
-                    alert(`Removed ${j.deleted} items`);
-                    setData({ chats: 0, successes: 0, fallbacks: 0, avg_similarity: 0 });
-                    setDaily([]);
-                } catch(e) {
-                    const msg = e instanceof Error ? e.message : String(e);
-                    alert(msg || 'Failed to clear data');
-                }
-                }} 
-            >
-                Clear Data
-            </Button>
         </div>
       </div>
 
@@ -119,6 +104,41 @@ export default function UsagePage({ params }: { params: Promise<{ botId: string 
         </div>
       ) : (
         <>
+            {/* Billing Card */}
+            {billing && (
+                <Card className="border-blue-200 bg-blue-50">
+                    <CardHeader>
+                        <CardTitle className="text-blue-900">Billing Summary</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                            <div className="space-y-2">
+                                <p className="text-sm font-medium text-blue-700">Billable Messages</p>
+                                <p className="text-4xl font-bold text-blue-900">{billing.messages.toLocaleString()}</p>
+                                <p className="text-xs text-blue-600">User queries tracked</p>
+                            </div>
+                            <div className="space-y-2">
+                                <p className="text-sm font-medium text-blue-700">Cost Per Message</p>
+                                <p className="text-4xl font-bold text-blue-900">₹{billing.costPerMessage.toFixed(2)}</p>
+                                <p className="text-xs text-blue-600">₹12 per 100 messages</p>
+                            </div>
+                            <div className="space-y-2">
+                                <p className="text-sm font-medium text-green-700">Total Cost ({days}d)</p>
+                                <p className="text-4xl font-bold text-green-700">₹{billing.totalCost.toFixed(2)}</p>
+                                <Button 
+                                    className="mt-2 w-full bg-green-600 hover:bg-green-700 text-white"
+                                    onClick={() => {
+                                        alert('Payment gateway integration coming soon! Total due: ₹' + billing.totalCost.toFixed(2));
+                                    }}
+                                >
+                                    Pay Now
+                                </Button>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
             {/* Stats Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card>

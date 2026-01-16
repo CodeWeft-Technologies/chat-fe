@@ -325,7 +325,7 @@ export default function EmbedPage(props: { params: Promise<{ botId: string }> })
         `var msgs=document.createElement('div');msgs.id='chatbot-messages';`,
         `msgs.innerHTML='<div class="chat-msg bot" style="background:${bubbleBot};color:${textColor}">'+(cfg.greeting||'')+'</div>';`,
         `var inputArea=document.createElement('div');inputArea.id='chatbot-input-area';`,
-        `inputArea.innerHTML='<input id="chatbot-input" type="text" placeholder="Ask a question..." maxlength="1000"><button id="chatbot-send">Send</button>';`,
+        `inputArea.innerHTML='<input id="chatbot-input" type="text" placeholder="Ask a question..." maxLength={1000}><button id="chatbot-send">Send</button>';`,
         `panel.appendChild(header);panel.appendChild(msgs);panel.appendChild(inputArea);`,
         `root.appendChild(btn);root.appendChild(panel);`,
         `var input=document.getElementById('chatbot-input');`,
@@ -615,7 +615,7 @@ export default function EmbedPage(props: { params: Promise<{ botId: string }> })
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && sendMessage(input)}
                   placeholder="Ask a question..."
-                  maxLength="1000"
+                  maxLength={1000}
                   className="flex-1 px-3 py-2 border text-sm"
                   style={{
                     backgroundColor: bgColor,
@@ -715,7 +715,7 @@ export default function EmbedPage(props: { params: Promise<{ botId: string }> })
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && sendMessage(input)}
               placeholder="Ask a question..."
-              maxLength="1000"
+              maxLength={1000}
               className="flex-1 px-3 py-2 border text-sm"
               style={{
                 backgroundColor: cardColor,
@@ -806,7 +806,7 @@ export default function EmbedPage(props: { params: Promise<{ botId: string }> })
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && sendMessage(input)}
               placeholder="Ask a question..."
-              maxLength="1000"
+              maxLength={1000}
               className="flex-1 px-3 py-2 border text-sm"
               style={{
                 backgroundColor: cardColor,
@@ -900,7 +900,7 @@ export default function EmbedPage(props: { params: Promise<{ botId: string }> })
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && sendMessage(input)}
               placeholder="Ask a question..."
-              maxLength="1000"
+              maxLength={1000}
               className="flex-1 px-4 py-3 border"
               style={{
                 backgroundColor: cardColor,
@@ -1059,7 +1059,7 @@ export default function EmbedPage(props: { params: Promise<{ botId: string }> })
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && sendMessage(input)}
                   placeholder="Ask a question..."
-                  maxLength="1000"
+                  maxLength={1000}
                   className="flex-1 px-3 py-2 border text-sm"
                   style={{
                     backgroundColor: bgColor,
@@ -1745,3 +1745,4 @@ Got a complex issue? [Open a ticket](https://support.example.com/ticket)`}
     </div>
   );
 }
+
