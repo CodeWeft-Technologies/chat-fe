@@ -340,7 +340,7 @@ export default function PublicHomepage() {
               <h4 className="font-semibold text-white mb-4">Support</h4>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <a href="mailto:support@chatbot.codeweft.in" className="hover:text-white transition">
+                  <a href="mailto:codeweft.ai@gmail.com" className="hover:text-white transition">
                     Email Support
                   </a>
                 </li>
