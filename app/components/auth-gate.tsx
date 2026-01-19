@@ -9,7 +9,7 @@ export default function AuthGate() {
   const verifyIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
   useEffect(() => {
-    const isPublicRoute = pathname === "/login" || pathname === "/register" || pathname?.startsWith("/embed");
+    const isPublicRoute = pathname === "/" || pathname === "/login" || pathname === "/register" || pathname?.startsWith("/embed");
     
     // Initial check
     try {
