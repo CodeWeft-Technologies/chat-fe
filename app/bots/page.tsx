@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useCallback, useState, useEffect, useMemo } from "react";
+import AuthGate from "../components/auth-gate";
 import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -162,7 +163,9 @@ export default function BotsPage() {
   };
 
   return (
-    <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto pb-12">
+    <>
+      <AuthGate />
+      <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto pb-12">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-gray-200 pb-4 sm:pb-6">
         <div>
@@ -407,6 +410,7 @@ export default function BotsPage() {
           ))}
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }

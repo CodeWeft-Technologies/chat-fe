@@ -33,7 +33,7 @@ export default function RegisterPage() {
         localStorage.setItem("token", d.token);
         localStorage.setItem("orgId", d.org_id);
       }
-      router.push("/");
+      router.push("/dashboard");
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       setError(msg || "Registration failed");

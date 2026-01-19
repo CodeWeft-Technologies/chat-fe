@@ -6,26 +6,37 @@ import { apiCall } from "./lib/api";
 
 export default function DashboardHome() {
   const [org, setOrg] = useState("");
+  const [bots, setBots] = useState<{ bot_id: string; name?: string | null; behavior: string; has_key: boolean }[]>([]);
+  const [hasAttempted, setHasAttempted] = useState(false);
+
   useEffect(() => {
-    const d = typeof window !== "undefined" ? (localStorage.getItem("orgId") || "") : "";
-    const t = setTimeout(() => { setOrg(d); }, 0);
-    return () => clearTimeout(t);
+    // Get org ID from localStorage
+    const orgId = typeof window !== "undefined" ? (localStorage.getItem("orgId") || "") : "";
+    if (orgId) {
+      setOrg(orgId);
+      setHasAttempted(true);
+    }
   }, []);
-  useEffect(() => { if (org) localStorage.setItem("orgId", org); }, [org]);
-  const [bots, setBots] = useState<{ bot_id: string; behavior: string; has_key: boolean }[]>([]);
+
   const loadBots = useCallback(async () => {
-    if (!org) return;
+    if (!org) {
+      setBots([]);
+      return;
+    }
     try {
-      const d = await apiCall<{ bots: { bot_id: string; behavior: string; has_key: boolean }[] }>(`/api/bots?org_id=${encodeURIComponent(org)}`);
+      const d = await apiCall<{ bots: { bot_id: string; name?: string | null; behavior: string; has_key: boolean }[] }>(`/api/bots?org_id=${encodeURIComponent(org)}`);
       setBots(d.bots || []);
-    } catch {
+    } catch (error) {
+      console.error("Failed to load bots:", error);
       setBots([]);
     }
   }, [org]);
+
   useEffect(() => {
-    const t = setTimeout(() => { loadBots(); }, 0);
-    return () => clearTimeout(t);
-  }, [loadBots]);
+    if (org && hasAttempted) {
+      loadBots();
+    }
+  }, [org, hasAttempted, loadBots]);
   return (
     <div className="space-y-8 pb-10">
       {/* Hero Section */}
@@ -147,7 +158,7 @@ export default function DashboardHome() {
                 <div className="p-5 flex-1">
                   <div className="flex items-start justify-between mb-4">
                     <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">
-                      {b.behavior.charAt(0).toUpperCase()}
+                      {(b.name || b.behavior).charAt(0).toUpperCase()}
                     </div>
                     {b.has_key && (
                       <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-50 text-[10px] font-medium text-green-700 border border-green-100">
@@ -157,7 +168,7 @@ export default function DashboardHome() {
                     )}
                   </div>
                   
-                  <h3 className="font-semibold text-gray-900 truncate pr-8">{b.behavior}</h3>
+                  <h3 className="font-semibold text-gray-900 truncate pr-8">{b.name || b.behavior}</h3>
                   <div className="text-xs font-mono text-gray-400 mt-1 truncate">{b.bot_id}</div>
                 </div>
 

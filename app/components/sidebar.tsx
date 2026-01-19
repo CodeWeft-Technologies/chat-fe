@@ -68,7 +68,7 @@ export default function Sidebar({ onLinkClick }: { onLinkClick?: () => void }) {
   };
 
   const primary = [
-    { href: '/', label: 'Overview', icon: '🏠' },
+    { href: '/dashboard', label: 'Overview', icon: '🏠' },
     { href: '/bots', label: 'My Bots', icon: '🤖' },
     { href: '/ingest', label: 'Knowledge Base', icon: '📚' },
   ];
@@ -80,7 +80,7 @@ export default function Sidebar({ onLinkClick }: { onLinkClick?: () => void }) {
     >
       <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between px-4'} h-16 border-b border-gray-100`}>
         {!collapsed && (
-          <Link href="/" className="flex items-center gap-2 group" onClick={onLinkClick}>
+          <Link href="/dashboard" className="flex items-center gap-2 group" onClick={onLinkClick}>
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-sm group-hover:shadow transition-all">
               C
             </div>

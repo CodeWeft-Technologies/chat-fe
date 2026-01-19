@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import AuthGate from "../components/auth-gate";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -57,47 +58,21 @@ export default function IngestPage() {
   useEffect(() => { if (org) localStorage.setItem("orgId", org); }, [org]);
   const [bot, setBot] = useState("");
   const [bots, setBots] = useState<{ bot_id: string; name?: string | null }[]>([]);
-  const [botKey, setBotKey] = useState<string | null>(null);
   const [text, setText] = useState("");
   const [url, setUrl] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [tab, setTab] = useState<'text'|'qna'|'website'|'file'>('file');
   const [qna, setQna] = useState<{ q: string; a: string }[]>([]);
-
-  const loadBots = useCallback(async () => {
-    if (!org) return;
-    const headers: Record<string, string> = {};
-    if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
-    const r = await fetch(`${B()}/api/bots?org_id=${encodeURIComponent(org)}`, { headers });
-    const d = await r.json();
-    const arr: { bot_id: string; name?: string | null }[] = (d.bots || []).map((b: { bot_id: string; name?: string | null }) => ({ bot_id: b.bot_id, name: b.name }));
-    setBots(arr);
-  }, [org]);
-  useEffect(() => {
-    loadBots();
-  }, [loadBots]);
-
-  useEffect(() => {
-    (async () => {
-      if (!org || !bot) { setBotKey(null); return; }
-      const headers: Record<string, string> = {};
-      if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
-      try {
-        const r = await fetch(`${B()}/api/bots/${encodeURIComponent(bot)}/key?org_id=${encodeURIComponent(org)}`, { headers });
-        const t = await r.text();
-        if (r.ok) { try { const j = JSON.parse(t); setBotKey(j.public_api_key || null); } catch { setBotKey(null); } } else { setBotKey(null); }
-      } catch { setBotKey(null); }
-    })();
-  }, [org, bot]);
-
+  const [botKey, setBotKey] = useState<string | null>(null);
   async function ingestText() {
-    if (!org || !bot || !text) return;
+    if (!org || !bot) { alert("Select org and bot"); return; }
+    if (!text.trim()) { alert("Enter text to ingest"); return; }
     setIsLoading(true);
-    setLoadingMessage("Processing your text content...");
+    setLoadingMessage("Training model with your text...");
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
+    if (botKey) headers["X-Bot-Key"] = botKey;
     try {
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
-      if (botKey) headers["X-Bot-Key"] = botKey;
       const r = await fetch(`${B()}/api/ingest/${encodeURIComponent(bot)}`, { method: "POST", headers, body: JSON.stringify({ org_id: org, content: text }) });
       const t = await r.text();
       if (!r.ok) { try { const j = JSON.parse(t); throw new Error(j.detail || t); } catch { throw new Error(t); } }
@@ -245,6 +220,7 @@ export default function IngestPage() {
 
   return (
     <>
+      <AuthGate />
       <IngestLoadingModal isOpen={isLoading} message={loadingMessage} />
       <div className="max-w-5xl mx-auto space-y-8 pb-12">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
