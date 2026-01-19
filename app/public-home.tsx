@@ -173,6 +173,48 @@ export default function PublicHomepage() {
           </div>
         </section>
 
+        {/* Chatbot Types */}
+        <section className="px-4 sm:px-6 lg:px-8 py-16 sm:py-24 bg-white">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-12 sm:mb-16">
+              <h2 className="text-3xl sm:text-5xl font-bold text-gray-900 mb-4">Build Any Type of Chatbot</h2>
+              <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">Whether you need appointment scheduling, lead generation, customer support, or surveys—CodeWeft has you covered</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
+              {[
+                { icon: '📅', title: 'Appointment Booking', desc: 'Schedule meetings with real-time calendar sync & automatic confirmations' },
+                { icon: '💼', title: 'Lead Generation', desc: 'Capture leads through conversational forms & qualify prospects instantly' },
+                { icon: '❓', title: 'Q&A Bot', desc: 'Answer FAQs automatically from your knowledge base 24/7' },
+                { icon: '📝', title: 'Enquiry Form', desc: 'Collect customer inquiries with smart multi-step forms' },
+                { icon: '📋', title: 'Survey Bot', desc: 'Gather feedback & insights through interactive surveys' },
+                { icon: '🛒', title: 'E-commerce Bot', desc: 'Help customers find products & answer purchase questions' },
+                { icon: '🎓', title: 'Support Bot', desc: 'Provide instant technical support & troubleshooting' },
+                { icon: '📞', title: 'Callback Request', desc: 'Let customers request callbacks at their convenience' },
+              ].map((type, i) => (
+                <div
+                  key={i}
+                  className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 sm:p-8 border border-gray-200 hover:border-blue-400 hover:shadow-lg transition transform hover:-translate-y-1 group"
+                >
+                  <div className="text-4xl sm:text-5xl mb-4 group-hover:scale-110 transition">{type.icon}</div>
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">{type.title}</h3>
+                  <p className="text-gray-600 text-sm sm:text-base">{type.desc}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-12 sm:mt-16 text-center">
+              <p className="text-gray-600 text-base sm:text-lg mb-6">Need a custom chatbot type?</p>
+              <a
+                href="mailto:codeweft.ai@gmail.com"
+                className="inline-block bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
+              >
+                Contact Our Team
+              </a>
+            </div>
+          </div>
+        </section>
+
         {/* How It Works */}
         <section id="how-it-works" className="px-4 sm:px-6 lg:px-8 py-16 sm:py-24 bg-gray-50">
           <div className="max-w-7xl mx-auto">
