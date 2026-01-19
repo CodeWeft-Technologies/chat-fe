@@ -2,7 +2,58 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+
+// Animated Text Component
+function AnimatedTextCycle() {
+  const texts = [
+    'Scheduling Assistant',
+    'Q&A Assistant',
+    'Support Assistant',
+    'Customer Care Assistant',
+    'Lead Generation Bot',
+    'Sales Assistant'
+  ];
+
+  const [displayText, setDisplayText] = useState('');
+  const [textIndex, setTextIndex] = useState(0);
+  const [charIndex, setCharIndex] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    const speed = isDeleting ? 50 : 100;
+    const currentFullText = texts[textIndex];
+
+    const timer = setTimeout(() => {
+      if (!isDeleting) {
+        if (charIndex < currentFullText.length) {
+          setDisplayText(currentFullText.substring(0, charIndex + 1));
+          setCharIndex(charIndex + 1);
+        } else {
+          // Pause at the end before deleting
+          setTimeout(() => setIsDeleting(true), 2000);
+        }
+      } else {
+        if (charIndex > 0) {
+          setDisplayText(currentFullText.substring(0, charIndex - 1));
+          setCharIndex(charIndex - 1);
+        } else {
+          setIsDeleting(false);
+          setTextIndex((textIndex + 1) % texts.length);
+        }
+      }
+    }, speed);
+
+    return () => clearTimeout(timer);
+  }, [charIndex, isDeleting, textIndex, texts]);
+
+  return (
+    <span className="block bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent min-w-[200px] min-h-[1.2em]">
+      {displayText}
+      <span className="animate-pulse">|</span>
+    </span>
+  );
+}
 
 export default function PublicHomepage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -76,9 +127,10 @@ export default function PublicHomepage() {
               <span className="text-blue-700 font-semibold text-sm">🚀 AI-Powered Scheduling Solution</span>
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-gray-900 mb-6 lg:mb-8 leading-tight">
-              Your Intelligent<br className="hidden sm:block" />
-              <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">Scheduling Assistant</span>
+            <h1 className="text-2xl sm:text-4xl lg:text-6xl xl:text-7xl font-bold text-gray-900 mb-6 lg:mb-8 leading-tight">
+              Your Intelligent
+              <br />
+              <AnimatedTextCycle />
             </h1>
 
             <p className="text-lg sm:text-xl lg:text-2xl text-gray-600 max-w-3xl mx-auto mb-8 lg:mb-12 leading-relaxed">
