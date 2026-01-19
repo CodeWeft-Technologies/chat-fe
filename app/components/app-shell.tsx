@@ -10,7 +10,7 @@ import Sidebar from "./sidebar";
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAuth = pathname === "/login" || pathname === "/register";
-  const isPublic = pathname === "/privacy" || pathname === "/terms";
+  const isPublic = pathname === "/privacy" || pathname === "/terms" || pathname === "/";
   const [open, setOpen] = useState(false);
   
   // Close sidebar on route change

@@ -60,8 +60,8 @@ export default function IngestPage() {
   const [botKey, setBotKey] = useState<string | null>(null);
   const [text, setText] = useState("");
   const [url, setUrl] = useState("");
-  const [pdf, setPdf] = useState<File | null>(null);
-  const [tab, setTab] = useState<'text'|'qna'|'website'|'pdf'>('pdf');
+  const [file, setFile] = useState<File | null>(null);
+  const [tab, setTab] = useState<'text'|'qna'|'website'|'file'>('file');
   const [qna, setQna] = useState<{ q: string; a: string }[]>([]);
 
   const loadBots = useCallback(async () => {
@@ -220,26 +220,26 @@ export default function IngestPage() {
       alert("✗ " + (msg || "Failed to ingest URL"));
     }
   }
-  async function ingestPdf() {
-    if (!org || !bot || !pdf) return;
+  async function ingestFile() {
+    if (!org || !bot || !file) return;
     setIsLoading(true);
-    setLoadingMessage("Extracting and processing PDF content...");
+    setLoadingMessage("Processing your document...");
     try {
       const fd = new FormData();
       fd.append("org_id", org);
-      fd.append("file", pdf);
+      fd.append("file", file);
       const headers: Record<string, string> = {};
       if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
       if (botKey) headers["X-Bot-Key"] = botKey;
-      const r = await fetch(`${B()}/api/ingest/pdf/${encodeURIComponent(bot)}`, { method: "POST", headers, body: fd });
+      const r = await fetch(`${B()}/api/ingest/file/${encodeURIComponent(bot)}`, { method: "POST", headers, body: fd });
       const d = await r.json();
       setIsLoading(false);
-      alert(`✓ Successfully inserted ${d.inserted} chunks`);
-      setPdf(null);
+      alert(`✓ Successfully processed ${file.name}\n\nInserted: ${d.inserted} chunks\nFile Type: ${d.file_type}`);
+      setFile(null);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       setIsLoading(false);
-      alert("✗ " + (msg || "Failed to ingest PDF"));
+      alert("✗ " + (msg || "Failed to ingest document"));
     }
   }
 
@@ -300,7 +300,7 @@ export default function IngestPage() {
         <div className="lg:col-span-2 space-y-6">
             {/* Tabs */}
             <div className="flex p-1 bg-gray-100/80 rounded-xl gap-1 overflow-x-auto">
-                {(['pdf', 'text', 'qna', 'website'] as const).map(k => (
+                {(['file', 'text', 'qna', 'website'] as const).map(k => (
                     <button
                         key={k}
                         onClick={() => setTab(k)}
@@ -310,7 +310,7 @@ export default function IngestPage() {
                                 : 'text-gray-500 hover:bg-white/50 hover:text-gray-700'
                         }`}
                     >
-                        {k === 'pdf' && '📄 PDF'}
+                        {k === 'file' && '📁 Documents'}
                         {k === 'text' && '📝 Text'}
                         {k === 'qna' && '💬 Q&A'}
                         {k === 'website' && '🌐 Website'}
@@ -472,36 +472,40 @@ export default function IngestPage() {
                         </div>
                     )}
 
-                    {tab === 'pdf' && (
+                    {tab === 'file' && (
                         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                             <div className="space-y-1">
-                                <h2 className="text-lg font-semibold text-gray-900">Upload PDF Document</h2>
+                                <h2 className="text-lg font-semibold text-gray-900">Upload Documents</h2>
                                 <p className="text-sm text-gray-500">
-                                    Extract text from PDF files for your knowledge base.
+                                    Upload any document type for your knowledge base.
                                 </p>
                             </div>
                             
                             <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center hover:bg-gray-50 transition-colors">
                                 <input
                                     type="file"
-                                    accept="application/pdf"
-                                    onChange={e => setPdf(e.target.files?.[0] || null)}
+                                    onChange={e => setFile(e.target.files?.[0] || null)}
                                     className="hidden"
-                                    id="pdf-upload"
+                                    id="file-upload"
                                 />
-                                <label htmlFor="pdf-upload" className="cursor-pointer flex flex-col items-center gap-2">
-                                    <span className="text-4xl">📄</span>
+                                <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center gap-2">
+                                    <span className="text-4xl">📁</span>
                                     <span className="font-medium text-gray-700">
-                                        {pdf ? pdf.name : "Click to select a PDF file"}
+                                        {file ? file.name : "Click to select a document"}
                                     </span>
                                     <span className="text-sm text-gray-400">
-                                        {pdf ? `${(pdf.size / 1024 / 1024).toFixed(2)} MB` : "Supports standard PDF documents"}
+                                        {file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : "PDF, Word, Excel, PowerPoint, Images, HTML, and more"}
                                     </span>
                                 </label>
                             </div>
 
+                            <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 text-sm text-blue-800">
+                                <p className="font-semibold mb-2">📋 Supported File Types:</p>
+                                <p className="text-xs">PDF • DOCX • XLSX • PPTX • HTML • TXT • Images (JPG, PNG, GIF) • JSON • CSV • Markdown and more</p>
+                            </div>
+
                             <div className="flex justify-end">
-                                <Button onClick={ingestPdf} disabled={!pdf || !bot}>
+                                <Button onClick={ingestFile} disabled={!file || !bot}>
                                     Upload & Process
                                 </Button>
                             </div>
