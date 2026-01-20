@@ -64,6 +64,39 @@ export default function IngestPage() {
   const [tab, setTab] = useState<'text'|'qna'|'website'|'file'>('file');
   const [qna, setQna] = useState<{ q: string; a: string }[]>([]);
   const [botKey, setBotKey] = useState<string | null>(null);
+   // Fetch bots when org changes
+  useEffect(() => {
+    if (!org || !mounted) return;
+    
+    async function fetchBots() {
+      try {
+        const headers: Record<string, string> = {};
+        if (typeof window !== "undefined") {
+          const token = localStorage.getItem("token");
+          if (token) headers["Authorization"] = `Bearer ${token}`;
+        }
+        
+        const response = await fetch(`${B()}/api/bots?org_id=${encodeURIComponent(org)}`, {
+          method: "GET",
+          headers
+        });
+        
+        if (!response.ok) {
+          console.error("Failed to fetch bots:", response.status);
+          return;
+        }
+        
+        const data = await response.json();
+        // Handle both array and object responses
+        const botsList = Array.isArray(data) ? data : (data.bots || []);
+        setBots(botsList);
+      } catch (error) {
+        console.error("Error fetching bots:", error);
+      }
+    }
+    
+    fetchBots();
+  }, [org, mounted]);
   async function ingestText() {
     if (!org || !bot) { alert("Select org and bot"); return; }
     if (!text.trim()) { alert("Enter text to ingest"); return; }
@@ -206,7 +239,7 @@ export default function IngestPage() {
       const headers: Record<string, string> = {};
       if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
       if (botKey) headers["X-Bot-Key"] = botKey;
-      const r = await fetch(`${B()}/api/ingest/file/${encodeURIComponent(bot)}`, { method: "POST", headers, body: fd });
+      const r = await fetch(`${B()}/api/ingest/pdf/${encodeURIComponent(bot)}`, { method: "POST", headers, body: fd });
       const d = await r.json();
       setIsLoading(false);
       alert(`✓ Successfully processed ${file.name}\n\nInserted: ${d.inserted} chunks\nFile Type: ${d.file_type}`);
