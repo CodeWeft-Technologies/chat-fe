@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Codeweft Chatbot",
+  title: "CodeWeft Chatbot",
   description: "powerful chatbot for your website",
   icons: {
     icon: "/favicon.ico",

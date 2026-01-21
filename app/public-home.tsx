@@ -67,7 +67,7 @@ export default function PublicHomepage() {
             <div className="w-8 h-8 sm:w-10 sm:h-10 relative">
               <Image src="/cw.png" alt="CodeWeft Logo" width={40} height={40} className="w-full h-full" />
             </div>
-            <span className="text-lg sm:text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">CodeWeft</span>
+            <span className="text-lg sm:text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">CodeWeft Chatbot</span>
           </div>
 
           {/* Desktop Menu */}
