@@ -1,46 +1,12 @@
 "use client";
 import { useState, useEffect } from "react";
 import AuthGate from "../components/auth-gate";
+import { IngestProgressModal } from "../components/ingest-progress-modal";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { Textarea } from "../components/ui/textarea";
-
-// Loading Modal Component
-function IngestLoadingModal({ isOpen, message }: { isOpen: boolean; message: string }) {
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4 animate-in zoom-in-50 duration-200">
-        <div className="flex flex-col items-center gap-6">
-          {/* Animated Spinner */}
-          <div className="relative w-16 h-16">
-            <div className="absolute inset-0 rounded-full border-4 border-gray-200"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-500 border-r-blue-500 animate-spin"></div>
-          </div>
-          
-          {/* Text */}
-          <div className="text-center space-y-2">
-            <h3 className="text-lg font-semibold text-gray-900">Training Model</h3>
-            <p className="text-sm text-gray-600">{message}</p>
-          </div>
-
-          {/* Pulsing Dots */}
-          <div className="flex gap-1.5 justify-center">
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"
-                style={{ animationDelay: `${i * 150}ms` }}
-              ></div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function B() {
   const env = process.env.NEXT_PUBLIC_BACKEND_URL || "";
@@ -52,8 +18,9 @@ function B() {
 export default function IngestPage() {
   const [mounted, setMounted] = useState(false);
   const [org, setOrg] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState("Processing your data...");
+  const [showProgress, setShowProgress] = useState(false);
+  const [currentJobId, setCurrentJobId] = useState<string | null>(null);
+  const [currentFileName, setCurrentFileName] = useState<string | null>(null);
   useEffect(() => { setMounted(true); const d = typeof window !== "undefined" ? (localStorage.getItem("orgId") || "") : ""; setOrg(d); }, []);
   useEffect(() => { if (org) localStorage.setItem("orgId", org); }, [org]);
   const [bot, setBot] = useState("");
@@ -100,8 +67,8 @@ export default function IngestPage() {
   async function ingestText() {
     if (!org || !bot) { alert("Select org and bot"); return; }
     if (!text.trim()) { alert("Enter text to ingest"); return; }
-    setIsLoading(true);
-    setLoadingMessage("Training model with your text...");
+    setCurrentFileName("Text Content");
+    setShowProgress(true);
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
     if (botKey) headers["X-Bot-Key"] = botKey;
@@ -110,12 +77,12 @@ export default function IngestPage() {
       const t = await r.text();
       if (!r.ok) { try { const j = JSON.parse(t); throw new Error(j.detail || t); } catch { throw new Error(t); } }
       const d = JSON.parse(t);
-      setIsLoading(false);
+      setShowProgress(false);
       alert(`✓ Successfully inserted ${d.inserted} chunks`);
       setText("");
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      setIsLoading(false);
+      setShowProgress(false);
       alert("✗ " + (msg || "Failed to ingest text"));
     }
   }
@@ -125,8 +92,8 @@ export default function IngestPage() {
     const parts = qna.filter(p=>p.q.trim()&&p.a.trim()).map(p=>`Q: ${p.q.trim()}\nA: ${p.a.trim()}`);
     if (!parts.length) { alert("No valid QnA rows. Please fill both Question and Answer."); return; }
     const content = parts.join("\n\n");
-    setIsLoading(true);
-    setLoadingMessage("Training model with Q&A pairs...");
+    setCurrentFileName("Q&A Content");
+    setShowProgress(true);
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
     if (botKey) headers["X-Bot-Key"] = botKey;
@@ -135,12 +102,12 @@ export default function IngestPage() {
       const t = await r.text();
       if (!r.ok) { try { const j = JSON.parse(t); throw new Error(j.detail || t); } catch { throw new Error(t); } }
       const d = JSON.parse(t);
-      setIsLoading(false);
+      setShowProgress(false);
       alert(`✓ Successfully inserted ${d.inserted} chunks`);
       setQna([]);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      setIsLoading(false);
+      setShowProgress(false);
       alert("✗ " + (msg || "Failed to ingest Q&A"));
     }
   }
@@ -230,8 +197,8 @@ export default function IngestPage() {
   }
   async function ingestFile() {
     if (!org || !bot || !file) return;
-    setIsLoading(true);
-    setLoadingMessage("Processing your document...");
+    setCurrentFileName(file.name);
+    setShowProgress(true);
     try {
       const fd = new FormData();
       fd.append("org_id", org);
@@ -241,12 +208,19 @@ export default function IngestPage() {
       if (botKey) headers["X-Bot-Key"] = botKey;
       const r = await fetch(`${B()}/api/ingest/file/${encodeURIComponent(bot)}`, { method: "POST", headers, body: fd });
       const d = await r.json();
-      setIsLoading(false);
-      alert(`✓ Successfully processed ${file.name}\n\nInserted: ${d.inserted} chunks\nSkipped Duplicates: ${d.skipped_duplicates}\nTotal Chunks: ${d.total_chunks}\nFile Type: ${d.file_type}`);
-      setFile(null);
+      
+      // Extract job ID from response
+      const jobId = d.job_id;
+      if (jobId) {
+        setCurrentJobId(jobId);
+      } else {
+        setShowProgress(false);
+        alert(`✓ Successfully processed ${file.name}\n\nInserted: ${d.inserted} chunks\nSkipped Duplicates: ${d.skipped_duplicates}\nTotal Chunks: ${d.total_chunks}\nFile Type: ${d.file_type}`);
+        setFile(null);
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      setIsLoading(false);
+      setShowProgress(false);
       alert("✗ " + (msg || "Failed to ingest document"));
     }
   }
@@ -254,6 +228,23 @@ export default function IngestPage() {
   return (
     <>
       <AuthGate />
+      <IngestProgressModal 
+        isOpen={showProgress} 
+        jobId={currentJobId || undefined}
+        fileName={currentFileName || undefined}
+        onComplete={(jobId) => {
+          setShowProgress(false);
+          setCurrentJobId(null);
+          setCurrentFileName(null);
+          setFile(null);
+          alert("✓ File ingestion completed successfully!");
+        }}
+        onDismiss={() => {
+          setShowProgress(false);
+          setCurrentJobId(null);
+          setCurrentFileName(null);
+        }}
+      />
       <IngestLoadingModal isOpen={isLoading} message={loadingMessage} />
       <div className="max-w-5xl mx-auto space-y-8 pb-12">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
