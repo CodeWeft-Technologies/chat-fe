@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, AlertCircle, Zap } from "lucide-react";
 
 interface ProgressModalProps {
   isOpen: boolean;
@@ -190,9 +189,7 @@ export function IngestProgressModal({
         {isCompleted && (
           <div className="text-center space-y-4 mb-6">
             <div className="flex justify-center">
-              <div className="relative w-20 h-20">
-                <CheckCircle2 className="w-20 h-20 text-green-500 animate-bounce" />
-              </div>
+              <div className="text-6xl animate-bounce">✅</div>
             </div>
             <div>
               <p className="text-xl font-bold text-white mb-1">Successfully ingested!</p>
@@ -207,7 +204,7 @@ export function IngestProgressModal({
         {isFailed && (
           <div className="text-center space-y-4 mb-6">
             <div className="flex justify-center">
-              <AlertCircle className="w-16 h-16 text-red-500" />
+              <div className="text-6xl">⚠️</div>
             </div>
             <div>
               <p className="text-sm text-red-400 font-mono break-words">{status?.error || "Unknown error occurred"}</p>
