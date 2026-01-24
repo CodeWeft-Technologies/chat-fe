@@ -2,18 +2,18 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 
 // Animated Text Component
 function AnimatedTextCycle() {
-  const texts = [
+  const texts = useMemo(() => [
     'Scheduling Assistant',
     'Q&A Assistant',
     'Support Assistant',
     'Customer Care Assistant',
     'Lead Generation Bot',
     'Sales Assistant'
-  ];
+  ], []);
 
   const [displayText, setDisplayText] = useState('');
   const [textIndex, setTextIndex] = useState(0);

@@ -70,7 +70,6 @@ export default function IngestPage() {
     setShowProgress(true);
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
-    if (botKey) headers["X-Bot-Key"] = botKey;
     try {
       const r = await fetch(`${B()}/api/ingest/${encodeURIComponent(bot)}`, { method: "POST", headers, body: JSON.stringify({ org_id: org, content: text }) });
       const t = await r.text();
@@ -95,7 +94,6 @@ export default function IngestPage() {
     setShowProgress(true);
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
-    if (botKey) headers["X-Bot-Key"] = botKey;
     try {
       const r = await fetch(`${B()}/api/ingest/${encodeURIComponent(bot)}`, { method: "POST", headers, body: JSON.stringify({ org_id: org, content }) });
       const t = await r.text();
@@ -175,22 +173,17 @@ export default function IngestPage() {
     if (!org || !bot || !url) return;
     let u = url.trim();
     if (!/^https?:\/\//i.test(u)) u = `https://${u}`;
-    setIsLoading(true);
-    setLoadingMessage("Fetching and processing website content...");
     try {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
-      if (botKey) headers["X-Bot-Key"] = botKey;
       const r = await fetch(`${B()}/api/ingest/url/${encodeURIComponent(bot)}`, { method: "POST", headers, body: JSON.stringify({ org_id: org, url: u }) });
       const t = await r.text();
       if (!r.ok) { try { const j = JSON.parse(t); throw new Error(j.detail || t); } catch { throw new Error(t); } }
       const d = JSON.parse(t);
-      setIsLoading(false);
       alert(`✓ Successfully inserted ${d.inserted} chunks`);
       setUrl("");
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      setIsLoading(false);
       alert("✗ " + (msg || "Failed to ingest URL"));
     }
   }
@@ -204,7 +197,6 @@ export default function IngestPage() {
       fd.append("file", file);
       const headers: Record<string, string> = {};
       if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
-      if (botKey) headers["X-Bot-Key"] = botKey;
       const r = await fetch(`${B()}/api/ingest/file/${encodeURIComponent(bot)}`, { method: "POST", headers, body: fd });
       const d = await r.json();
       
@@ -276,7 +268,7 @@ export default function IngestPage() {
                             { value: "", label: "Select a bot..." },
                             ...bots.map(b => ({ value: b.bot_id, label: b.name || b.bot_id }))
                         ]}
-                        description={botKey ? 'Active API Key found' : 'Using Bearer Token'}
+                        description="Using Bearer Token"
                     />
                 </CardContent>
             </Card>
@@ -430,14 +422,13 @@ export default function IngestPage() {
                                     </div>
                                 ))}
                             </div>
-
                             <div className="flex justify-end pt-4 border-t border-gray-100">
                                 <Button 
                                     onClick={ingestQna} 
-                                    disabled={isLoading || qna.length === 0 || !bot}
+                                    disabled={qna.length === 0 || !bot}
                                     className="min-w-[120px]"
                                 >
-                                    {isLoading ? 'Processing...' : 'Save Q&A Pairs'}
+                                    Save Q&A Pairs
                                 </Button>
                             </div>
                         </div>

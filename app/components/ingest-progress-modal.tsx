@@ -76,7 +76,6 @@ export function IngestProgressModal({
 
         const data = await response.json();
         setStatus(data);
-        setLoading(false);
 
         // Call onComplete when done
         if (data.status === "completed" && onComplete) {
