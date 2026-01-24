@@ -40,7 +40,6 @@ export function IngestProgressModal({
   onDismiss,
 }: ProgressModalProps) {
   const [status, setStatus] = useState<JobStatus | null>(null);
-  const [loading, setLoading] = useState(true);
   const [textIndex, setTextIndex] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
 
@@ -216,7 +215,7 @@ export function IngestProgressModal({
         <div className="space-y-3">
           {!isCompleted && !isFailed && (
             <div className="bg-slate-700/50 border border-slate-600 rounded-xl p-4">
-              <p className="text-xs text-slate-300 font-semibold mb-3">💡 While we're training:</p>
+              <p className="text-xs text-slate-300 font-semibold mb-3">💡 While we&apos;re training:</p>
               <div className="flex flex-col gap-2">
                 <Link
                   href="/dashboard"

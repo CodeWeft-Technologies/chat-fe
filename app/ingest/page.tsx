@@ -30,7 +30,6 @@ export default function IngestPage() {
   const [file, setFile] = useState<File | null>(null);
   const [tab, setTab] = useState<'text'|'qna'|'website'|'file'>('file');
   const [qna, setQna] = useState<{ q: string; a: string }[]>([]);
-  const [botKey, setBotKey] = useState<string | null>(null);
    // Fetch bots when org changes
   useEffect(() => {
     if (!org || !mounted) return;
@@ -232,7 +231,7 @@ export default function IngestPage() {
         isOpen={showProgress} 
         jobId={currentJobId || undefined}
         fileName={currentFileName || undefined}
-        onComplete={(jobId) => {
+        onComplete={() => {
           setShowProgress(false);
           setCurrentJobId(null);
           setCurrentFileName(null);
@@ -245,7 +244,6 @@ export default function IngestPage() {
           setCurrentFileName(null);
         }}
       />
-      <IngestLoadingModal isOpen={isLoading} message={loadingMessage} />
       <div className="max-w-5xl mx-auto space-y-8 pb-12">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
