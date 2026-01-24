@@ -239,10 +239,10 @@ export default function IngestPage() {
       const headers: Record<string, string> = {};
       if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
       if (botKey) headers["X-Bot-Key"] = botKey;
-      const r = await fetch(`${B()}/api/ingest/pdf/${encodeURIComponent(bot)}`, { method: "POST", headers, body: fd });
+      const r = await fetch(`${B()}/api/ingest/file/${encodeURIComponent(bot)}`, { method: "POST", headers, body: fd });
       const d = await r.json();
       setIsLoading(false);
-      alert(`✓ Successfully processed ${file.name}\n\nInserted: ${d.inserted} chunks\nFile Type: ${d.file_type}`);
+      alert(`✓ Successfully processed ${file.name}\n\nInserted: ${d.inserted} chunks\nSkipped Duplicates: ${d.skipped_duplicates}\nTotal Chunks: ${d.total_chunks}\nFile Type: ${d.file_type}`);
       setFile(null);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
