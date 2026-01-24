@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import AuthGate from "../components/auth-gate";
-import { IngestProgressModal } from "../components/ingest-progress-modal";
+import { IngestProgressInline } from "../components/ingest-progress-inline";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -219,8 +219,8 @@ export default function IngestPage() {
   return (
     <>
       <AuthGate />
-      <IngestProgressModal 
-        isOpen={showProgress} 
+      <IngestProgressInline 
+        isVisible={showProgress} 
         jobId={currentJobId || undefined}
         fileName={currentFileName || undefined}
         onComplete={() => {
