@@ -63,7 +63,12 @@ export function IngestProgressInline({
 
   // Poll job status
   useEffect(() => {
-    if (!isVisible || !jobId) return;
+    console.log(`[INGEST-POLL] useEffect triggered - isVisible=${isVisible}, jobId=${jobId}`);
+    
+    if (!isVisible || !jobId) {
+      console.log(`[INGEST-POLL] Skipping poll: isVisible=${isVisible}, jobId=${jobId}`);
+      return;
+    }
 
     const fetchStatus = async () => {
       try {
@@ -73,14 +78,14 @@ export function IngestProgressInline({
           if (token) headers["Authorization"] = `Bearer ${token}`;
         }
         
-        console.log(`[INGEST-POLL] Fetching status for job: ${jobId?.substring(0, 8)}...`);
+        console.log(`[INGEST-POLL] Making request to /api/ingest/jobs/status/${jobId?.substring(0, 8)}...`);
         const response = await fetch(`/api/ingest/jobs/status/${jobId}`, { headers });
-        console.log(`[INGEST-POLL] Response status: ${response.status}`);
+        console.log(`[INGEST-POLL] ✓ Response status: ${response.status}`);
         
         if (!response.ok) throw new Error(`Failed to fetch status: ${response.status}`);
 
         const data = await response.json();
-        console.log(`[INGEST-POLL] Got response: status=${data.status}, progress=${data.progress}%`);
+        console.log(`[INGEST-POLL] ✓ Got response: status=${data.status}, progress=${data.progress}%`);
         setStatus(data);
 
         // Call onComplete when done
@@ -89,13 +94,18 @@ export function IngestProgressInline({
           onComplete();
         }
       } catch (error) {
-        console.error('[INGEST-POLL] Error fetching job status:', error);
+        console.error('[INGEST-POLL] ❌ Error:', error);
       }
     };
 
-    fetchStatus();
+    console.log(`[INGEST-POLL] Setting up polling interval (1 second)`);
+    fetchStatus();  // Initial fetch immediately
     const interval = setInterval(fetchStatus, 1000);
-    return () => clearInterval(interval);
+    
+    return () => {
+      console.log(`[INGEST-POLL] Cleanup: Clearing interval`);
+      clearInterval(interval);
+    };
   }, [isVisible, jobId, onComplete]);
 
   if (!isVisible) return null;
