@@ -87,11 +87,11 @@ export function IngestProgressInline({
     return () => clearInterval(interval);
   }, [isVisible, jobId, onComplete]);
 
-  if (!isVisible || !status) return null;
+  if (!isVisible) return null;
 
-  const isCompleted = status.status === 'completed';
-  const isFailed = status.status === 'failed';
-  const isProcessing = status.status === 'processing' || status.status === 'pending';
+  const isCompleted = status?.status === 'completed';
+  const isFailed = status?.status === 'failed';
+  const isProcessing = !status || status?.status === 'processing' || status?.status === 'pending';
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -132,12 +132,12 @@ export function IngestProgressInline({
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-600">Progress</span>
-                <span className="font-semibold text-blue-600">{status.progress}%</span>
+                <span className="font-semibold text-blue-600">{status?.progress || 0}%</span>
               </div>
               <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full transition-all duration-300"
-                  style={{ width: `${status.progress}%` }}
+                  style={{ width: `${status?.progress || 0}%` }}
                 />
               </div>
             </div>
@@ -179,7 +179,7 @@ export function IngestProgressInline({
             <div>
               <p className="font-semibold text-gray-900">Ingestion Complete!</p>
               <p className="text-sm text-gray-600">
-                {status.documents_count || 0} documents processed
+                {status?.documents_count || 0} documents processed
               </p>
             </div>
             <button
@@ -197,7 +197,7 @@ export function IngestProgressInline({
             <div className="text-6xl">⚠️</div>
             <div>
               <p className="font-semibold text-gray-900">Ingestion Failed</p>
-              <p className="text-sm text-red-600">{status.error || 'Unknown error'}</p>
+              <p className="text-sm text-red-600">{status?.error || 'Unknown error'}</p>
             </div>
             <button
               onClick={onDismiss}

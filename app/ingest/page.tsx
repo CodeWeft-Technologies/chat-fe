@@ -189,8 +189,10 @@ export default function IngestPage() {
   }
   async function ingestFile() {
     if (!org || !bot || !file) return;
+    console.log('[INGEST] Starting file upload:', file.name);
     setCurrentFileName(file.name);
     setShowProgress(true);
+    console.log('[INGEST] Progress modal should be visible now');
     try {
       const fd = new FormData();
       fd.append("org_id", org);
@@ -198,19 +200,25 @@ export default function IngestPage() {
       const headers: Record<string, string> = {};
       if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
       const r = await fetch(`${B()}/api/ingest/file/${encodeURIComponent(bot)}`, { method: "POST", headers, body: fd });
+      console.log('[INGEST] Response status:', r.status);
       const d = await r.json();
+      console.log('[INGEST] Response data:', d);
       
       // Extract job ID from response
       const jobId = d.job_id;
+      console.log('[INGEST] Job ID:', jobId);
       if (jobId) {
         setCurrentJobId(jobId);
+        console.log('[INGEST] Job ID set, waiting for progress updates');
       } else {
+        console.log('[INGEST] No job ID in response');
         setShowProgress(false);
         alert(`✓ Successfully processed ${file.name}\n\nInserted: ${d.inserted} chunks\nSkipped Duplicates: ${d.skipped_duplicates}\nTotal Chunks: ${d.total_chunks}\nFile Type: ${d.file_type}`);
         setFile(null);
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
+      console.error('[INGEST] Error:', msg);
       setShowProgress(false);
       alert("✗ " + (msg || "Failed to ingest document"));
     }
