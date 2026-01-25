@@ -67,18 +67,29 @@ export function IngestProgressInline({
 
     const fetchStatus = async () => {
       try {
-        const response = await fetch(`/api/ingest/jobs/status/${jobId}`);
-        if (!response.ok) throw new Error('Failed to fetch status');
+        const headers: Record<string, string> = {};
+        if (typeof window !== "undefined") {
+          const token = localStorage.getItem("token");
+          if (token) headers["Authorization"] = `Bearer ${token}`;
+        }
+        
+        console.log(`[INGEST-POLL] Fetching status for job: ${jobId?.substring(0, 8)}...`);
+        const response = await fetch(`/api/ingest/jobs/status/${jobId}`, { headers });
+        console.log(`[INGEST-POLL] Response status: ${response.status}`);
+        
+        if (!response.ok) throw new Error(`Failed to fetch status: ${response.status}`);
 
         const data = await response.json();
+        console.log(`[INGEST-POLL] Got response: status=${data.status}, progress=${data.progress}%`);
         setStatus(data);
 
         // Call onComplete when done
         if (data.status === 'completed' && onComplete) {
+          console.log(`[INGEST-POLL] ✅ Job completed! Documents: ${data.documents_count}`);
           onComplete();
         }
       } catch (error) {
-        console.error('Error fetching job status:', error);
+        console.error('[INGEST-POLL] Error fetching job status:', error);
       }
     };
 
