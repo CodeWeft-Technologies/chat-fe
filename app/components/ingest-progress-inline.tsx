@@ -60,7 +60,7 @@ export function IngestProgressInline({
       setElapsedTime((prev) => prev + 1);
     }, 1000);
     return () => clearInterval(timer);
-  }, [isVisible, status?.status]);
+  }, [isVisible, status]);
 
   // Poll job status
   useEffect(() => {
@@ -96,7 +96,7 @@ export function IngestProgressInline({
             onComplete();
           }, 500);
         }
-      } catch (error) {
+      } catch {
         // Silently fail - endpoint might not be ready yet
       }
     };
@@ -269,10 +269,10 @@ export function IngestProgressInline({
 
             <div className="space-y-3">
               <h2 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                We've Trained Your Chatbot!
+                We&apos;ve Trained Your Chatbot!
               </h2>
               <p className="text-gray-600">
-                {status?.documents_count || 0} documents have been successfully processed and integrated into your chatbot's knowledge base.
+                {status?.documents_count || 0} documents have been successfully processed and integrated into your chatbot&apos;s knowledge base.
               </p>
             </div>
 
