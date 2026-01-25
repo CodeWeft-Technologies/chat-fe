@@ -227,23 +227,6 @@ export default function IngestPage() {
   return (
     <>
       <AuthGate />
-      <IngestProgressInline 
-        isVisible={showProgress} 
-        jobId={currentJobId || undefined}
-        fileName={currentFileName || undefined}
-        onComplete={() => {
-          setShowProgress(false);
-          setCurrentJobId(null);
-          setCurrentFileName(null);
-          setFile(null);
-          alert("✓ File ingestion completed successfully!");
-        }}
-        onDismiss={() => {
-          setShowProgress(false);
-          setCurrentJobId(null);
-          setCurrentFileName(null);
-        }}
-      />
       <div className="max-w-5xl mx-auto space-y-8 pb-12">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -251,6 +234,26 @@ export default function IngestPage() {
           <p className="text-gray-500 mt-1">Add content sources for your chatbot to learn from</p>
         </div>
       </div>
+
+      {/* Progress indicator shown inline at the top */}
+      {showProgress && (
+        <IngestProgressInline 
+          isVisible={showProgress} 
+          jobId={currentJobId || undefined}
+          fileName={currentFileName || undefined}
+          onComplete={() => {
+            setShowProgress(false);
+            setCurrentJobId(null);
+            setCurrentFileName(null);
+            setFile(null);
+          }}
+          onDismiss={() => {
+            setShowProgress(false);
+            setCurrentJobId(null);
+            setCurrentFileName(null);
+          }}
+        />
+      )}
 
       <div className="grid lg:grid-cols-3 gap-8">
         {/* Left Column: Configuration */}
