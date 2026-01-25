@@ -99,12 +99,13 @@ export function IngestProgressInline({
     };
 
     fetchStatus();  // Initial fetch immediately
-    const interval = setInterval(fetchStatus, 1000);
+    // Poll every 5 seconds instead of every 1 second to reduce API calls
+    const interval = setInterval(fetchStatus, 5000);
     
     return () => {
       clearInterval(interval);
     };
-  }, [isVisible, jobId, onComplete]);
+  }, [isVisible, jobId]);
 
   if (!isVisible) return null;
 
