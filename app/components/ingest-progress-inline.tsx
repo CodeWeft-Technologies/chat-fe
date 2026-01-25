@@ -63,12 +63,7 @@ export function IngestProgressInline({
 
   // Poll job status
   useEffect(() => {
-    console.log(`[INGEST-POLL] useEffect triggered - isVisible=${isVisible}, jobId=${jobId}`);
-    
-    if (!isVisible || !jobId) {
-      console.log(`[INGEST-POLL] Skipping poll: isVisible=${isVisible}, jobId=${jobId}`);
-      return;
-    }
+    if (!isVisible || !jobId) return;
 
     const fetchStatus = async () => {
       try {
@@ -86,33 +81,26 @@ export function IngestProgressInline({
         backendUrl = backendUrl.replace(/\/$/, "");
         
         const url = `${backendUrl}/api/ingest/jobs/status/${jobId}`;
-        
-        console.log(`[INGEST-POLL] Making request to ${url}`);
         const response = await fetch(url, { headers });
-        console.log(`[INGEST-POLL] ✓ Response status: ${response.status}`);
         
         if (!response.ok) throw new Error(`Failed to fetch status: ${response.status}`);
 
         const data = await response.json();
-        console.log(`[INGEST-POLL] ✓ Got response: status=${data.status}, progress=${data.progress}%`);
         setStatus(data);
 
         // Call onComplete when done
         if (data.status === 'completed' && onComplete) {
-          console.log(`[INGEST-POLL] ✅ Job completed! Documents: ${data.documents_count}`);
           onComplete();
         }
       } catch (error) {
-        console.error('[INGEST-POLL] ❌ Error:', error);
+        // Silently fail - endpoint might not be ready yet
       }
     };
 
-    console.log(`[INGEST-POLL] Setting up polling interval (1 second)`);
     fetchStatus();  // Initial fetch immediately
     const interval = setInterval(fetchStatus, 1000);
     
     return () => {
-      console.log(`[INGEST-POLL] Cleanup: Clearing interval`);
       clearInterval(interval);
     };
   }, [isVisible, jobId, onComplete]);
