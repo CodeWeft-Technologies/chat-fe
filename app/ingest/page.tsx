@@ -48,6 +48,47 @@ export default function IngestPage() {
   const [file, setFile] = useState<File | null>(null);
   const [tab, setTab] = useState<'text'|'qna'|'website'|'file'>('file');
   const [qna, setQna] = useState<{ q: string; a: string }[]>([]);
+
+  // Allowed file types
+  const ALLOWED_FILE_TYPES = {
+    // Documents
+    'application/pdf': ['.pdf'],
+    'application/msword': ['.doc'],
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
+    'application/vnd.ms-powerpoint': ['.ppt'],
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+    'application/vnd.ms-excel': ['.xls'],
+    'text/csv': ['.csv'],
+    'text/plain': ['.txt'],
+    // Images
+    'image/png': ['.png'],
+    'image/jpeg': ['.jpg', '.jpeg'],
+    'image/webp': ['.webp'],
+  };
+
+  const ALLOWED_EXTENSIONS = ['.pdf', '.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls', '.csv', '.txt', '.png', '.jpg', '.jpeg', '.webp'];
+  const ALLOWED_MIME_TYPES = Object.keys(ALLOWED_FILE_TYPES);
+
+  function isFileTypeAllowed(file: File): boolean {
+    const extension = '.' + file.name.split('.').pop()?.toLowerCase();
+    return ALLOWED_EXTENSIONS.includes(extension) || ALLOWED_MIME_TYPES.includes(file.type);
+  }
+
+  function handleFileChange(file: File | null) {
+    if (!file) {
+      setFile(null);
+      return;
+    }
+
+    if (!isFileTypeAllowed(file)) {
+      const ext = file.name.split('.').pop()?.toUpperCase() || 'Unknown';
+      alert(`❌ File type ".${ext}" is not supported.\n\nSupported types:\nDocuments: PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX, CSV, TXT\nImages: PNG, JPG, JPEG, WEBP`);
+      return;
+    }
+
+    setFile(file);
+  }
    // Fetch bots when org changes
   useEffect(() => {
     if (!org || !mounted) return;
@@ -523,9 +564,10 @@ export default function IngestPage() {
                             <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center hover:bg-gray-50 transition-colors">
                                 <input
                                     type="file"
-                                    onChange={e => setFile(e.target.files?.[0] || null)}
+                                    onChange={e => handleFileChange(e.target.files?.[0] || null)}
                                     className="hidden"
                                     id="file-upload"
+                                    accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.csv,.txt,.png,.jpg,.jpeg,.webp"
                                 />
                                 <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center gap-2">
                                     <span className="text-4xl">📁</span>
@@ -533,14 +575,23 @@ export default function IngestPage() {
                                         {file ? file.name : "Click to select a document"}
                                     </span>
                                     <span className="text-sm text-gray-400">
-                                        {file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : "PDF, Word, Excel, PowerPoint, Images, HTML, and more"}
+                                        {file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : "PDF, Word, Excel, PowerPoint, Images, CSV, Text"}
                                     </span>
                                 </label>
                             </div>
 
                             <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 text-sm text-blue-800">
                                 <p className="font-semibold mb-2">📋 Supported File Types:</p>
-                                <p className="text-xs">PDF • DOCX • XLSX • PPTX • HTML • TXT • Images (JPG, PNG, GIF) • JSON • CSV • Markdown and more</p>
+                                <div className="grid grid-cols-2 gap-3 text-xs">
+                                    <div>
+                                        <p className="font-semibold text-gray-700 mb-1">Documents:</p>
+                                        <p>PDF • DOC • DOCX • PPT • PPTX • XLS • XLSX</p>
+                                    </div>
+                                    <div>
+                                        <p className="font-semibold text-gray-700 mb-1">Other:</p>
+                                        <p>CSV • TXT • PNG • JPG • JPEG • WEBP</p>
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="flex justify-end">
