@@ -21,7 +21,25 @@ export default function IngestPage() {
   const [showProgress, setShowProgress] = useState(false);
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
   const [currentFileName, setCurrentFileName] = useState<string | null>(null);
-  useEffect(() => { setMounted(true); const d = typeof window !== "undefined" ? (localStorage.getItem("orgId") || "") : ""; setOrg(d); }, []);
+  
+  useEffect(() => { 
+    setMounted(true); 
+    const d = typeof window !== "undefined" ? (localStorage.getItem("orgId") || "") : ""; 
+    setOrg(d);
+    
+    // Restore progress state from localStorage (survives tab switches)
+    if (typeof window !== "undefined") {
+      const savedJobId = localStorage.getItem("ingestJobId");
+      const savedFileName = localStorage.getItem("ingestFileName");
+      if (savedJobId && savedFileName) {
+        console.log("[INGEST] Restoring progress from previous session:', jobId=${savedJobId}');
+        setShowProgress(true);
+        setCurrentJobId(savedJobId);
+        setCurrentFileName(savedFileName);
+      }
+    }
+  }, []);
+  
   useEffect(() => { if (org) localStorage.setItem("orgId", org); }, [org]);
   const [bot, setBot] = useState("");
   const [bots, setBots] = useState<{ bot_id: string; name?: string | null }[]>([]);
@@ -192,7 +210,7 @@ export default function IngestPage() {
     console.log('[INGEST] Starting file upload:', file.name);
     setCurrentFileName(file.name);
     setShowProgress(true);
-    console.log('[INGEST] Progress modal should be visible now');
+    
     try {
       const fd = new FormData();
       fd.append("org_id", org);
@@ -209,6 +227,14 @@ export default function IngestPage() {
       console.log('[INGEST] Job ID:', jobId);
       if (jobId) {
         setCurrentJobId(jobId);
+        
+        // Save to localStorage so progress persists across tab switches
+        if (typeof window !== "undefined") {
+          localStorage.setItem("ingestJobId", jobId);
+          localStorage.setItem("ingestFileName", file.name);
+          console.log('[INGEST] Saved progress to localStorage (survives tab switches)');
+        }
+        
         console.log('[INGEST] Job ID set, waiting for progress updates');
       } else {
         console.log('[INGEST] No job ID in response');
@@ -242,15 +268,28 @@ export default function IngestPage() {
           jobId={currentJobId || undefined}
           fileName={currentFileName || undefined}
           onComplete={() => {
+            console.log('[INGEST] Ingestion complete, clearing progress');
             setShowProgress(false);
             setCurrentJobId(null);
             setCurrentFileName(null);
             setFile(null);
+            
+            // Clear localStorage when done
+            if (typeof window !== "undefined") {
+              localStorage.removeItem("ingestJobId");
+              localStorage.removeItem("ingestFileName");
+            }
           }}
           onDismiss={() => {
             setShowProgress(false);
             setCurrentJobId(null);
             setCurrentFileName(null);
+            
+            // Clear localStorage when dismissed
+            if (typeof window !== "undefined") {
+              localStorage.removeItem("ingestJobId");
+              localStorage.removeItem("ingestFileName");
+            }
           }}
         />
       )}
