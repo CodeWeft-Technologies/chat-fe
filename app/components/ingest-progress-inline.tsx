@@ -78,8 +78,13 @@ export function IngestProgressInline({
           if (token) headers["Authorization"] = `Bearer ${token}`;
         }
         
-        console.log(`[INGEST-POLL] Making request to /api/ingest/jobs/status/${jobId?.substring(0, 8)}...`);
-        const response = await fetch(`/api/ingest/jobs/status/${jobId}`, { headers });
+        // Get backend URL from environment or use current origin
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 
+          (typeof window !== "undefined" ? window.location.origin : "");
+        const url = `${backendUrl}/api/ingest/jobs/status/${jobId}`;
+        
+        console.log(`[INGEST-POLL] Making request to ${url}`);
+        const response = await fetch(url, { headers });
         console.log(`[INGEST-POLL] ✓ Response status: ${response.status}`);
         
         if (!response.ok) throw new Error(`Failed to fetch status: ${response.status}`);
