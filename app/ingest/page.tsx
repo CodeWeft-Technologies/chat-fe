@@ -32,7 +32,7 @@ export default function IngestPage() {
       const savedJobId = localStorage.getItem("ingestJobId");
       const savedFileName = localStorage.getItem("ingestFileName");
       if (savedJobId && savedFileName) {
-        console.log("[INGEST] Restoring progress from previous session:', jobId=${savedJobId}');
+        console.log(`[INGEST] Restoring progress from previous session: jobId=${savedJobId}`);
         setShowProgress(true);
         setCurrentJobId(savedJobId);
         setCurrentFileName(savedFileName);
