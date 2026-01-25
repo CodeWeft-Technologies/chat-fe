@@ -79,8 +79,12 @@ export function IngestProgressInline({
         }
         
         // Get backend URL from environment or use current origin
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 
+        let backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 
           (typeof window !== "undefined" ? window.location.origin : "");
+        
+        // Remove trailing slash to avoid double slashes
+        backendUrl = backendUrl.replace(/\/$/, "");
+        
         const url = `${backendUrl}/api/ingest/jobs/status/${jobId}`;
         
         console.log(`[INGEST-POLL] Making request to ${url}`);
