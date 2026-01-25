@@ -26,6 +26,9 @@ export default function PrivacyPage() {
             This page informs you of our policies regarding the collection, use, and disclosure of personal data when you use our Service. 
             For more information about CodeWeft, visit our main website at <a href="https://www.codeweft.in" className="text-blue-600 hover:text-blue-700 underline">www.codeweft.in</a>.
           </p>
+          <p className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded">
+            <strong>Google Compliance:</strong> This Privacy Policy complies with Google OAuth and Google API Services User Data Policy requirements.
+          </p>
 
           <h2 className="text-2xl font-semibold mt-8 mb-4">2. Types of Data Collected</h2>
           
@@ -74,25 +77,57 @@ export default function PrivacyPage() {
           <ul className="list-disc list-inside mb-4 space-y-2">
             <li>View and manage your calendar events</li>
             <li>Create new calendar events based on chatbot conversations</li>
-            <li>Update existing calendar events</li>
+            <li>Update and reschedule existing calendar events</li>
+            <li>Cancel calendar events</li>
           </ul>
           <p>
             Your Google credentials are encrypted and securely stored. We do not share your calendar data with third parties without your consent.
           </p>
 
-          <h2 className="text-2xl font-semibold mt-8 mb-4">6. Third-Party Services</h2>
+          <h2 className="text-2xl font-semibold mt-8 mb-4">5.1 Google Calendar Data Retention and Deletion</h2>
+          <p>
+            We store your Google Calendar ID only for as long as necessary to provide calendar management features (creating, updating, rescheduling, and canceling events). 
+            Your Google Calendar ID is retained while your account is active and you have enabled calendar integration.
+          </p>
+          <p>
+            <strong>Data Deletion:</strong> You can request deletion of your Google Calendar data at any time by:
+          </p>
+          <ul className="list-disc list-inside mb-4 space-y-2">
+            <li>Disconnecting your Google Calendar from your account settings in our Service</li>
+            <li>Requesting account deletion through our support contact</li>
+          </ul>
+          <p>
+            Upon disconnection or account deletion, your Google Calendar ID and associated data will be permanently deleted from our systems within 30 days. 
+            However, calendar events that were already created in your Google Calendar will remain unless you delete them directly from your Google Calendar.
+          </p>
+
+          <h2 className="text-2xl font-semibold mt-8 mb-4">5.2 Limited Use and Data Sharing</h2>
+          <p>
+            Your Google Calendar data is used <strong>exclusively</strong> for the following purposes:
+          </p>
+          <ul className="list-disc list-inside mb-4 space-y-2">
+            <li>Creating calendar events from chatbot conversations</li>
+            <li>Rescheduling existing calendar events</li>
+            <li>Canceling calendar events</li>
+          </ul>
+          <p>
+            We <strong>do not</strong> share, sell, or disclose your Google Calendar ID or calendar data to any third parties. 
+            Your Google Calendar information is used solely to operate the calendar management features of our Service.
+          </p>
+
+          <h2 className="text-2xl font-semibold mt-8 mb-4">7. Third-Party Services</h2>
           <p>
             Our Service may contain links to other sites that are not operated by us. This Privacy Policy does not apply to third-party websites, 
             and we are not responsible for their privacy practices. We encourage you to review the privacy policies of any third-party service before providing your information.
           </p>
 
-          <h2 className="text-2xl font-semibold mt-8 mb-4">7. Children&apos;s Privacy</h2>
+          <h2 className="text-2xl font-semibold mt-8 mb-4">8. Children&apos;s Privacy</h2>
           <p>
             Our Service does not address anyone under the age of 18 (&quot;Children&quot;). We do not knowingly collect personally identifiable information from anyone under 18. 
             If you are a parent or guardian and you are aware that your child has provided us with Personal Data, please contact us immediately.
           </p>
 
-          <h2 className="text-2xl font-semibold mt-8 mb-4">8. Changes to This Privacy Policy</h2>
+          <h2 className="text-2xl font-semibold mt-8 mb-4">9. Changes to This Privacy Policy</h2>
           <p>
             We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page 
             and updating the &quot;effective date&quot; at the bottom of this Privacy Policy.
