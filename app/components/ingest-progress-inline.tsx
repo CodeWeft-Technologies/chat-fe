@@ -122,7 +122,7 @@ export function IngestProgressInline({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="w-full">
       <style>{`
         @keyframes float {
           0%, 100% { transform: translateY(0px); }
@@ -157,6 +157,8 @@ export function IngestProgressInline({
         .slide-down { animation: slide-down 0.5s ease-out; }
         .confetti-piece {
           animation: confetti 3s ease-out forwards;
+          position: fixed;
+          pointer-events: none;
         }
       `}</style>
 
@@ -166,7 +168,7 @@ export function IngestProgressInline({
           {[...Array(15)].map((_, i) => (
             <div
               key={i}
-              className="confetti-piece fixed pointer-events-none"
+              className="confetti-piece"
               style={{
                 left: '50%',
                 top: '50%',
@@ -180,7 +182,7 @@ export function IngestProgressInline({
         </>
       )}
 
-      <div className="bg-gradient-to-br from-white via-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl p-8 max-w-md w-full shadow-2xl slide-down">
+      <div className="bg-gradient-to-br from-white via-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl p-8 w-full shadow-lg slide-down mb-6">
         
         {/* Processing state */}
         {isProcessing && (
