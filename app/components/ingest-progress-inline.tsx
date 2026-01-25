@@ -89,12 +89,9 @@ export function IngestProgressInline({
         const data = await response.json();
         setStatus(data);
 
-        // Call onComplete when done
-        if (data.status === 'completed' && onComplete) {
+        // Show celebration but don't auto-dismiss
+        if (data.status === 'completed') {
           setShowCelebration(true);
-          setTimeout(() => {
-            onComplete();
-          }, 500);
         }
       } catch {
         // Silently fail - endpoint might not be ready yet
@@ -260,47 +257,42 @@ export function IngestProgressInline({
 
         {/* Success state */}
         {isCompleted && (
-          <div className="text-center space-y-6">
-            <div className="relative">
-              <div className="inline-block">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-r from-green-400 to-emerald-500 flex items-center justify-center animate-bounce shadow-lg">
-                  <span className="text-5xl">✨</span>
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="flex-shrink-0">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 animate-pulse">
+                  <span className="text-xl">✨</span>
+                </div>
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-lg bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                  Chatbot Trained Successfully!
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Your data has been integrated into your chatbot
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-600 font-medium">Documents Trained</p>
+                  <p className="text-2xl font-bold text-green-600 mt-1">{status?.documents_count || 0}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-gray-600 font-medium">Training Time</p>
+                  <p className="text-2xl font-bold text-emerald-600 mt-1">{formatTime(elapsedTime)}</p>
                 </div>
               </div>
             </div>
 
-            <div className="space-y-3">
-              <h2 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                We&apos;ve Trained Your Chatbot!
-              </h2>
-              <p className="text-gray-600">
-                {status?.documents_count || 0} documents have been successfully processed and integrated into your chatbot&apos;s knowledge base.
-              </p>
-            </div>
-
-            <div className="bg-white/70 rounded-lg p-4 border border-green-200">
-              <p className="text-sm font-semibold text-gray-700 mb-2">✓ Your chatbot is now equipped with:</p>
-              <ul className="text-xs text-gray-600 space-y-1">
-                <li>✓ {status?.documents_count || 0} trained documents</li>
-                <li>✓ Advanced AI understanding</li>
-                <li>✓ Ready to answer questions</li>
-              </ul>
-            </div>
-
-            <div className="flex flex-col gap-3 pt-2">
-              <button
-                onClick={onDismiss}
-                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-3 px-4 rounded-lg transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
-              >
-                Continue →
-              </button>
-              <Link
-                href="/bots"
-                className="w-full bg-white hover:bg-gray-50 text-gray-900 font-semibold py-3 px-4 rounded-lg transition-all border-2 border-gray-200 hover:border-blue-300 text-center"
-              >
-                View Your Chatbot
-              </Link>
-            </div>
+            <button
+              onClick={onDismiss}
+              className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-2.5 px-4 rounded-lg transition-all shadow-md hover:shadow-lg"
+            >
+              Done
+            </button>
           </div>
         )}
 
