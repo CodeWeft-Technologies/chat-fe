@@ -71,7 +71,7 @@ const TEMPLATE_INSTRUCTIONS: Record<string, { title: string; description: string
       'User asks any question',
       'Bot searches knowledge base',
       'If found: Bot provides accurate answer',
-      'If not found: Bot says "I don\'t have that information"',
+      'If not found: Bot says "I do not have that information"',
       'No forms or data collection'
     ]
   }
@@ -903,7 +903,13 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                       </div>
                     </div>
                   )}
+                </div>
+              </Card>
+            )}
         </div>
+        {/* Sidebar Column - if needed in future */}
+        {/* <div className="space-y-6">
+        </div> */}
       </div>
     </div>
   );
