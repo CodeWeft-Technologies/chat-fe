@@ -851,12 +851,12 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                         <div className="relative">
                           <Input 
                             readOnly 
-                            value={`https://api.codeweft.in/api/form/booking/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`} 
+                            value={`https://api.codeweft.in/api/form/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`} 
                             className="pr-16 font-mono text-xs bg-gray-50" 
                           />
                           <button 
                             onClick={async()=>{
-                              const link = `https://api.codeweft.in/api/form/booking/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`;
+                              const link = `https://api.codeweft.in/api/form/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`;
                               try { 
                                 await navigator.clipboard.writeText(link); 
                                 alert("Booking form link copied!"); 
@@ -881,12 +881,12 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                         <div className="relative">
                           <Input 
                             readOnly 
-                            value={`https://api.codeweft.in/api/form/reschedule/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`} 
+                            value={`https://api.codeweft.in/api/reschedule/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`} 
                             className="pr-16 font-mono text-xs bg-gray-50" 
                           />
                           <button 
                             onClick={async()=>{
-                              const link = `https://api.codeweft.in/api/form/reschedule/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`;
+                              const link = `https://api.codeweft.in/api/reschedule/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`;
                               try { 
                                 await navigator.clipboard.writeText(link); 
                                 alert("Reschedule form link copied!"); 
