@@ -809,31 +809,100 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                 subtitle={`${behavior === 'sales' ? 'Enquiry form' : 'Booking & scheduling forms'} for external use`}
               >
                 <div className="space-y-4">
-                  <div className="relative">
-                    <Input 
-                      readOnly 
-                      value={`https://api.codeweft.in/api/form/lead/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`} 
-                      className="pr-16 font-mono text-xs bg-gray-50" 
-                    />
-                    <button 
-                      onClick={async()=>{
-                        const link = `https://api.codeweft.in/api/form/lead/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`;
-                        try { 
-                          await navigator.clipboard.writeText(link); 
-                          alert("Enquiry form link copied!"); 
-                        } catch {}
-                      }}
-                      className="absolute right-1 top-1 bottom-1 px-3 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-blue-600 hover:border-blue-200"
-                    >
-                      COPY
-                    </button>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Captures lead information including name, email, phone, and service interests
-                  </p>
-                </div>
-              </Card>
-            )}
+                  {behavior === 'sales' && (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-sm font-semibold text-gray-900">💼 Enquiry Form</span>
+                        <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">Sales</span>
+                      </div>
+                      <div className="relative">
+                        <Input 
+                          readOnly 
+                          value={`https://api.codeweft.in/api/form/lead/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`} 
+                          className="pr-16 font-mono text-xs bg-gray-50" 
+                        />
+                        <button 
+                          onClick={async()=>{
+                            const link = `https://api.codeweft.in/api/form/lead/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`;
+                            try { 
+                              await navigator.clipboard.writeText(link); 
+                              alert("Enquiry form link copied!"); 
+                            } catch {}
+                          }}
+                          className="absolute right-1 top-1 bottom-1 px-3 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-blue-600 hover:border-blue-200"
+                        >
+                          COPY
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Captures lead information including name, email, phone, and service interests
+                      </p>
+                    </div>
+                  )}
+
+                  {behavior === 'appointment' && (
+                    <div className="space-y-4">
+                      {/* Booking Form */}
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-sm font-semibold text-gray-900">📅 Appointment Booking Form</span>
+                          <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">Book</span>
+                        </div>
+                        <div className="relative">
+                          <Input 
+                            readOnly 
+                            value={`https://api.codeweft.in/api/form/booking/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`} 
+                            className="pr-16 font-mono text-xs bg-gray-50" 
+                          />
+                          <button 
+                            onClick={async()=>{
+                              const link = `https://api.codeweft.in/api/form/booking/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`;
+                              try { 
+                                await navigator.clipboard.writeText(link); 
+                                alert("Booking form link copied!"); 
+                              } catch {}
+                            }}
+                            className="absolute right-1 top-1 bottom-1 px-3 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-blue-600 hover:border-blue-200"
+                          >
+                            COPY
+                          </button>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          For users to schedule new appointments with available time slots
+                        </p>
+                      </div>
+
+                      {/* Reschedule Form */}
+                      <div className="space-y-3 pt-3 border-t border-gray-100">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-sm font-semibold text-gray-900">🔄 Appointment Reschedule Form</span>
+                          <span className="text-xs px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full">Reschedule</span>
+                        </div>
+                        <div className="relative">
+                          <Input 
+                            readOnly 
+                            value={`https://api.codeweft.in/api/form/reschedule/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`} 
+                            className="pr-16 font-mono text-xs bg-gray-50" 
+                          />
+                          <button 
+                            onClick={async()=>{
+                              const link = `https://api.codeweft.in/api/form/reschedule/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`;
+                              try { 
+                                await navigator.clipboard.writeText(link); 
+                                alert("Reschedule form link copied!"); 
+                              } catch {}
+                            }}
+                            className="absolute right-1 top-1 bottom-1 px-3 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-blue-600 hover:border-blue-200"
+                          >
+                            COPY
+                          </button>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          For users to modify existing appointment times (requires appointment ID)
+                        </p>
+                      </div>
+                    </div>
+                  )}
         </div>
       </div>
     </div>
