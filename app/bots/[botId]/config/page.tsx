@@ -809,144 +809,28 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                 subtitle={`${behavior === 'sales' ? 'Enquiry form' : 'Booking & scheduling forms'} for external use`}
               >
                 <div className="space-y-4">
-                  {/* Unified Booking Portal Link (for appointment bots) */}
-                  {behavior === 'appointment' && (
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-sm font-semibold text-blue-900">🗂️ Unified Booking Portal</span>
-                        <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">All-in-one</span>
-                      </div>
-                      <div className="relative">
-                        <Input 
-                          readOnly 
-                          value={`${window.location.origin}/bots/${botId}/unified-booking`} 
-                          className="pr-16 font-mono text-xs bg-gray-50" 
-                        />
-                        <button 
-                          onClick={async()=>{
-                            const link = `${window.location.origin}/bots/${botId}/unified-booking`;
-                            try { 
-                              await navigator.clipboard.writeText(link); 
-                              alert("Unified booking portal link copied!"); 
-                            } catch {}
-                          }}
-                          className="absolute right-1 top-1 bottom-1 px-3 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-blue-600 hover:border-blue-200"
-                        >
-                          COPY
-                        </button>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Share this single link to let users book, reschedule, cancel, or check appointment status—all in one place.
-                      </p>
-                    </div>
-                  )}
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-xs text-blue-900 leading-relaxed">
-                      📋 These form links can be shared directly with users or embedded on your website. 
-                      Forms are automatically connected to your bot and will capture submissions.
-                    </p>
+                  <div className="relative">
+                    <Input 
+                      readOnly 
+                      value={`https://api.codeweft.in/api/form/lead/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`} 
+                      className="pr-16 font-mono text-xs bg-gray-50" 
+                    />
+                    <button 
+                      onClick={async()=>{
+                        const link = `https://api.codeweft.in/api/form/lead/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`;
+                        try { 
+                          await navigator.clipboard.writeText(link); 
+                          alert("Enquiry form link copied!"); 
+                        } catch {}
+                      }}
+                      className="absolute right-1 top-1 bottom-1 px-3 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-blue-600 hover:border-blue-200"
+                    >
+                      COPY
+                    </button>
                   </div>
-
-                  {behavior === 'sales' && (
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-sm font-semibold text-gray-900">💼 Enquiry Form</span>
-                        <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">Sales</span>
-                      </div>
-                      <div className="relative">
-                        <Input 
-                          readOnly 
-                          value={`${B()}/api/chat/sales-form/${botId}?org_id=${org}`} 
-                          className="pr-16 font-mono text-xs bg-gray-50" 
-                        />
-                        <button 
-                          onClick={async()=>{
-                            const link = `${B()}/api/chat/sales-form/${botId}?org_id=${org}`;
-                            try { 
-                              await navigator.clipboard.writeText(link); 
-                              alert("Enquiry form link copied!"); 
-                            } catch {}
-                          }}
-                          className="absolute right-1 top-1 bottom-1 px-3 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-blue-600 hover:border-blue-200"
-                        >
-                          COPY
-                        </button>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Captures lead information including name, email, phone, and service interests
-                      </p>
-                    </div>
-                  )}
-
-                  {behavior === 'appointment' && (
-                    <div className="space-y-4">
-                      {/* Booking Form */}
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-sm font-semibold text-gray-900">📅 Booking Form</span>
-                          <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">New Appointments</span>
-                        </div>
-                        <div className="relative">
-                          <Input 
-                            readOnly 
-                            value={`${B()}/api/chat/booking-form/${botId}?org_id=${org}`} 
-                            className="pr-16 font-mono text-xs bg-gray-50" 
-                          />
-                          <button 
-                            onClick={async()=>{
-                              const link = `${B()}/api/chat/booking-form/${botId}?org_id=${org}`;
-                              try { 
-                                await navigator.clipboard.writeText(link); 
-                                alert("Booking form link copied!"); 
-                              } catch {}
-                            }}
-                            className="absolute right-1 top-1 bottom-1 px-3 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-blue-600 hover:border-blue-200"
-                          >
-                            COPY
-                          </button>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">
-                          For users to schedule new appointments with available time slots
-                        </p>
-                      </div>
-
-                      {/* Reschedule Form */}
-                      <div className="space-y-3 pt-3 border-t border-gray-100">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-sm font-semibold text-gray-900">🔄 Reschedule Form</span>
-                          <span className="text-xs px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full">Existing Appointments</span>
-                        </div>
-                        <div className="relative">
-                          <Input 
-                            readOnly 
-                            value={`${B()}/api/chat/reschedule-form/${botId}?org_id=${org}`} 
-                            className="pr-16 font-mono text-xs bg-gray-50" 
-                          />
-                          <button 
-                            onClick={async()=>{
-                              const link = `${B()}/api/chat/reschedule-form/${botId}?org_id=${org}`;
-                              try { 
-                                await navigator.clipboard.writeText(link); 
-                                alert("Reschedule form link copied!"); 
-                              } catch {}
-                            }}
-                            className="absolute right-1 top-1 bottom-1 px-3 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-blue-600 hover:border-blue-200"
-                          >
-                            COPY
-                          </button>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">
-                          For users to modify existing appointment times (requires appointment ID)
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="mt-4 pt-3 border-t border-gray-100">
-                    <p className="text-xs text-gray-500">
-                      💡 <strong>Tip:</strong> You can embed these forms on your website using an iframe or share the direct link with customers.
-                    </p>
-                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Captures lead information including name, email, phone, and service interests
+                  </p>
                 </div>
               </Card>
             )}
