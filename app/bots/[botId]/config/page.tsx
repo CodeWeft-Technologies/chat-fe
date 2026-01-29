@@ -905,21 +905,21 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                       {/* Unified Appointment Portal */}
                       <div className="space-y-3 pt-3 border-t border-gray-100">
                         <div className="flex items-center gap-2 mb-2">
-                          <span className="text-sm font-semibold text-gray-900">🎯 Unified Appointment Portal</span>
+                          <span className="text-sm font-semibold text-gray-900">🎯 Public Appointment Portal</span>
                           <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">All-in-One</span>
                         </div>
                         <div className="relative">
                           <Input 
                             readOnly 
-                            value={`${window.location.origin}/bots/${botId}/unified-booking?org_id=${org}`} 
+                            value={`${window.location.origin}/appointment/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`} 
                             className="pr-16 font-mono text-xs bg-gray-50" 
                           />
                           <button 
                             onClick={async()=>{
-                              const link = `${window.location.origin}/bots/${botId}/unified-booking?org_id=${org}`;
+                              const link = `${window.location.origin}/appointment/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`;
                               try { 
                                 await navigator.clipboard.writeText(link); 
-                                alert("Unified appointment portal link copied!"); 
+                                alert("Public appointment portal link copied!"); 
                               } catch {}
                             }}
                             className="absolute right-1 top-1 bottom-1 px-3 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-blue-600 hover:border-blue-200"
@@ -928,7 +928,7 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                           </button>
                         </div>
                         <p className="text-xs text-gray-500 mt-1">
-                          <strong>Complete appointment management:</strong> Book new appointments, reschedule existing ones, check appointment status, and cancel appointments - all in one unified interface
+                          <strong>Public appointment portal:</strong> No login required • Direct links to booking and reschedule forms • Status checking and cancellation • Perfect for sharing with external customers
                         </p>
                         <div className="flex flex-wrap gap-1 mt-2">
                           <span className="text-xs px-2 py-0.5 bg-green-50 text-green-600 rounded">📅 Book</span>
