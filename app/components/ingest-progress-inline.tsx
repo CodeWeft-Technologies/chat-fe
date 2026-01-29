@@ -92,6 +92,10 @@ export function IngestProgressInline({
         // Show celebration but don't auto-dismiss
         if (data.status === 'completed') {
           setShowCelebration(true);
+          // Call onComplete callback if provided
+          if (onComplete) {
+            onComplete();
+          }
         }
       } catch {
         // Silently fail - endpoint might not be ready yet
@@ -105,7 +109,7 @@ export function IngestProgressInline({
     return () => {
       clearInterval(interval);
     };
-  }, [isVisible, jobId]);
+  }, [isVisible, jobId, onComplete]);
 
   if (!isVisible) return null;
 

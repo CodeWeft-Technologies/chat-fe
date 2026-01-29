@@ -901,6 +901,42 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                           For users to modify existing appointment times (requires appointment ID)
                         </p>
                       </div>
+
+                      {/* Unified Appointment Portal */}
+                      <div className="space-y-3 pt-3 border-t border-gray-100">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-sm font-semibold text-gray-900">🎯 Unified Appointment Portal</span>
+                          <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">All-in-One</span>
+                        </div>
+                        <div className="relative">
+                          <Input 
+                            readOnly 
+                            value={`${window.location.origin}/bots/${botId}/unified-booking?org_id=${org}`} 
+                            className="pr-16 font-mono text-xs bg-gray-50" 
+                          />
+                          <button 
+                            onClick={async()=>{
+                              const link = `${window.location.origin}/bots/${botId}/unified-booking?org_id=${org}`;
+                              try { 
+                                await navigator.clipboard.writeText(link); 
+                                alert("Unified appointment portal link copied!"); 
+                              } catch {}
+                            }}
+                            className="absolute right-1 top-1 bottom-1 px-3 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-blue-600 hover:border-blue-200"
+                          >
+                            COPY
+                          </button>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          <strong>Complete appointment management:</strong> Book new appointments, reschedule existing ones, check appointment status, and cancel appointments - all in one unified interface
+                        </p>
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          <span className="text-xs px-2 py-0.5 bg-green-50 text-green-600 rounded">📅 Book</span>
+                          <span className="text-xs px-2 py-0.5 bg-orange-50 text-orange-600 rounded">🔄 Reschedule</span>
+                          <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded">📋 Status</span>
+                          <span className="text-xs px-2 py-0.5 bg-red-50 text-red-600 rounded">❌ Cancel</span>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
