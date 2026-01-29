@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Input } from "@/app/components/ui/input";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
@@ -237,7 +237,7 @@ export default function PublicAppointmentPage({ params, searchParams }: {
                 </a>
                 
                 <p className="text-sm text-gray-500 mt-4">
-                  Opens in a new window • You'll need your appointment ID
+                  Opens in a new window • You&apos;ll need your appointment ID
                 </p>
               </div>
             </div>
