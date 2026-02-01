@@ -6,6 +6,7 @@ import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Select } from "../../../components/ui/select";
 import Builder, { type Win } from "./builder";
+import QRCode from "qrcode";
 
 const TEMPLATE_INSTRUCTIONS: Record<string, { title: string; description: string; features: string[]; workflow: string[] }> = {
   support: {
@@ -82,6 +83,31 @@ function B() {
   if (env) return env.replace(/\/$/, "");
   if (typeof window !== "undefined") return window.location.origin.replace(/\/$/, "");
   return "";
+}
+
+// Helper function to generate and download QR code
+async function downloadQRCode(url: string, filename: string) {
+  try {
+    const qrDataUrl = await QRCode.toDataURL(url, {
+      width: 512,
+      margin: 2,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF'
+      }
+    });
+    
+    // Create a temporary link element and trigger download
+    const link = document.createElement('a');
+    link.href = qrDataUrl;
+    link.download = `${filename}-qrcode.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch (error) {
+    console.error('Error generating QR code:', error);
+    alert('Failed to generate QR code');
+  }
 }
 
 export default function BotConfigPage({ params }: { params: Promise<{ botId: string }> }) {
@@ -818,21 +844,33 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                       <div className="relative">
                         <Input 
                           readOnly 
-                          value={`https://api.codeweft.in/api/form/lead/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`} 
-                          className="pr-16 font-mono text-xs bg-gray-50" 
+                          value={`${B()}/api/form/lead/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`} 
+                          className="pr-28 font-mono text-xs bg-gray-50" 
                         />
-                        <button 
-                          onClick={async()=>{
-                            const link = `https://api.codeweft.in/api/form/lead/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`;
-                            try { 
-                              await navigator.clipboard.writeText(link); 
-                              alert("Enquiry form link copied!"); 
-                            } catch {}
-                          }}
-                          className="absolute right-1 top-1 bottom-1 px-3 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-blue-600 hover:border-blue-200"
-                        >
-                          COPY
-                        </button>
+                        <div className="absolute right-1 top-1 bottom-1 flex gap-1">
+                          <button 
+                            onClick={async()=>{
+                              const link = `${B()}/api/form/lead/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`;
+                              await downloadQRCode(link, 'enquiry-form');
+                            }}
+                            className="px-2 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-purple-600 hover:border-purple-200"
+                            title="Download QR Code"
+                          >
+                            QR
+                          </button>
+                          <button 
+                            onClick={async()=>{
+                              const link = `${B()}/api/form/lead/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`;
+                              try { 
+                                await navigator.clipboard.writeText(link); 
+                                alert("Enquiry form link copied!"); 
+                              } catch {}
+                            }}
+                            className="px-3 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-blue-600 hover:border-blue-200"
+                          >
+                            COPY
+                          </button>
+                        </div>
                       </div>
                       <p className="text-xs text-gray-500 mt-1">
                         Captures lead information including name, email, phone, and service interests
@@ -851,21 +889,33 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                         <div className="relative">
                           <Input 
                             readOnly 
-                            value={`https://api.codeweft.in/api/form/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`} 
-                            className="pr-16 font-mono text-xs bg-gray-50" 
+                            value={`${B()}/api/form/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`} 
+                            className="pr-28 font-mono text-xs bg-gray-50" 
                           />
-                          <button 
-                            onClick={async()=>{
-                              const link = `https://api.codeweft.in/api/form/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`;
-                              try { 
-                                await navigator.clipboard.writeText(link); 
-                                alert("Booking form link copied!"); 
-                              } catch {}
-                            }}
-                            className="absolute right-1 top-1 bottom-1 px-3 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-blue-600 hover:border-blue-200"
-                          >
-                            COPY
-                          </button>
+                          <div className="absolute right-1 top-1 bottom-1 flex gap-1">
+                            <button 
+                              onClick={async()=>{
+                                const link = `${B()}/api/form/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`;
+                                await downloadQRCode(link, 'booking-form');
+                              }}
+                              className="px-2 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-purple-600 hover:border-purple-200"
+                              title="Download QR Code"
+                            >
+                              QR
+                            </button>
+                            <button 
+                              onClick={async()=>{
+                                const link = `${B()}/api/form/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`;
+                                try { 
+                                  await navigator.clipboard.writeText(link); 
+                                  alert("Booking form link copied!"); 
+                                } catch {}
+                              }}
+                              className="px-3 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-blue-600 hover:border-blue-200"
+                            >
+                              COPY
+                            </button>
+                          </div>
                         </div>
                         <p className="text-xs text-gray-500 mt-1">
                           For users to schedule new appointments with available time slots
@@ -881,21 +931,33 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                         <div className="relative">
                           <Input 
                             readOnly 
-                            value={`https://api.codeweft.in/api/reschedule/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`} 
-                            className="pr-16 font-mono text-xs bg-gray-50" 
+                            value={`${B()}/api/reschedule/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`} 
+                            className="pr-28 font-mono text-xs bg-gray-50" 
                           />
-                          <button 
-                            onClick={async()=>{
-                              const link = `https://api.codeweft.in/api/reschedule/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`;
-                              try { 
-                                await navigator.clipboard.writeText(link); 
-                                alert("Reschedule form link copied!"); 
-                              } catch {}
-                            }}
-                            className="absolute right-1 top-1 bottom-1 px-3 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-blue-600 hover:border-blue-200"
-                          >
-                            COPY
-                          </button>
+                          <div className="absolute right-1 top-1 bottom-1 flex gap-1">
+                            <button 
+                              onClick={async()=>{
+                                const link = `${B()}/api/reschedule/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`;
+                                await downloadQRCode(link, 'reschedule-form');
+                              }}
+                              className="px-2 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-purple-600 hover:border-purple-200"
+                              title="Download QR Code"
+                            >
+                              QR
+                            </button>
+                            <button 
+                              onClick={async()=>{
+                                const link = `${B()}/api/reschedule/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`;
+                                try { 
+                                  await navigator.clipboard.writeText(link); 
+                                  alert("Reschedule form link copied!"); 
+                                } catch {}
+                              }}
+                              className="px-3 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-blue-600 hover:border-blue-200"
+                            >
+                              COPY
+                            </button>
+                          </div>
                         </div>
                         <p className="text-xs text-gray-500 mt-1">
                           For users to modify existing appointment times (requires appointment ID)
@@ -911,21 +973,33 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                         <div className="relative">
                           <Input 
                             readOnly 
-                            value={`https://api.codeweft.in/api/appointment-portal/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`} 
-                            className="pr-16 font-mono text-xs bg-gray-50" 
+                            value={`${B()}/api/appointment-portal/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`} 
+                            className="pr-28 font-mono text-xs bg-gray-50" 
                           />
-                          <button 
-                            onClick={async()=>{
-                              const link = `https://api.codeweft.in/api/appointment-portal/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`;
-                              try { 
-                                await navigator.clipboard.writeText(link); 
-                                alert("Unified appointment portal link copied!"); 
-                              } catch {}
-                            }}
-                            className="absolute right-1 top-1 bottom-1 px-3 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-blue-600 hover:border-blue-200"
-                          >
-                            COPY
-                          </button>
+                          <div className="absolute right-1 top-1 bottom-1 flex gap-1">
+                            <button 
+                              onClick={async()=>{
+                                const link = `${B()}/api/appointment-portal/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`;
+                                await downloadQRCode(link, 'appointment-portal');
+                              }}
+                              className="px-2 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-purple-600 hover:border-purple-200"
+                              title="Download QR Code"
+                            >
+                              QR
+                            </button>
+                            <button 
+                              onClick={async()=>{
+                                const link = `${B()}/api/appointment-portal/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`;
+                                try { 
+                                  await navigator.clipboard.writeText(link); 
+                                  alert("Unified appointment portal link copied!"); 
+                                } catch {}
+                              }}
+                              className="px-3 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-blue-600 hover:border-blue-200"
+                            >
+                              COPY
+                            </button>
+                          </div>
                         </div>
                         <p className="text-xs text-gray-500 mt-1">
                           <strong>Standalone appointment portal:</strong> No login required • Contains booking and reschedule form links • Status checking and cancellation • Perfect for sharing with external customers
