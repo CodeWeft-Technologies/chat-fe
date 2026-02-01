@@ -286,9 +286,35 @@ export default function BotCalendarPage({ params }: { params: Promise<{ botId: s
   }
 
   const [selected, setSelected] = useState<null | { type: "event" | "appt"; id?: number; title: string; start: string; end: string }>(null);
+  const [slotAppointments, setSlotAppointments] = useState<null | Appointment[]>(null);
   const selectedAppt = selected?.type === 'appt' && typeof selected.id === 'number'
     ? appts.find(a => a.id === selected.id)
     : null;
+
+  function handleBlockClick(block: { kind: "event" | "appt"; id?: number; title: string; start: string; end: string; top: number; h: number }) {
+    // If it's an appointment, check if there are multiple appointments in overlapping time
+    if (block.kind === 'appt') {
+      const blockStart = new Date(block.start).getTime();
+      const blockEnd = new Date(block.end).getTime();
+      
+      // Find all appointments that overlap with this time slot
+      const overlappingAppts = filteredAppts.filter(a => {
+        const aStart = new Date(a.start_iso).getTime();
+        const aEnd = new Date(a.end_iso).getTime();
+        // Check if appointments overlap
+        return (aStart < blockEnd && aEnd > blockStart);
+      });
+      
+      // If there are multiple overlapping appointments, show the list
+      if (overlappingAppts.length > 1) {
+        setSlotAppointments(overlappingAppts);
+        return;
+      }
+    }
+    
+    // Otherwise, show the single appointment/event details
+    setSelected({ type: block.kind, id: block.id, title: block.title, start: block.start, end: block.end });
+  }
 
   function isTodayKey(k: string) {
     return k === getLocalDayKey(new Date());
@@ -556,24 +582,39 @@ export default function BotCalendarPage({ params }: { params: Promise<{ botId: s
                             
                             {/* All-day events at top */}
                             <div className="absolute left-1 right-1 top-1 space-y-1 z-10">
-                                {blocksByDay[d.key].filter(b=>b.top===0 && b.h>=gridHeight).map((b, idx) => (
-                                <button key={idx} onClick={()=>setSelected({ type: b.kind, id: b.id, title: b.title, start: b.start, end: b.end })} 
-                                    className={`px-2 py-1 rounded text-[10px] font-medium w-full text-left shadow-sm transition-all
-                                    ${b.kind==='appt' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200 hover:bg-emerald-200' : 'bg-blue-100 text-blue-800 border border-blue-200 hover:bg-blue-200'}`}>
-                                    {b.title}
-                                </button>
-                                ))}
+                                {blocksByDay[d.key].filter(b=>b.top===0 && b.h>=gridHeight).map((b, idx) => {
+                                  const allDayColorClass = b.kind === 'appt'
+                                    ? b.status === 'cancelled'
+                                      ? 'bg-red-100 text-red-800 border border-red-200 hover:bg-red-200'
+                                      : b.status === 'completed'
+                                      ? 'bg-green-100 text-green-800 border border-green-200 hover:bg-green-200'
+                                      : 'bg-yellow-100 text-yellow-800 border border-yellow-200 hover:bg-yellow-200'
+                                    : 'bg-blue-100 text-blue-800 border border-blue-200 hover:bg-blue-200';
+                                  return (
+                                  <button key={idx} onClick={()=>handleBlockClick(b)} 
+                                      className={`px-2 py-1 rounded text-[10px] font-medium w-full text-left shadow-sm transition-all ${allDayColorClass}`}>
+                                      {b.title}
+                                  </button>
+                                  );
+                                })}
                             </div>
 
                             {/* Timed events */}
                             {blocksWithColumns.map((b, idx) => {
                                 const widthPercent = 100 / b.overlapCount;
                                 const leftPercent = (b.column * widthPercent);
+                                // Color code appointments based on status
+                                const apptColorClass = b.kind === 'appt'
+                                  ? b.status === 'cancelled'
+                                    ? 'bg-red-50 text-red-900 border-red-500 hover:bg-red-100'
+                                    : b.status === 'completed'
+                                    ? 'bg-green-50 text-green-900 border-green-500 hover:bg-green-100'
+                                    : 'bg-yellow-50 text-yellow-900 border-yellow-500 hover:bg-yellow-100'
+                                  : 'bg-blue-50 text-blue-900 border-blue-500 hover:bg-blue-100';
                                 return (
                                 <button key={idx} 
-                                    onClick={()=>setSelected({ type: b.kind, id: b.id, title: b.title, start: b.start, end: b.end })}
-                                    className={`absolute rounded px-2 py-1 text-xs text-left overflow-hidden transition-all hover:z-50 hover:shadow-lg border-l-4 group
-                                    ${b.kind==='appt' ? 'bg-emerald-50 text-emerald-900 border-emerald-500 hover:bg-emerald-100' : 'bg-blue-50 text-blue-900 border-blue-500 hover:bg-blue-100'}`}
+                                    onClick={()=>handleBlockClick(b)}
+                                    className={`absolute rounded px-2 py-1 text-xs text-left overflow-hidden transition-all hover:z-50 hover:shadow-lg border-l-4 group ${apptColorClass}`}
                                     style={{ top: b.top, height: b.h, width: `${widthPercent}%`, left: `${leftPercent}%`, zIndex: 10 + b.column }}
                                     aria-label={`${b.kind === 'appt' ? 'Appointment' : 'Event'}: ${b.title}`}
                                 >
@@ -630,13 +671,21 @@ export default function BotCalendarPage({ params }: { params: Promise<{ botId: s
                             <div key={idx} className={`relative min-h-[100px] p-2 bg-white ${!c.inMonth ? 'bg-gray-50/50 text-gray-400' : ''}`}>
                                 <div className={`text-xs font-medium mb-1 ${c.inMonth ? 'text-gray-700' : 'text-gray-400'}`}>{c.date.getDate()}</div>
                                 <div className="space-y-1">
-                                {blocksByDay[c.key].filter(b=>b.top===0 && b.h>=gridHeight).slice(0,3).map((b, i2) => (
-                                    <button key={i2} onClick={()=>setSelected({ type: b.kind, id: b.id, title: b.title, start: b.start, end: b.end })} 
-                                    className={`px-1.5 py-0.5 rounded text-[10px] w-full text-left truncate
-                                    ${b.kind==='appt' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'}`}>
+                                {blocksByDay[c.key].filter(b=>b.top===0 && b.h>=gridHeight).slice(0,3).map((b, i2) => {
+                                    const monthColorClass = b.kind === 'appt'
+                                      ? b.status === 'cancelled'
+                                        ? 'bg-red-100 text-red-800'
+                                        : b.status === 'completed'
+                                        ? 'bg-green-100 text-green-800'
+                                        : 'bg-yellow-100 text-yellow-800'
+                                      : 'bg-blue-100 text-blue-800';
+                                    return (
+                                    <button key={i2} onClick={()=>handleBlockClick(b)} 
+                                    className={`px-1.5 py-0.5 rounded text-[10px] w-full text-left truncate ${monthColorClass}`}>
                                     {b.title}
                                     </button>
-                                ))}
+                                    );
+                                })}
                                 {blocksByDay[c.key].filter(b=>b.top===0 && b.h>=gridHeight).length > 3 && (
                                     <div className="text-[10px] text-gray-400 pl-1">+{blocksByDay[c.key].filter(b=>b.top===0 && b.h>=gridHeight).length - 3} more</div>
                                 )}
@@ -771,6 +820,131 @@ export default function BotCalendarPage({ params }: { params: Promise<{ botId: s
           </Card>
         )}
       </div>
+
+      {/* Multiple Appointments List Modal */}
+      {slotAppointments && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
+          <Card className="w-full max-w-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col bg-white rounded-xl">
+            {/* Header */}
+            <div className="relative p-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white">
+              <button 
+                onClick={()=>setSlotAppointments(null)} 
+                className="absolute top-4 right-4 p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-full transition-all"
+              >
+                <span className="sr-only">Close</span>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              
+              <div className="pr-10">
+                <div className="flex items-center gap-2 mb-2">
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="text-sm font-medium opacity-90">Multiple Appointments in Time Slot</span>
+                </div>
+                <h3 className="text-2xl font-bold mb-2">{slotAppointments.length} Appointments Found</h3>
+                <p className="text-white/80 text-sm">Click on an appointment to view full details</p>
+              </div>
+            </div>
+
+            {/* Body - Appointments List */}
+            <div className="p-6 overflow-y-auto flex-1 bg-gray-50">
+              <div className="space-y-3">
+                {slotAppointments.map((a) => {
+                  const statusBadge = 
+                    a.status === 'cancelled' ? 'bg-red-100 text-red-800 border-red-200' :
+                    a.status === 'completed' ? 'bg-green-100 text-green-800 border-green-200' :
+                    a.status === 'confirmed' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                    'bg-blue-100 text-blue-800 border-blue-200';
+                  
+                  const cardBorderColor = 
+                    a.status === 'cancelled' ? 'border-l-red-500' :
+                    a.status === 'completed' ? 'border-l-green-500' :
+                    a.status === 'confirmed' ? 'border-l-yellow-500' :
+                    'border-l-blue-500';
+
+                  return (
+                    <button
+                      key={a.id}
+                      onClick={() => {
+                        setSlotAppointments(null);
+                        setSelected({ type: 'appt', id: a.id, title: a.summary || `Appointment #${a.id}`, start: a.start_iso, end: a.end_iso });
+                      }}
+                      className={`w-full bg-white rounded-lg border-l-4 ${cardBorderColor} border border-gray-200 p-4 hover:shadow-lg transition-all text-left group`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-center gap-3">
+                            <span className="text-lg font-bold text-gray-900">#{a.id}</span>
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider border ${statusBadge}`}>
+                              {a.status}
+                            </span>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                            {a.name && (
+                              <div className="flex items-center gap-2">
+                                <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                                <span className="font-medium text-gray-900">{a.name}</span>
+                              </div>
+                            )}
+                            
+                            {a.summary && (
+                              <div className="flex items-center gap-2">
+                                <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                                </svg>
+                                <span className="text-gray-700">{a.summary}</span>
+                              </div>
+                            )}
+                            
+                            {a.email && (
+                              <div className="flex items-center gap-2">
+                                <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                </svg>
+                                <span className="text-gray-700 truncate">{a.email}</span>
+                              </div>
+                            )}
+                            
+                            {a.phone && (
+                              <div className="flex items-center gap-2">
+                                <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                </svg>
+                                <span className="text-gray-700">{a.phone}</span>
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div className="flex items-center gap-2 text-sm text-gray-600 pt-2 border-t border-gray-100">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>
+                              {new Date(a.start_iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })} - {new Date(a.end_iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex-shrink-0">
+                          <svg className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
 
       {/* Modal */}
       {selected && (
