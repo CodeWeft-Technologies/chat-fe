@@ -132,6 +132,9 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
   const [rotatedAt, setRotatedAt] = useState<string | null>(null);
   const [connectBusy, setConnectBusy] = useState<boolean>(false);
   const [calendarId, setCalendarId] = useState<string | null>(null);
+  const [calendarEmail, setCalendarEmail] = useState<string | null>(null);
+  const [calendarName, setCalendarName] = useState<string | null>(null);
+  const [disconnectBusy, setDisconnectBusy] = useState<boolean>(false);
   const [tz, setTz] = useState<string>("");
   const [slotMin, setSlotMin] = useState<number>(30);
   const [cap, setCap] = useState<number>(1);
@@ -183,8 +186,21 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
     try {
       const rcal = await fetch(`${B()}/api/bots/${encodeURIComponent(botId)}/calendar/config?org_id=${encodeURIComponent(org)}`, { headers });
       const tcal = await rcal.text();
-      if (rcal.ok) { const j = JSON.parse(tcal); setCalendarId(j.calendar_id || null); } else { setCalendarId(null); }
-    } catch { setCalendarId(null); }
+      if (rcal.ok) { 
+        const j = JSON.parse(tcal); 
+        setCalendarId(j.calendar_id || null); 
+        setCalendarEmail(j.calendar_email || null);
+        setCalendarName(j.calendar_name || null);
+      } else { 
+        setCalendarId(null); 
+        setCalendarEmail(null);
+        setCalendarName(null);
+      }
+    } catch { 
+      setCalendarId(null); 
+      setCalendarEmail(null);
+      setCalendarName(null);
+    }
     try {
       if (!org) { console.warn("No org_id found, skipping booking settings load"); return; }
       const rbs = await fetch(`${B()}/api/bots/${encodeURIComponent(botId)}/booking/settings?org_id=${encodeURIComponent(org)}`, { headers });
@@ -722,35 +738,118 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                             </div>
                             <div className={`w-2 h-2 rounded-full ${calendarId ? 'bg-green-500' : 'bg-gray-300'}`} />
                         </div>
-                        <p className="text-xs text-gray-500 mb-3">
-                            {calendarId ? `Connected: ${calendarId}` : "Not connected. Required for appointment booking."}
-                        </p>
-                        <div className="grid grid-cols-2 gap-2">
-                            <Link href={`/bots/${botId}/calendar`} className="btn-base px-3 py-1.5 text-xs text-center bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-md shadow-sm">
-                                View Calendar
-                            </Link>
-                            <button 
-                                disabled={connectBusy} 
-                                onClick={async()=>{
-                                    try {
-                                    setConnectBusy(true);
-                                    const headers: Record<string,string> = {};
-                                    if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
-                                    const cb = `${window.location.origin}/oauth/google/callback`;
-                                    const r = await fetch(`${B()}/api/bots/${encodeURIComponent(botId)}/calendar/google/oauth/start?org_id=${encodeURIComponent(org)}&redirect_uri=${encodeURIComponent(cb)}`, { headers });
-                                    const t = await r.text();
-                                    if (!r.ok) { alert(t); return; }
-                                    const j = JSON.parse(t);
-                                    window.location.href = j.url;
-                                    } finally {
-                                    setConnectBusy(false);
-                                    }
-                                }} 
-                                className={`px-3 py-1.5 rounded-md text-xs font-medium text-white shadow-sm transition-all ${calendarId ? 'bg-blue-600 hover:bg-blue-700' : 'bg-green-600 hover:bg-green-700'}`}
-                            >
-                                {connectBusy ? '...' : (calendarId ? 'Reconnect' : 'Connect')}
-                            </button>
-                        </div>
+                        
+                        {calendarId ? (
+                            <>
+                                <div className="mb-3 p-2 bg-white rounded border border-gray-200">
+                                    <div className="text-xs font-semibold text-gray-700 mb-2">Connected Calendar Details</div>
+                                    <div className="space-y-1">
+                                        {calendarName && (
+                                            <div className="flex items-center gap-2 text-xs">
+                                                <span className="text-gray-500">Name:</span>
+                                                <span className="font-medium text-gray-900">{calendarName}</span>
+                                            </div>
+                                        )}
+                                        {calendarEmail && (
+                                            <div className="flex items-center gap-2 text-xs">
+                                                <span className="text-gray-500">Email:</span>
+                                                <span className="font-medium text-gray-900">{calendarEmail}</span>
+                                            </div>
+                                        )}
+                                        <div className="flex items-center gap-2 text-xs">
+                                            <span className="text-gray-500">Calendar ID:</span>
+                                            <span className="font-mono text-[10px] text-gray-700 bg-gray-100 px-1 rounded">{calendarId}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2">
+                                    <Link href={`/bots/${botId}/calendar`} className="btn-base px-3 py-1.5 text-xs text-center bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-md shadow-sm">
+                                        View
+                                    </Link>
+                                    <button 
+                                        disabled={connectBusy} 
+                                        onClick={async()=>{
+                                            try {
+                                            setConnectBusy(true);
+                                            const headers: Record<string,string> = {};
+                                            if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
+                                            const cb = `${window.location.origin}/oauth/google/callback`;
+                                            const r = await fetch(`${B()}/api/bots/${encodeURIComponent(botId)}/calendar/google/oauth/start?org_id=${encodeURIComponent(org)}&redirect_uri=${encodeURIComponent(cb)}`, { headers });
+                                            const t = await r.text();
+                                            if (!r.ok) { alert(t); return; }
+                                            const j = JSON.parse(t);
+                                            window.location.href = j.url;
+                                            } finally {
+                                            setConnectBusy(false);
+                                            }
+                                        }} 
+                                        className="px-3 py-1.5 rounded-md text-xs font-medium text-white shadow-sm transition-all bg-blue-600 hover:bg-blue-700"
+                                    >
+                                        {connectBusy ? '...' : 'Reconnect'}
+                                    </button>
+                                    <button 
+                                        disabled={disconnectBusy} 
+                                        onClick={async()=>{
+                                            if (!confirm('Are you sure you want to disconnect Google Calendar? This will disable appointment booking features.')) return;
+                                            try {
+                                            setDisconnectBusy(true);
+                                            const headers: Record<string,string> = { 'Content-Type': 'application/json' };
+                                            if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
+                                            const r = await fetch(`${B()}/api/bots/${encodeURIComponent(botId)}/calendar/disconnect?org_id=${encodeURIComponent(org)}`, { method: 'POST', headers });
+                                            if (!r.ok) { 
+                                                const errorText = await r.text(); 
+                                                alert(`Failed to disconnect: ${errorText}`); 
+                                                return; 
+                                            }
+                                            setCalendarId(null);
+                                            setCalendarEmail(null);
+                                            setCalendarName(null);
+                                            alert('Google Calendar disconnected successfully');
+                                            } catch (e) {
+                                                alert(`Error: ${e}`);
+                                            } finally {
+                                            setDisconnectBusy(false);
+                                            }
+                                        }} 
+                                        className="px-3 py-1.5 rounded-md text-xs font-medium text-white shadow-sm transition-all bg-red-600 hover:bg-red-700"
+                                    >
+                                        {disconnectBusy ? '...' : 'Disconnect'}
+                                    </button>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <p className="text-xs text-gray-500 mb-3">
+                                    Not connected. Required for appointment booking.
+                                </p>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <Link href={`/bots/${botId}/calendar`} className="btn-base px-3 py-1.5 text-xs text-center bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-md shadow-sm">
+                                        View Calendar
+                                    </Link>
+                                    <button 
+                                        disabled={connectBusy} 
+                                        onClick={async()=>{
+                                            try {
+                                            setConnectBusy(true);
+                                            const headers: Record<string,string> = {};
+                                            if (typeof window !== "undefined") { const t = localStorage.getItem("token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
+                                            const cb = `${window.location.origin}/oauth/google/callback`;
+                                            const r = await fetch(`${B()}/api/bots/${encodeURIComponent(botId)}/calendar/google/oauth/start?org_id=${encodeURIComponent(org)}&redirect_uri=${encodeURIComponent(cb)}`, { headers });
+                                            const t = await r.text();
+                                            if (!r.ok) { alert(t); return; }
+                                            const j = JSON.parse(t);
+                                            window.location.href = j.url;
+                                            } finally {
+                                            setConnectBusy(false);
+                                            }
+                                        }} 
+                                        className="px-3 py-1.5 rounded-md text-xs font-medium text-white shadow-sm transition-all bg-green-600 hover:bg-green-700"
+                                    >
+                                        {connectBusy ? '...' : 'Connect'}
+                                    </button>
+                                </div>
+                            </>
+                        )}
                     </div>
 
                     <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
