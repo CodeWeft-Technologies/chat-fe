@@ -84,7 +84,12 @@ export default function BotCalendarPage({ params }: { params: Promise<{ botId: s
         const r = await fetch(`${B()}/api/bots/${encodeURIComponent(botId)}/calendar/events?org_id=${encodeURIComponent(org)}&time_min_iso=${encodeURIComponent(from)}&time_max_iso=${encodeURIComponent(to)}`, { headers });
         const t = await r.text();
         if (!r.ok) { 
-            console.error(t); 
+            // Calendar not connected is expected - just skip loading calendar events
+            if (t.includes('calendar not connected') || t.includes('not connected')) {
+                setEvents([]);
+            } else {
+                console.error('Calendar events error:', t); 
+            }
         } else {
             const j = JSON.parse(t);
             const allEvents = (j.events || []) as GEvent[];
@@ -387,6 +392,9 @@ export default function BotCalendarPage({ params }: { params: Promise<{ botId: s
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-gray-600">{calendarId || 'primary'}</span>
               {tz && <span>• {tz}</span>}
+              {!calendarId && (
+                <span className="text-amber-600 font-medium">• Calendar not connected</span>
+              )}
             </div>
           </div>
         </div>
@@ -394,6 +402,11 @@ export default function BotCalendarPage({ params }: { params: Promise<{ botId: s
             <Button variant="outline" size="sm" onClick={load} disabled={busy}>
                 {busy ? "Refreshing..." : "Refresh"}
             </Button>
+            {!calendarId && (
+              <Link href={`/bots/${botId}/config`} className="px-3 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md transition-all">
+                Connect Calendar
+              </Link>
+            )}
             <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-lg border border-gray-200">
                 <button onClick={() => setView("month")} className={`px-3 py-1 text-sm font-medium rounded-md transition-all ${view === "month" ? "bg-white text-blue-600 shadow-sm ring-1 ring-black/5" : "text-gray-500 hover:text-gray-900"}`}>Month</button>
                 <button onClick={() => setView("week")} className={`px-3 py-1 text-sm font-medium rounded-md transition-all ${view === "week" ? "bg-white text-blue-600 shadow-sm ring-1 ring-black/5" : "text-gray-500 hover:text-gray-900"}`}>Week</button>
