@@ -366,6 +366,25 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
     } catch (e) { alert(String(e||"Failed")); }
   }, [org, botId, windowsVal, tz, slotMin, cap, minNotice, maxFuture]);
 
+  const apiBase = B();
+  const whatsappEndpoint = `${apiBase}/api/chat/whatsapp/${botId}`;
+  const botKeyValue = pubKey || "{bot_key}";
+  const whatsappHeaders = `{
+  "accept": "application/json",
+  "Content-Type": "application/json",
+  "X-Bot-Key": "${botKeyValue}"
+}`;
+  const whatsappBody = `{
+  "message": "What can you do?",
+  "org_id": "${org || "{org_id}"}",
+  "session_id": "optional-session-id"
+}`;
+  const whatsappCurl = `curl -X POST "${whatsappEndpoint}" \
+  -H "accept: application/json" \
+  -H "Content-Type: application/json" \
+  -H "X-Bot-Key: ${botKeyValue}" \
+  -d '${whatsappBody.replace(/\n/g, "").replace(/\s+/g, " ")}'`;
+
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-20 animate-in fade-in duration-500">
@@ -926,6 +945,73 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                      )}
                 </div>
             </Card>
+
+              {/* WhatsApp External API */}
+              <Card title="WhatsApp External API" subtitle="Single-response endpoint for WhatsApp and other integrations">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="text-xs font-semibold text-gray-700">Endpoint</div>
+                    <div className="relative">
+                      <Input
+                        readOnly
+                        value={whatsappEndpoint}
+                        className="pr-16 font-mono text-xs bg-gray-50"
+                      />
+                      <button
+                        onClick={async()=>{
+                          try { await navigator.clipboard.writeText(whatsappEndpoint); alert("Endpoint copied"); } catch {}
+                        }}
+                        className="absolute right-1 top-1 bottom-1 px-3 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-blue-600 hover:border-blue-200"
+                      >
+                        COPY
+                      </button>
+                    </div>
+                        <p className="text-[10px] text-gray-400">Returns JSON: {`{&quot;answer&quot;:&quot;...&quot;}`}</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="text-xs font-semibold text-gray-700">Headers</div>
+                    <pre className="text-[11px] leading-relaxed bg-gray-50 border border-gray-200 rounded p-3 overflow-x-auto font-mono">
+                      {whatsappHeaders}
+                    </pre>
+                    <p className="text-[10px] text-gray-400">X-Bot-Key is required if your public API key is enabled.</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="text-xs font-semibold text-gray-700">Body (JSON)</div>
+                    <pre className="text-[11px] leading-relaxed bg-gray-50 border border-gray-200 rounded p-3 overflow-x-auto font-mono">
+                      {whatsappBody}
+                    </pre>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="text-xs font-semibold text-gray-700">cURL</div>
+                    <pre className="text-[11px] leading-relaxed bg-gray-50 border border-gray-200 rounded p-3 overflow-x-auto font-mono">
+                      {whatsappCurl}
+                    </pre>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={async()=>{ try { await navigator.clipboard.writeText(whatsappHeaders); alert("Headers copied"); } catch {} }}
+                        className="px-3 py-1.5 rounded-md text-[10px] font-medium bg-white border border-gray-200 text-gray-600 hover:text-blue-600 hover:border-blue-200"
+                      >
+                        Copy Headers
+                      </button>
+                      <button
+                        onClick={async()=>{ try { await navigator.clipboard.writeText(whatsappBody); alert("Body copied"); } catch {} }}
+                        className="px-3 py-1.5 rounded-md text-[10px] font-medium bg-white border border-gray-200 text-gray-600 hover:text-blue-600 hover:border-blue-200"
+                      >
+                        Copy Body
+                      </button>
+                      <button
+                        onClick={async()=>{ try { await navigator.clipboard.writeText(whatsappCurl); alert("cURL copied"); } catch {} }}
+                        className="px-3 py-1.5 rounded-md text-[10px] font-medium bg-white border border-gray-200 text-gray-600 hover:text-blue-600 hover:border-blue-200"
+                      >
+                        Copy cURL
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </Card>
 
             {/* Form Links Section */}
             {behavior && ['sales', 'appointment'].includes(behavior.toLowerCase()) && (
