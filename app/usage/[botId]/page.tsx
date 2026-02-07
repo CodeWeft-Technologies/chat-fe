@@ -47,10 +47,10 @@ export default function UsagePage({ params }: { params: Promise<{ botId: string 
         if (m.ok) {
             const mj = await m.json();
             
-            // Calculate billing (₹12 per 100 messages)
+            // Calculate billing (₹15 per 100 messages)
             const totalMessages = mj.total_messages || 0;
-            const costPerMessage = 0.12; // ₹0.12 per message
-            const totalCost = (totalMessages / 100) * 12; // ₹12 per 100 messages
+            const costPerMessage = 0.15; // ₹0.15 per message
+            const totalCost = (totalMessages / 100) * 15; // ₹15 per 100 messages
             setBilling({
                 messages: totalMessages,
                 costPerMessage: costPerMessage,
@@ -120,7 +120,7 @@ export default function UsagePage({ params }: { params: Promise<{ botId: string 
                             <div className="space-y-2">
                                 <p className="text-sm font-medium text-blue-700">Cost Per Message</p>
                                 <p className="text-4xl font-bold text-blue-900">₹{billing.costPerMessage.toFixed(2)}</p>
-                                <p className="text-xs text-blue-600">₹12 per 100 messages</p>
+                                <p className="text-xs text-blue-600">₹15 per 100 messages</p>
                             </div>
                             <div className="space-y-2">
                                 <p className="text-sm font-medium text-green-700">Total Cost ({days}d)</p>
