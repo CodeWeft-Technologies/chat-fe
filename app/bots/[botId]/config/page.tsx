@@ -142,6 +142,17 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
   const [maxFuture, setMaxFuture] = useState<number>(60);
   const [windowsVal, setWindowsVal] = useState<Win[]>([]);
   const [helper, setHelper] = useState<string>("");
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const handleCopy = useCallback(async (text: string, key: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(null), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  }, []);
 
   const addService = useCallback(() => {
     if (!newService.trim()) return;
@@ -385,46 +396,69 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
   -H "X-Bot-Key: ${botKeyValue}" \
   -d '${whatsappBody.replace(/\n/g, "").replace(/\s+/g, " ")}'`;
 
+  const behaviorType = (behavior || "").toLowerCase();
+  const isAppointment = behaviorType === "appointment";
+  const isSales = behaviorType === "sales";
+
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-20 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-6">
-        <div className="flex items-center gap-3">
-            <Link href="/bots" className="p-2 -ml-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-all">
+    <div className="space-y-8 max-w-6xl mx-auto pb-24 px-4 sm:px-6 lg:px-8 animate-in fade-in duration-500">
+      <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-br from-white via-white to-blue-50/60 p-6 sm:p-8 shadow-sm">
+        <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-blue-100/60 blur-3xl" aria-hidden />
+        <div className="absolute -left-20 -bottom-20 h-44 w-44 rounded-full bg-indigo-100/60 blur-3xl" aria-hidden />
+        <div className="relative flex flex-col gap-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div className="flex items-start gap-4">
+              <Link href="/bots" className="p-2 -ml-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-all">
                 ←
-            </Link>
-            <div>
-                <h1 className="text-2xl font-bold tracking-tight text-gray-900">Bot Configuration</h1>
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-gray-600">{botId}</span>
-                    <span>•</span>
-                    <span className="capitalize">{behavior || "Unknown"} Assistant</span>
+              </Link>
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-gray-400">Configuration</p>
+                <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-gray-900">Bot workspace</h1>
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                  <span className="font-mono bg-white/80 border border-gray-200 px-2 py-1 rounded-md text-gray-600">ID: {botId}</span>
+                  <span className="badge">{behaviorType || "unknown"}</span>
+                  {mounted && org && <span className="badge">Org {org}</span>}
                 </div>
+              </div>
             </div>
+            <div className="flex flex-wrap items-center gap-3">
+              {saved && <span className="text-xs font-medium text-green-700 bg-green-50 border border-green-100 px-2 py-1 rounded-full animate-in fade-in">Saved</span>}
+              <Button variant="outline" onClick={load} className="text-gray-700 bg-white">↻ Reload</Button>
+              <Button onClick={save} disabled={loading}>{loading ? "Saving..." : "Save Changes"}</Button>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="rounded-xl border border-gray-200 bg-white/80 p-3">
+              <p className="text-[10px] uppercase tracking-widest text-gray-400">Assistant Type</p>
+              <p className="text-sm font-semibold text-gray-900 capitalize">{behaviorType || "unknown"}</p>
+              <p className="text-[10px] text-gray-500 mt-1">Template-driven behavior</p>
+            </div>
+            <div className="rounded-xl border border-gray-200 bg-white/80 p-3">
+              <p className="text-[10px] uppercase tracking-widest text-gray-400">Organization</p>
+              <p className="text-sm font-semibold text-gray-900 truncate">{mounted && org ? org : "Not set"}</p>
+              <p className="text-[10px] text-gray-500 mt-1">Used for data isolation</p>
+            </div>
+            <div className="rounded-xl border border-gray-200 bg-white/80 p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] uppercase tracking-widest text-gray-400">Connection</p>
+                <span className={`h-2 w-2 rounded-full ${isAppointment ? (calendarId ? "bg-green-500" : "bg-amber-400") : (pubKey ? "bg-green-500" : "bg-gray-300")}`} />
+              </div>
+              <p className="text-sm font-semibold text-gray-900">
+                {isAppointment ? (calendarId ? "Calendar connected" : "Calendar not connected") : (pubKey ? "Public API enabled" : "Public API disabled")}
+              </p>
+              <p className="text-[10px] text-gray-500 mt-1">Affects bookings and embeds</p>
+            </div>
+          </div>
         </div>
-        
-        {mounted && (
-            <div className="flex items-center gap-3">
-                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-full border border-gray-200 text-xs text-gray-600">
-                    <span className="font-medium">Org:</span>
-                    <span className="font-mono">{org}</span>
-                </div>
-                <Button variant="outline" onClick={load} className="text-gray-600">↻ Reload</Button>
-            </div>
-        )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Main Column */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-8 space-y-6">
             
             {/* General Settings */}
-            <Card title="General Settings" subtitle="Core behavior and personality" actions={
-                <div className="flex items-center gap-3">
-                    {saved && <span className="text-xs font-medium text-green-600 animate-in fade-in">Saved!</span>}
-                    <Button onClick={save} disabled={loading}>{loading ? 'Saving...' : 'Save Changes'}</Button>
-                </div>
-            }>
+            <Card title="General Settings" subtitle="Core behavior and personality" className="bg-white/80">
                 <div className="grid grid-cols-1 gap-5">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <Select
@@ -457,18 +491,18 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                     </div>
 
                     {/* Template Instructions - Show when template is selected */}
-                    {behavior && TEMPLATE_INSTRUCTIONS[behavior.toLowerCase()] && (
+                    {behaviorType && TEMPLATE_INSTRUCTIONS[behaviorType] && (
                       <div className="p-5 bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl space-y-4 shadow-sm">
                         <div>
-                          <h3 className="text-base font-bold text-blue-900">{TEMPLATE_INSTRUCTIONS[behavior.toLowerCase()].title}</h3>
-                          <p className="text-sm text-blue-700 mt-1">{TEMPLATE_INSTRUCTIONS[behavior.toLowerCase()].description}</p>
+                          <h3 className="text-base font-bold text-blue-900">{TEMPLATE_INSTRUCTIONS[behaviorType].title}</h3>
+                          <p className="text-sm text-blue-700 mt-1">{TEMPLATE_INSTRUCTIONS[behaviorType].description}</p>
                         </div>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <p className="text-xs font-semibold text-blue-900 mb-2 uppercase tracking-wide">✨ Key Features</p>
                             <ul className="space-y-1.5">
-                              {TEMPLATE_INSTRUCTIONS[behavior.toLowerCase()].features.map((feature, i) => (
+                              {TEMPLATE_INSTRUCTIONS[behaviorType].features.map((feature, i) => (
                                 <li key={i} className="text-xs text-blue-800 flex items-start gap-2">
                                   <span className="text-blue-600 font-bold">✓</span>
                                   <span>{feature}</span>
@@ -480,7 +514,7 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                           <div>
                             <p className="text-xs font-semibold text-blue-900 mb-2 uppercase tracking-wide">🔄 How It Works</p>
                             <ul className="space-y-1.5">
-                              {TEMPLATE_INSTRUCTIONS[behavior.toLowerCase()].workflow.map((step, i) => (
+                              {TEMPLATE_INSTRUCTIONS[behaviorType].workflow.map((step, i) => (
                                 <li key={i} className="text-xs text-blue-800 flex items-start gap-2">
                                   <span className="text-blue-600 font-medium min-w-[16px]">{i+1}.</span>
                                   <span>{step}</span>
@@ -525,17 +559,13 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                         onChange={e=>setWelcome(e.target.value)} 
                         placeholder="e.g. Hello! How can I help you today?" 
                     />
+                    <p className="text-[10px] text-gray-400">Use &quot;Save Changes&quot; above to apply updates.</p>
                 </div>
             </Card>
 
             {/* Services Configuration */}
-            {(behavior || '').toLowerCase() === 'sales' && (
-            <Card title="Enquiry Form Services" subtitle="Services available for selection in lead forms" actions={
-                <div className="flex items-center gap-3">
-                    {saved && <span className="text-xs font-medium text-green-600 animate-in fade-in">Saved!</span>}
-                    <Button onClick={save} disabled={loading}>{loading ? 'Saving...' : 'Save Services'}</Button>
-                </div>
-            }>
+                {isSales && (
+                <Card title="Enquiry Form Services" subtitle="Services available for selection in lead forms" className="bg-white/80">
                 <div className="space-y-4">
                     <div className="flex gap-2">
                         <Input 
@@ -599,13 +629,14 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                             />
                         </div>
                     </div>
+                      <p className="text-[10px] text-gray-400">Remember to hit &quot;Save Changes&quot; after editing services.</p>
                 </div>
             </Card>
             )}
 
             {/* Booking Settings */}
-            {(behavior || '').toLowerCase() === 'appointment' && (
-            <Card title="Booking Configuration" subtitle="Availability and constraints" actions={<Button onClick={saveBooking} variant="outline">Update Settings</Button>}>
+                  {isAppointment && (
+                  <Card title="Booking Configuration" subtitle="Availability and constraints" actions={<Button onClick={saveBooking} variant="outline">Update Settings</Button>} className="bg-white/80">
                 <div className="space-y-6">
                     {helper && <div className="p-2 bg-green-50 text-green-700 text-xs rounded border border-green-100">{helper}</div>}
                     
@@ -697,30 +728,30 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
             {/* Danger Zone */}
             <Card title="Danger Zone" className="border-red-100 bg-red-50/20" padding="md">
                 <div className="space-y-4">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
                         <div>
                         <h4 className="text-sm font-medium text-red-900">Clear Knowledge Base</h4>
                         <p className="text-xs text-red-700/70">Remove all ingested documents and vectors.</p>
                         </div>
-                        <Button onClick={clearData} variant="outline" className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 hover:border-red-300">Clear Data</Button>
+                        <Button onClick={clearData} variant="outline" className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 hover:border-red-300 w-full sm:w-auto">Clear Data</Button>
                     </div>
                     <div className="h-px bg-red-100" />
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
                         <div>
                         <h4 className="text-sm font-medium text-red-900">Delete Assistant</h4>
                         <p className="text-xs text-red-700/70">Permanently delete this bot and all its history.</p>
                         </div>
-                        <Button onClick={deleteBot} className="bg-red-600 hover:bg-red-700 text-white border-none shadow-none">Delete Bot</Button>
+                        <Button onClick={deleteBot} className="bg-red-600 hover:bg-red-700 text-white border-none shadow-none w-full sm:w-auto">Delete Bot</Button>
                     </div>
                 </div>
             </Card>
         </div>
 
         {/* Sidebar Column */}
-        <div className="space-y-6">
+        <div className="space-y-6 lg:col-span-4 lg:sticky lg:top-6 h-fit">
             {/* Quick Actions */}
-            <Card title="Quick Actions" subtitle="Manage your bot">
-                <div className="grid grid-cols-2 gap-3">
+          <Card title="Quick Actions" subtitle="Manage your bot" className="bg-white/80">
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-3">
                     <Link href={`/usage/${botId}`} className="flex flex-col items-center justify-center gap-2 p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-blue-200 hover:text-blue-700 transition-all group">
                         <span className="text-2xl group-hover:scale-110 transition-transform">📊</span>
                         <span className="text-xs font-medium">Analytics</span>
@@ -729,7 +760,7 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                         <span className="text-2xl group-hover:scale-110 transition-transform">🔌</span>
                         <span className="text-xs font-medium">Embed</span>
                     </Link>
-                    {(behavior || '').toLowerCase() === 'appointment' && (
+              {isAppointment && (
                     <>
                     <Link href={`/bots/${botId}/calendar`} className="flex flex-col items-center justify-center gap-2 p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-blue-200 hover:text-blue-700 transition-all group">
                         <span className="text-2xl group-hover:scale-110 transition-transform">📅</span>
@@ -745,9 +776,9 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
             </Card>
 
             {/* Integrations */}
-            <Card title="Integrations" subtitle="Connect external services">
+            <Card title="Integrations" subtitle="Connect external services" className="bg-white/80">
                 <div className="space-y-4">
-                    {(behavior || '').toLowerCase() === 'appointment' && (
+                {isAppointment && (
                     <>
                     <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
                         <div className="flex items-start justify-between mb-2">
@@ -781,8 +812,8 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                                         </div>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-3 gap-2">
-                                    <Link href={`/bots/${botId}/calendar`} className="btn-base px-3 py-1.5 text-xs text-center bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-md shadow-sm">
+                                <div className="flex flex-col sm:grid sm:grid-cols-3 gap-2">
+                                    <Link href={`/bots/${botId}/calendar`} className="btn-base px-3 py-2 sm:py-1.5 text-xs text-center bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-md shadow-sm w-full">
                                         View
                                     </Link>
                                     <button 
@@ -802,7 +833,7 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                                             setConnectBusy(false);
                                             }
                                         }} 
-                                        className="px-3 py-1.5 rounded-md text-xs font-medium text-white shadow-sm transition-all bg-blue-600 hover:bg-blue-700"
+                                        className="px-3 py-2 sm:py-1.5 rounded-md text-xs font-medium text-white shadow-sm transition-all bg-blue-600 hover:bg-blue-700 w-full"
                                     >
                                         {connectBusy ? '...' : 'Reconnect'}
                                     </button>
@@ -830,7 +861,7 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                                             setDisconnectBusy(false);
                                             }
                                         }} 
-                                        className="px-3 py-1.5 rounded-md text-xs font-medium text-white shadow-sm transition-all bg-red-600 hover:bg-red-700"
+                                        className="px-3 py-2 sm:py-1.5 rounded-md text-xs font-medium text-white shadow-sm transition-all bg-red-600 hover:bg-red-700 w-full"
                                     >
                                         {disconnectBusy ? '...' : 'Disconnect'}
                                     </button>
@@ -841,8 +872,8 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                                 <p className="text-xs text-gray-500 mb-3">
                                     Not connected. Required for appointment booking.
                                 </p>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <Link href={`/bots/${botId}/calendar`} className="btn-base px-3 py-1.5 text-xs text-center bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-md shadow-sm">
+                                <div className="flex flex-col sm:grid sm:grid-cols-2 gap-2">
+                                    <Link href={`/bots/${botId}/calendar`} className="btn-base px-3 py-2 sm:py-1.5 text-xs text-center bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-md shadow-sm w-full">
                                         View Calendar
                                     </Link>
                                     <button 
@@ -862,7 +893,7 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                                             setConnectBusy(false);
                                             }
                                         }} 
-                                        className="px-3 py-1.5 rounded-md text-xs font-medium text-white shadow-sm transition-all bg-green-600 hover:bg-green-700"
+                                        className="px-3 py-2 sm:py-1.5 rounded-md text-xs font-medium text-white shadow-sm transition-all bg-green-600 hover:bg-green-700 w-full"
                                     >
                                         {connectBusy ? '...' : 'Connect'}
                                     </button>
@@ -885,14 +916,14 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                     </div>
                     </>
                     )}
-                    {(behavior || '').toLowerCase() !== 'appointment' && (
+                    {!isAppointment && (
                         <p className="text-sm text-gray-400 italic text-center py-4">No integrations available for this bot type.</p>
                     )}
                 </div>
             </Card>
 
             {/* API Key */}
-            <Card title="Public API Access" subtitle="For embedding on websites">
+                <Card title="Public API Access" subtitle="For embedding on websites" className="bg-white/80">
                 <div className="space-y-4">
                      <div className="relative">
                         <Input 
@@ -947,7 +978,7 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
             </Card>
 
               {/* WhatsApp External API */}
-              <Card title="WhatsApp External API" subtitle="Single-response endpoint for WhatsApp and other integrations">
+              <Card title="WhatsApp External API" subtitle="Single-response endpoint for WhatsApp and other integrations" className="bg-white/80">
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <div className="text-xs font-semibold text-gray-700">Endpoint</div>
@@ -958,12 +989,10 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                         className="pr-16 font-mono text-xs bg-gray-50"
                       />
                       <button
-                        onClick={async()=>{
-                          try { await navigator.clipboard.writeText(whatsappEndpoint); alert("Endpoint copied"); } catch {}
-                        }}
-                        className="absolute right-1 top-1 bottom-1 px-3 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-blue-600 hover:border-blue-200"
+                        onClick={()=>handleCopy(whatsappEndpoint, 'whatsapp-endpoint')}
+                        className="absolute right-1 top-1 bottom-1 px-3 text-[10px] font-semibold bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg shadow-md hover:shadow-lg hover:from-blue-700 hover:to-cyan-700 transition-all duration-200"
                       >
-                        COPY
+                        {copiedKey === 'whatsapp-endpoint' ? '✓ Copied!' : '📋 Copy'}
                       </button>
                     </div>
                         <p className="text-[10px] text-gray-400">Returns JSON: {`{&quot;answer&quot;:&quot;...&quot;}`}</p>
@@ -989,24 +1018,24 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                     <pre className="text-[11px] leading-relaxed bg-gray-50 border border-gray-200 rounded p-3 overflow-x-auto font-mono">
                       {whatsappCurl}
                     </pre>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <button
-                        onClick={async()=>{ try { await navigator.clipboard.writeText(whatsappHeaders); alert("Headers copied"); } catch {} }}
-                        className="px-3 py-1.5 rounded-md text-[10px] font-medium bg-white border border-gray-200 text-gray-600 hover:text-blue-600 hover:border-blue-200"
+                        onClick={()=>handleCopy(whatsappHeaders, 'whatsapp-headers')}
+                        className="px-2 md:px-3 py-1.5 rounded-lg text-[9px] md:text-[10px] font-semibold bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-md hover:shadow-lg hover:from-blue-700 hover:to-cyan-700 transition-all duration-200 whitespace-nowrap"
                       >
-                        Copy Headers
+                        {copiedKey === 'whatsapp-headers' ? '✓ Copied!' : '📋 Headers'}
                       </button>
                       <button
-                        onClick={async()=>{ try { await navigator.clipboard.writeText(whatsappBody); alert("Body copied"); } catch {} }}
-                        className="px-3 py-1.5 rounded-md text-[10px] font-medium bg-white border border-gray-200 text-gray-600 hover:text-blue-600 hover:border-blue-200"
+                        onClick={()=>handleCopy(whatsappBody, 'whatsapp-body')}
+                        className="px-2 md:px-3 py-1.5 rounded-lg text-[9px] md:text-[10px] font-semibold bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-md hover:shadow-lg hover:from-blue-700 hover:to-cyan-700 transition-all duration-200 whitespace-nowrap"
                       >
-                        Copy Body
+                        {copiedKey === 'whatsapp-body' ? '✓ Copied!' : '📋 Body'}
                       </button>
                       <button
-                        onClick={async()=>{ try { await navigator.clipboard.writeText(whatsappCurl); alert("cURL copied"); } catch {} }}
-                        className="px-3 py-1.5 rounded-md text-[10px] font-medium bg-white border border-gray-200 text-gray-600 hover:text-blue-600 hover:border-blue-200"
+                        onClick={()=>handleCopy(whatsappCurl, 'whatsapp-curl')}
+                        className="px-2 md:px-3 py-1.5 rounded-lg text-[9px] md:text-[10px] font-semibold bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-md hover:shadow-lg hover:from-blue-700 hover:to-cyan-700 transition-all duration-200 whitespace-nowrap"
                       >
-                        Copy cURL
+                        {copiedKey === 'whatsapp-curl' ? '✓ Copied!' : '📋 cURL'}
                       </button>
                     </div>
                   </div>
@@ -1014,12 +1043,13 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
               </Card>
 
             {/* Form Links Section */}
-            {behavior && ['sales', 'appointment'].includes(behavior.toLowerCase()) && (
+            {behaviorType && ['sales', 'appointment'].includes(behaviorType) && (
               <Card 
                 title="Form Links" 
-                subtitle={`${behavior === 'sales' ? 'Enquiry form' : 'Booking & scheduling forms'} for external use`}
+                subtitle={`${behaviorType === 'sales' ? 'Enquiry form' : 'Booking & scheduling forms'} for external use`}
+                className="bg-white/80"
               >
-                {behavior === 'appointment' && !calendarId ? (
+                {behaviorType === 'appointment' && !calendarId ? (
                   <div className="p-6 bg-amber-50 border border-amber-200 rounded-lg text-center">
                     <svg className="w-12 h-12 mx-auto text-amber-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -1035,40 +1065,37 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                   </div>
                 ) : (
                 <div className="space-y-4">
-                  {behavior === 'sales' && (
+                  {behaviorType === 'sales' && (
                     <div className="space-y-3">
-                      <div className="flex items-center gap-2 mb-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
                         <span className="text-sm font-semibold text-gray-900">💼 Enquiry Form</span>
-                        <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">Sales</span>
+                        <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full w-fit">Sales</span>
                       </div>
-                      <div className="relative">
+                      <div className="space-y-2">
                         <Input 
                           readOnly 
                           value={`${B()}/api/form/lead/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`} 
-                          className="pr-28 font-mono text-xs bg-gray-50" 
+                          className="font-mono text-xs bg-gray-50 w-full" 
                         />
-                        <div className="absolute right-1 top-1 bottom-1 flex gap-1">
+                        <div className="flex flex-col sm:flex-row gap-2 w-full">
                           <button 
                             onClick={async()=>{
                               const link = `${B()}/api/form/lead/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`;
                               await downloadQRCode(link, 'enquiry-form');
                             }}
-                            className="px-2 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-purple-600 hover:border-purple-200"
+                            className={`px-3 py-1.5 text-[10px] font-semibold rounded-lg shadow-md transition-all duration-200 flex items-center justify-center gap-1.5 whitespace-nowrap flex-1 ${copiedKey === 'enquiry-qr' ? 'bg-green-600 text-white' : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:shadow-lg hover:from-purple-700 hover:to-indigo-700'}`}
                             title="Download QR Code"
                           >
-                            QR
+                            {copiedKey === 'enquiry-qr' ? '✓ Downloaded!' : '📱 QR'}
                           </button>
                           <button 
-                            onClick={async()=>{
+                            onClick={()=>{
                               const link = `${B()}/api/form/lead/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`;
-                              try { 
-                                await navigator.clipboard.writeText(link); 
-                                alert("Enquiry form link copied!"); 
-                              } catch {}
+                              handleCopy(link, 'enquiry-copy');
                             }}
-                            className="px-3 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-blue-600 hover:border-blue-200"
+                            className={`px-3 py-1.5 text-[10px] font-semibold rounded-lg shadow-md transition-all duration-200 flex items-center justify-center gap-1.5 whitespace-nowrap flex-1 ${copiedKey === 'enquiry-copy' ? 'bg-green-600 text-white' : 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:shadow-lg hover:from-blue-700 hover:to-cyan-700'}`}
                           >
-                            COPY
+                            {copiedKey === 'enquiry-copy' ? '✓ Copied!' : '📋 Copy'}
                           </button>
                         </div>
                       </div>
@@ -1078,42 +1105,39 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                     </div>
                   )}
 
-                  {behavior === 'appointment' && (
+                  {behaviorType === 'appointment' && (
                     <div className="space-y-4">
                       {/* Booking Form */}
                       <div className="space-y-3">
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
                           <span className="text-sm font-semibold text-gray-900">📅 Appointment Booking Form</span>
-                          <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">Book</span>
+                          <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full w-fit">Book</span>
                         </div>
-                        <div className="relative">
+                        <div className="space-y-2">
                           <Input 
                             readOnly 
                             value={`${B()}/api/form/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`} 
-                            className="pr-28 font-mono text-xs bg-gray-50" 
+                            className="font-mono text-xs bg-gray-50 w-full" 
                           />
-                          <div className="absolute right-1 top-1 bottom-1 flex gap-1">
+                          <div className="flex flex-col sm:flex-row gap-2 w-full">
                             <button 
                               onClick={async()=>{
                                 const link = `${B()}/api/form/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`;
                                 await downloadQRCode(link, 'booking-form');
                               }}
-                              className="px-2 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-purple-600 hover:border-purple-200"
+                              className={`px-3 py-1.5 text-[10px] font-semibold rounded-lg shadow-md transition-all duration-200 flex items-center justify-center gap-1.5 whitespace-nowrap flex-1 ${copiedKey === 'booking-qr' ? 'bg-green-600 text-white' : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:shadow-lg hover:from-purple-700 hover:to-indigo-700'}`}
                               title="Download QR Code"
                             >
-                              QR
+                              {copiedKey === 'booking-qr' ? '✓ Downloaded!' : '📱 QR'}
                             </button>
                             <button 
-                              onClick={async()=>{
+                              onClick={()=>{
                                 const link = `${B()}/api/form/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`;
-                                try { 
-                                  await navigator.clipboard.writeText(link); 
-                                  alert("Booking form link copied!"); 
-                                } catch {}
+                                handleCopy(link, 'booking-copy');
                               }}
-                              className="px-3 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-blue-600 hover:border-blue-200"
+                              className={`px-3 py-1.5 text-[10px] font-semibold rounded-lg shadow-md transition-all duration-200 flex items-center justify-center gap-1.5 whitespace-nowrap flex-1 ${copiedKey === 'booking-copy' ? 'bg-green-600 text-white' : 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:shadow-lg hover:from-blue-700 hover:to-cyan-700'}`}
                             >
-                              COPY
+                              {copiedKey === 'booking-copy' ? '✓ Copied!' : '📋 Copy'}
                             </button>
                           </div>
                         </div>
@@ -1124,38 +1148,35 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
 
                       {/* Reschedule Form */}
                       <div className="space-y-3 pt-3 border-t border-gray-100">
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
                           <span className="text-sm font-semibold text-gray-900">🔄 Appointment Reschedule Form</span>
-                          <span className="text-xs px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full">Reschedule</span>
+                          <span className="text-xs px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full w-fit">Reschedule</span>
                         </div>
-                        <div className="relative">
+                        <div className="space-y-2">
                           <Input 
                             readOnly 
                             value={`${B()}/api/reschedule/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`} 
-                            className="pr-28 font-mono text-xs bg-gray-50" 
+                            className="font-mono text-xs bg-gray-50 w-full" 
                           />
-                          <div className="absolute right-1 top-1 bottom-1 flex gap-1">
+                          <div className="flex flex-col sm:flex-row gap-2 w-full">
                             <button 
                               onClick={async()=>{
                                 const link = `${B()}/api/reschedule/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`;
                                 await downloadQRCode(link, 'reschedule-form');
                               }}
-                              className="px-2 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-purple-600 hover:border-purple-200"
+                              className={`px-3 py-1.5 text-[10px] font-semibold rounded-lg shadow-md transition-all duration-200 flex items-center justify-center gap-1.5 whitespace-nowrap flex-1 ${copiedKey === 'reschedule-qr' ? 'bg-green-600 text-white' : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:shadow-lg hover:from-purple-700 hover:to-indigo-700'}`}
                               title="Download QR Code"
                             >
-                              QR
+                              {copiedKey === 'reschedule-qr' ? '✓ Downloaded!' : '📱 QR'}
                             </button>
                             <button 
-                              onClick={async()=>{
+                              onClick={()=>{
                                 const link = `${B()}/api/reschedule/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`;
-                                try { 
-                                  await navigator.clipboard.writeText(link); 
-                                  alert("Reschedule form link copied!"); 
-                                } catch {}
+                                handleCopy(link, 'reschedule-copy');
                               }}
-                              className="px-3 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-blue-600 hover:border-blue-200"
+                              className={`px-3 py-1.5 text-[10px] font-semibold rounded-lg shadow-md transition-all duration-200 flex items-center justify-center gap-1.5 whitespace-nowrap flex-1 ${copiedKey === 'reschedule-copy' ? 'bg-green-600 text-white' : 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:shadow-lg hover:from-blue-700 hover:to-cyan-700'}`}
                             >
-                              COPY
+                              {copiedKey === 'reschedule-copy' ? '✓ Copied!' : '📋 Copy'}
                             </button>
                           </div>
                         </div>
@@ -1166,38 +1187,35 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
 
                       {/* Unified Appointment Portal */}
                       <div className="space-y-3 pt-3 border-t border-gray-100">
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
                           <span className="text-sm font-semibold text-gray-900">🎯 Unified Appointment Portal</span>
-                          <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">Standalone</span>
+                          <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full w-fit">Standalone</span>
                         </div>
-                        <div className="relative">
+                        <div className="space-y-2">
                           <Input 
                             readOnly 
                             value={`${B()}/api/appointment-portal/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`} 
-                            className="pr-28 font-mono text-xs bg-gray-50" 
+                            className="font-mono text-xs bg-gray-50 w-full" 
                           />
-                          <div className="absolute right-1 top-1 bottom-1 flex gap-1">
+                          <div className="flex flex-col sm:flex-row gap-2 w-full">
                             <button 
                               onClick={async()=>{
                                 const link = `${B()}/api/appointment-portal/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`;
                                 await downloadQRCode(link, 'appointment-portal');
                               }}
-                              className="px-2 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-purple-600 hover:border-purple-200"
+                              className={`px-3 py-1.5 text-[10px] font-semibold rounded-lg shadow-md transition-all duration-200 flex items-center justify-center gap-1.5 whitespace-nowrap flex-1 ${copiedKey === 'portal-qr' ? 'bg-green-600 text-white' : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:shadow-lg hover:from-purple-700 hover:to-indigo-700'}`}
                               title="Download QR Code"
                             >
-                              QR
+                              {copiedKey === 'portal-qr' ? '✓ Downloaded!' : '📱 QR'}
                             </button>
                             <button 
-                              onClick={async()=>{
+                              onClick={()=>{
                                 const link = `${B()}/api/appointment-portal/${botId}?org_id=${org}&bot_key=${pubKey || '{bot_key}'}`;
-                                try { 
-                                  await navigator.clipboard.writeText(link); 
-                                  alert("Unified appointment portal link copied!"); 
-                                } catch {}
+                                handleCopy(link, 'portal-copy');
                               }}
-                              className="px-3 text-[10px] font-medium bg-white border border-gray-200 rounded text-gray-600 hover:text-blue-600 hover:border-blue-200"
+                              className={`px-3 py-1.5 text-[10px] font-semibold rounded-lg shadow-md transition-all duration-200 flex items-center justify-center gap-1.5 whitespace-nowrap flex-1 ${copiedKey === 'portal-copy' ? 'bg-green-600 text-white' : 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:shadow-lg hover:from-blue-700 hover:to-cyan-700'}`}
                             >
-                              COPY
+                              {copiedKey === 'portal-copy' ? '✓ Copied!' : '📋 Copy'}
                             </button>
                           </div>
                         </div>
