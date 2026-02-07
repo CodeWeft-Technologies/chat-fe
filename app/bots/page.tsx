@@ -165,38 +165,37 @@ export default function BotsPage() {
   return (
     <>
       <AuthGate />
-      <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto pb-12">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-gray-200 pb-4 sm:pb-6">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">My Assistants</h1>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1">Manage your AI chatbots and their configurations</p>
+      <div className="space-y-6 max-w-7xl mx-auto pb-12 px-4 sm:px-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-gray-200 pb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Assistants</h1>
+            <p className="text-sm text-gray-600 mt-2">Create and manage your AI chatbots</p>
+          </div>
+          <div className="flex items-center gap-3">
+            {mounted && (
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-200 text-xs text-gray-600">
+                <span className="font-medium">Org:</span>
+                <input 
+                  value={org} 
+                  readOnly 
+                  className="bg-transparent border-none p-0 w-24 focus:ring-0 text-gray-900 font-mono text-xs" 
+                />
+              </div>
+            )}
+            <Button onClick={() => setIsCreating(!isCreating)} variant={isCreating ? "outline" : "primary"} className="whitespace-nowrap">
+              {isCreating ? "Cancel" : "Create New"}
+            </Button>
+          </div>
         </div>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
-          {mounted && (
-            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-full border border-gray-200 text-xs text-gray-600">
-              <span className="font-medium">Org:</span>
-              <input 
-                value={org} 
-                readOnly 
-                className="bg-transparent border-none p-0 w-24 focus:ring-0 text-gray-900 font-mono" 
-              />
-            </div>
-          )}
-          <Button onClick={() => setIsCreating(!isCreating)} variant={isCreating ? "outline" : "primary"} className="w-full sm:w-auto">
-            {isCreating ? "Cancel" : "Create New Bot"}
-          </Button>
-        </div>
-      </div>
 
       {/* Create Form */}
       {isCreating && (
-        <div className="animate-in slide-in-from-top-4 duration-200 fade-in">
-          <Card className="border-blue-100 shadow-lg ring-1 ring-blue-50 overflow-hidden" padding="lg">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-gray-900">Create New Assistant</h2>
-              <button onClick={() => setIsCreating(false)} className="text-gray-400 hover:text-gray-600">✕</button>
-            </div>
+        <Card className="border border-gray-200 shadow-md" padding="lg">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-semibold text-gray-900">Create New Assistant</h2>
+            <button onClick={() => setIsCreating(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+          </div>
             
             {/* Template Selector */}
             <Select
@@ -315,96 +314,86 @@ export default function BotsPage() {
             
             <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-gray-100">
               <Button variant="outline" onClick={() => setIsCreating(false)}>Cancel</Button>
-              <Button onClick={createBot}>Create Assistant</Button>
+              <Button onClick={createBot}>Create</Button>
             </div>
           </Card>
-        </div>
-      )}
+        )}
 
-      {/* Controls & Search */}
-      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-        <div className="relative w-full sm:w-72">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-            🔍
-          </div>
+      {/* Search */}
+      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+        <div className="relative flex-1">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">🔍</div>
           <Input
-            placeholder="Search bots by name or ID..."
+            placeholder="Search by name or ID..."
             value={search}
             onChange={e=>setSearch(e.target.value)}
             className="pl-9"
           />
         </div>
-        <Button variant="ghost" onClick={load} className="text-gray-500 hover:text-gray-900">
-          ↻ Refresh List
-        </Button>
+        <Button variant="outline" onClick={load} className="whitespace-nowrap">↻ Refresh</Button>
       </div>
 
       {/* Bot Grid */}
       {!filtered.length ? (
-        <div className="text-center py-12 sm:py-20 bg-gray-50 rounded-xl sm:rounded-2xl border-2 border-dashed border-gray-200 px-4">
-          <div className="text-3xl sm:text-4xl mb-3 sm:mb-4">🤖</div>
-          <h3 className="text-base sm:text-lg font-medium text-gray-900">No bots found</h3>
-          <p className="text-xs sm:text-sm text-gray-500 max-w-sm mx-auto mt-2 mb-4 sm:mb-6">
-            {search ? "Try adjusting your search terms." : "Get started by creating your first AI assistant to help your customers."}
+        <div className="text-center py-16 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="text-4xl mb-3">🤖</div>
+          <h3 className="text-lg font-semibold text-gray-900">No assistants yet</h3>
+          <p className="text-sm text-gray-600 mt-2 mb-6">
+            {search ? "No results found." : "Create your first assistant to get started."}
           </p>
           {!search && (
-            <Button onClick={() => setIsCreating(true)} variant="primary" className="w-full sm:w-auto">Create Your First Bot</Button>
+            <Button onClick={() => setIsCreating(true)} variant="primary">Create Assistant</Button>
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map(b => (
-            <div key={b.bot_id} className="group bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-200 flex flex-col overflow-hidden">
-              {/* Card Header */}
-              <div className="p-5 flex-1">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-600 flex items-center justify-center text-xl shadow-sm ring-1 ring-blue-100">
-                    {getBotIcon(b.behavior)}
+            <div key={b.bot_id} className="bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all flex flex-col overflow-hidden">
+              {/* Header */}
+              <div className="p-4 border-b border-gray-100">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="text-2xl">{getBotIcon(b.behavior)}</div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-gray-900 truncate">{b.name || 'Untitled'}</h3>
+                    <p className="text-xs text-gray-600 capitalize mt-0.5">{b.behavior}</p>
                   </div>
-                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider ${b.has_key ? 'bg-green-50 text-green-700 ring-1 ring-green-100' : 'bg-amber-50 text-amber-700 ring-1 ring-amber-100'}`}>
+                  <span className={`px-2 py-1 text-xs font-medium rounded whitespace-nowrap ${b.has_key ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
                     {b.has_key ? 'Active' : 'Draft'}
                   </span>
                 </div>
-                
-                <h3 className="font-semibold text-gray-900 mb-1 truncate" title={b.name || 'Untitled Bot'}>
-                  {b.name || 'Untitled Bot'}
-                </h3>
-                <p className="text-xs text-gray-500 capitalize mb-4">{b.behavior} Assistant</p>
-                
-                <div className="flex items-center gap-1.5 p-1.5 bg-gray-50 rounded-md border border-gray-100 max-w-full">
-                  <span className="text-[10px] text-gray-400 font-mono select-none">ID:</span>
-                  <code className="text-[10px] font-mono text-gray-600 truncate flex-1 select-all" title={b.bot_id}>
-                    {b.bot_id}
-                  </code>
-                </div>
+                <code className="text-xs text-gray-500 block truncate bg-gray-50 px-2 py-1 rounded" title={b.bot_id}>{b.bot_id}</code>
               </div>
 
-              {/* Card Actions */}
-              <div className="bg-gray-50/50 p-3 grid grid-cols-2 gap-2 border-t border-gray-100">
-                <Link 
-                  href={`/bots/${b.bot_id}/config`} 
-                  className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm"
-                >
-                  <span>⚙️</span> Config
-                </Link>
-                <Link 
-                  href={`/embed/${b.bot_id}`} 
-                  className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-white bg-blue-600 border border-blue-600 rounded-lg hover:bg-blue-700 hover:border-blue-700 transition-all shadow-sm group-hover:shadow-blue-100"
-                >
-                  <span>🚀</span> Embed
-                </Link>
-                <Link 
-                  href={`/bots/${b.bot_id}/leads`} 
-                  className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm"
-                >
-                  <span>📋</span> Leads
-                </Link>
-                <Link 
-                  href={`/usage/${b.bot_id}`} 
-                  className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm"
-                >
-                  <span>📊</span> Analytics
-                </Link>
+              {/* Actions */}
+              <div className="p-3 space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <Link 
+                    href={`/bots/${b.bot_id}/config`} 
+                    className="px-3 py-2 text-xs font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded hover:bg-gray-100 transition-colors text-center"
+                  >
+                    ⚙️ Config
+                  </Link>
+                  <Link 
+                    href={`/embed/${b.bot_id}`} 
+                    className="px-3 py-2 text-xs font-medium text-white bg-blue-600 border border-blue-600 rounded hover:bg-blue-700 transition-colors text-center"
+                  >
+                    🚀 Embed
+                  </Link>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Link 
+                    href={`/bots/${b.bot_id}/leads`} 
+                    className="px-3 py-2 text-xs font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded hover:bg-gray-100 transition-colors text-center"
+                  >
+                    📋 Leads
+                  </Link>
+                  <Link 
+                    href={`/usage/${b.bot_id}`} 
+                    className="px-3 py-2 text-xs font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded hover:bg-gray-100 transition-colors text-center"
+                  >
+                    📊 Analytics
+                  </Link>
+                </div>
               </div>
             </div>
           ))}
