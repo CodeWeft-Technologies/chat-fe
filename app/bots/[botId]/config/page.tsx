@@ -268,6 +268,7 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
 
   const save = useCallback(async () => {
     if (!org || !behavior) { alert("Missing org or bot type"); return; }
+    if (system.length > 850) { alert("System Instructions cannot exceed 850 characters. Current: " + system.length); return; }
     setLoading(true);
     setSaved(false);
     try {
@@ -424,8 +425,9 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
             </div>
             <div className="flex flex-wrap items-center gap-3">
               {saved && <span className="text-xs font-medium text-green-700 bg-green-50 border border-green-100 px-2 py-1 rounded-full animate-in fade-in">Saved</span>}
+              {system.length > 850 && <span className="text-xs font-medium text-red-700 bg-red-50 border border-red-100 px-2 py-1 rounded-full">Exceeds limit</span>}
               <Button variant="outline" onClick={load} className="text-gray-700 bg-white">↻ Reload</Button>
-              <Button onClick={save} disabled={loading}>{loading ? "Saving..." : "Save Changes"}</Button>
+              <Button onClick={save} disabled={loading || system.length > 850}>{loading ? "Saving..." : "Save Changes"}</Button>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -532,9 +534,18 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                             value={system} 
                             onChange={e=>setSystem(e.target.value)} 
                             placeholder="Write detailed guidance and constraints for the bot..." 
-                            className="input-base w-full min-h-[160px] resize-y text-sm leading-relaxed font-mono text-gray-800" 
+                            className={`input-base w-full min-h-[160px] resize-y text-sm leading-relaxed font-mono text-gray-800 ${system.length > 850 ? 'border-red-500 border-2' : ''}`}
+                            maxLength={1000}
                         />
-                        <p className="text-[10px] text-gray-400">These instructions define the bot&apos;s personality and rules.</p>
+                        <div className="flex items-center justify-between">
+                            <p className="text-[10px] text-gray-400">These instructions define the bot&apos;s personality and rules.</p>
+                            <p className={`text-[10px] font-medium ${system.length > 850 ? 'text-red-600' : system.length > 700 ? 'text-amber-600' : 'text-gray-400'}`}>
+                                {system.length}/850 characters
+                            </p>
+                        </div>
+                        {system.length > 850 && (
+                            <p className="text-[10px] text-red-600 font-medium">⚠️ System prompt exceeds 850 character limit. Please reduce the length.</p>
+                        )}
                         
                         {/* System Instructions Guide */}
                         <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
