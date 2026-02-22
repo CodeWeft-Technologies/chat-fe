@@ -71,6 +71,7 @@ export default function Sidebar({ onLinkClick }: { onLinkClick?: () => void }) {
     { href: '/dashboard', label: 'Overview', icon: '🏠' },
     { href: '/bots', label: 'My Bots', icon: '🤖' },
     { href: '/ingest', label: 'Knowledge Base', icon: '📚' },
+    { href: '/documentation', label: 'Documentation', icon: '📖' },
   ];
 
   return (

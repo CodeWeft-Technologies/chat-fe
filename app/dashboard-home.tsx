@@ -111,14 +111,14 @@ export default function DashboardHome() {
           </div>
         </Link>
 
-        <Link href="https://docs.codeweft.com" target="_blank" className="group block">
+        <Link href="/documentation" className="group block">
           <div className="h-full p-6 rounded-xl bg-white dark:bg-neutral-900 border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all duration-200 group-hover:-translate-y-1">
             <div className="w-12 h-12 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <span className="text-2xl">💡</span>
+              <span className="text-2xl">📖</span>
             </div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Documentation</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Learn how to integrate widgets, use the API, and advanced configuration.
+              Complete guides for widgets, customization, forms, calendar setup, and more.
             </p>
           </div>
         </Link>

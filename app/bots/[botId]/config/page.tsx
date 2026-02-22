@@ -470,10 +470,10 @@ export default function BotConfigPage({ params }: { params: Promise<{ botId: str
                                 const v=e.target.value; 
                                 if(v){ 
                                     setBehavior(v); 
-                                    if(v==='support'){setSystem('Answer customer support questions using provided context. Be concise and helpful.');} 
-                                    else if(v==='sales'){setSystem('Assist with product questions and sales. Use provided context and be persuasive but honest.');} 
-                                    else if(v==='appointment'){setSystem('Help users schedule appointments. Collect required details and respect constraints from provided context.');} 
-                                    else if(v==='qna'){setSystem('Answer strictly from the provided Q&A knowledge. If not found, say: "I do not have that information."');} 
+                                    if(v==='support'){setSystem('Answer questions ONLY from knowledge base. Admit gaps. Never ask for personal info upfront. Be concise (1-2 sentences). Grounded in provided context only.');} 
+                                    else if(v==='sales'){setSystem('Answer sales questions from provided information only. Do NOT invent features/pricing. If missing: "Contact sales for details." Be warm, helpful, no fabrication.');} 
+                                    else if(v==='appointment'){setSystem('Answer general questions using knowledge provided. For bookings: ONLY mention command if user asks directly. NEVER ask for name/email/details upfront - forms collect data.');} 
+                                    else if(v==='qna'){setSystem('Answer ONLY from knowledge base. Do NOT use external knowledge. If unavailable: "I do not have that information."');} 
                                 } 
                             }}
                             options={[
